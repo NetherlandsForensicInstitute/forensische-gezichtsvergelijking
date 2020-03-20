@@ -2,25 +2,12 @@ import argparse
 import os
 import re
 
-import numpy as np
-
 
 def write_output(df, experiment_name):
     # %H:%M:%S -> : (colon) werkt niet in windows
     output_file = os.path.join('.', 'output', f'{experiment_name}_experiments_results.csv')
     with open(output_file, 'w+') as f:
         df.to_csv(f, header=True)
-
-
-def get_test_data(df, indices):
-    max_samples = 10000
-    if len(df) < max_samples:
-        test_data = np.delete(df, indices, axis=0)
-    # to ensure the system does not slow down with too much data
-    else:
-        new_indices = np.random.choice(np.delete(np.arange(0, len(df), 1), indices), max_samples)
-        test_data = df[new_indices, :]
-    return test_data
 
 
 def parser_setup():
