@@ -8,12 +8,12 @@ from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV
 
-from lr_face.data_providers import test_data
+from lr_face.data_providers import test_data, enfsi_2011
 from lr_face.testmodel import TestModel
 
 """How often to repeat all experiments"""
 
-TIMES = 50
+TIMES = 10
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'
@@ -78,7 +78,7 @@ DATA = {
     'current_set_up': ['test'],
     'all': {
         'test': {
-            'dataset_callable': test_data,
+            'dataset_callable': [enfsi_2011, test_data],
             'fraction_test': .5,
         }
     }

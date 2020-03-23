@@ -6,3 +6,4 @@ tqdm
 confidence
 pandas
 matplotlib
+opencv-python

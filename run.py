@@ -31,16 +31,15 @@ def run(args):
     if not os.path.exists(plots_dir):
         os.makedirs(plots_dir)
 
-    # load data once
-    real_data_provider = get_data(
-        dataset_callable=params_dict['dataset_callable'],
-        fraction_test=params_dict['fraction_test'],
-    )
-
     n_experiments = experiments_setup.data_frame.shape[0]
     for row in tqdm(range(0, n_experiments)):
         params_dict = experiments_setup.data_frame[parameters_used].iloc[row].to_dict()
 
+        #TODO load the data every cycle may get expensive
+        real_data_provider = get_data(
+            dataset_callable=params_dict['dataset_callable'],
+            fraction_test=params_dict['fraction_test'],
+        )
         if row < n_experiments / TIMES:
             # for the first round, make plots
             make_plots_and_save_as = os.path.join(plots_dir,

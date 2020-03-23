@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Tuple
+import os
 
+import cv2
 import numpy as np
 from sklearn.model_selection import GroupShuffleSplit
 
@@ -22,26 +24,41 @@ def test_data(resolution):
     return np.random.random([11, resolution[0], resolution[1], 3]), np.array([1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5])
 
 
+def enfsi_2011(resolution) -> Tuple[np.ndarray, np.ndarray]:
+    folder = os.path.join('resources', 'enfsi', '2011')
+    X = []
+    y = []
+    for file in os.listdir(folder):
+        # TODO check RGB/GRB ordering/colous usage on models.
+        img = cv2.imread(os.path.join(folder, file), cv2.COLOR_BGR2RGB)
+        cls = file[:3]
+        X.append(img)
+        y.append(int(cls))
+    return np.array(X), np.array(y)
+
+
 def get_data(dataset_callable, resolution=(100, 100),
              train_calibration_same_data=True, fraction_calibration=None, fraction_test=0.2) -> Images:
     """
-    Takes a list of functions that return X, y, with X images and y identities. Returns a dataset with all data
+    Takes a function that return X, y, with X images and y identities. Returns a dataset with all data
     split into the right datasets
+
 
     fraction_calibration is the fraction of train data that is used for calibration,
         so fraction_calibration + fraction_test can be > 1
 
     """
+    #TODO take a list of functions
+
 
     X = np.zeros((0, resolution[0], resolution[1], 3))
     y = np.array([])
     this_X, this_y = dataset_callable(resolution)
-    assert this_X.shape[1:3] == resolution, f
-    'resolution should be {resolution}, not {this_X.shape[:2]}'
-    assert this_X.shape[0] == len(this_y), f
-    'y and X should have same length'
+    # TODO for now we will let the model resize, in future we should enforce the right resolution to come from preprocessing
+    # assert this_X.shape[1:3] == resolution, f'resolution should be {resolution}, not {this_X.shape[:2]}'
+    assert len(this_X) == len(this_y), f'y and X should have same length'
 
-    X = np.concatenate((X, this_X), axis=0)
+    X=this_X
     y = np.append(y, this_y)
 
     # split on identities, not on samples (so same person does not appear in both test and train
