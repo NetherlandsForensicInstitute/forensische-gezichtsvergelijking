@@ -70,21 +70,29 @@ def make_pairs(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     takes images X and classes y, and returns a paired data and a vector indicating same or different source
 
-    Currently makes different source by coupling every class with one other, to keep data sets limited.
+    Example
+    [x1, .., x9], [1,2,3,4,5,6,7,8,9]
+    ->
+    [[x1,x2], [x1,x3], [x1,x2], [x1, x4], [x1, x5], ...], [1, 1, 1, 0, 0, ...]
+
+    Currently makes different sources only by pairing class n with n+1 rather than taking all ~N^2 possible pairs,
+    to keep data sets limited.
     """
-    image_ids = np.unique(y)
+    person_ids = np.unique(y)
     pairs = []
     same_different_source = []
-    for i_id, image_id in enumerate(image_ids):
-        idx = y == image_id
+    for i_person_id, person_id in enumerate(person_ids):
+        idx = y == person_id
         nidx = sum(idx)
+        # all images of this person
         imgs = X[idx]
         for i in range(nidx):
             for j in range(i + 1, nidx):
+                # make same-person pairs by pairing all images of the person
                 pairs.append((imgs[i], imgs[j]))
                 same_different_source.append(1)
-            if i_id > 0:
-                # make different source with previous
+            if i_person_id > 0:
+                # make different-person pairs by pairing person i with person i-1
                 for j in range(len(imgs_prev)):
                     pairs.append((imgs[i], imgs_prev[j]))
                     same_different_source.append(0)
