@@ -1,0 +1,8 @@
+sklearn
+numpy
+streamlit
+lir
+tqdm
+confidence
+pandas
+matplotlib
