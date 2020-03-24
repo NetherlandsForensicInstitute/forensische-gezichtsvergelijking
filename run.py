@@ -25,29 +25,31 @@ def run(args):
     parameters_used = experiments_setup.input_parameters  # exclude output columns
 
     experiment_name = datetime.now().strftime("%Y-%m-%d %H %M %S")
-    params_dict = experiments_setup.data_frame[parameters_used].iloc[0].to_dict()
 
     plots_dir = os.path.join('output', experiment_name)
     if not os.path.exists(plots_dir):
         os.makedirs(plots_dir)
 
+    # caching for data
+    dataproviders= {}
+
     n_experiments = experiments_setup.data_frame.shape[0]
     for row in tqdm(range(0, n_experiments)):
         params_dict = experiments_setup.data_frame[parameters_used].iloc[row].to_dict()
-
-        #TODO load the data every cycle may get expensive
-        real_data_provider = get_data(
-            dataset_callable=params_dict['dataset_callable'],
-            fraction_test=params_dict['fraction_test'],
-        )
+        if (params_dict['dataset_callable'], params_dict['fraction_test']) not in dataproviders:
+            dataproviders[(params_dict['dataset_callable'], params_dict['fraction_test'])] = get_data(
+                dataset_callable=params_dict['dataset_callable'],
+                            fraction_test=params_dict['fraction_test'],
+            )
+        data_provider = dataproviders[(params_dict['dataset_callable'], params_dict['fraction_test'])]
         if row < n_experiments / TIMES:
             # for the first round, make plots
             make_plots_and_save_as = os.path.join(plots_dir,
                                                   f"{'_'.join([str(v)[:25] for v in params_dict.values()])}")
-            results = experiment(params_dict, data_provider=real_data_provider,
+            results = experiment(params_dict, data_provider=data_provider,
                                  make_plots_and_save_as=make_plots_and_save_as)
         else:
-            results = experiment(params_dict, data_provider=real_data_provider)
+            results = experiment(params_dict, data_provider=data_provider)
 
         for k, v in results.items():
             experiments_setup.data_frame.loc[row, k] = v
