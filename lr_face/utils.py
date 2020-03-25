@@ -60,18 +60,19 @@ def parse_object_string(obj_string, name_only=False):
         obj_string = obj_string.replace('\r', '').replace('\n', '')
         name_match = re.findall(r'[a-zA-Z]+(?=\()', obj_string)
         obj_dict["name"] = "_".join(name_match)
-        body_match = re.search(r'(?<=\().+(?=\)$)', obj_string).group()
-        if len(name_match) > 1:
-            body_match = re.search(r'\(.*?\)', body_match).group()[1:-1]
-        if body_match is not None and not name_only:
-            body_arr = body_match.split(',')
-            obj_dict['body'] = {}
-            for par in body_arr:
-                key_val = par.split('=')
-                if len(key_val) == 2:
-                    obj_dict['body'][key_val[0].strip()] = key_val[1].strip()
-                else:
-                    obj_dict['body'][key_val[0].strip()] = None
+        if not name_only:
+            body_match = re.search(r'(?<=\().+(?=\)$)', obj_string).group()
+            if len(name_match) > 1:
+                body_match = re.search(r'\(.*?\)', body_match).group()[1:-1]
+            if body_match is not None:
+                body_arr = body_match.split(',')
+                obj_dict['body'] = {}
+                for par in body_arr:
+                    key_val = par.split('=')
+                    if len(key_val) == 2:
+                        obj_dict['body'][key_val[0].strip()] = key_val[1].strip()
+                    else:
+                        obj_dict['body'][key_val[0].strip()] = None
     return obj_dict
 
 
@@ -103,10 +104,6 @@ def process_dataframe(df):
         # old column name: parameter name (new column is [old column name]_[parameter name])
         ['scorers', 'class_weight'],
         ['calibrators', 'class_weight'],
-        ['h1_distribution', 'dimensions'],
-        ['h2_distribution', 'dimensions'],
-        ['test_set', 'cotravel_type'],
-        ['test_set', 'mean']
     ]
     for column, parameter in make_parameter_columns:
         new_column = column + "_" + parameter

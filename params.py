@@ -1,12 +1,14 @@
-import functools
+from functools import partial
 import numpy as np
 
 from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrator, FractionCalibrator, \
     IsotonicCalibrator, DummyCalibrator
 
+
 from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
-from lr_face.data_providers import test_data
 from lr_face.models import DummyModel, Deepface_Lib_Model
+from lr_face.data_providers import test_data, enfsi_data, combine_data
+
 
 """How often to repeat all experiments"""
 
@@ -32,23 +34,11 @@ PARAMS = {
             'transform_scorer_output': False,
             'train_calibration_same_data': False,
         },
-        'rna1': {
-            'fraction_training': 0.6,
-            'n_datapoints_test': 50,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': False,
-        },
         'calibrate_same1': {
             'fraction_training': .5,
             'n_datapoints_test': 30,
             'transform_scorer_output': False,
             'train_calibration_same_data': [True, False],
-        },
-        'calibrate_same2': {
-            'fraction_training': .5,
-            'n_datapoints_test': 1000,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': True,
         },
         'fraction1': {
             'fraction_training': list(np.arange(0.1, 1.0, 0.1)),
@@ -56,26 +46,23 @@ PARAMS = {
             'transform_scorer_output': False,
             'train_calibration_same_data': False
         },
-        'fraction2': {
-            'fraction_training': list(np.arange(0.1, 1.0, 0.1)),
-            'n_datapoints_test': 100,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': True
-        },
-        'data_mismatch1': {
-            'fraction_training': 0.6,
-            'n_datapoints_test': 1000,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': False
-        }
     }
 }
 
+
 DATA = {
-    'current_set_up': ['test'],
+    'current_set_up': ['enfsi'],
     'all': {
         'test': {
-            'dataset_callable': test_data,
+            'dataset_callable': [test_data],
+            'fraction_test': .5,
+        },
+        'enfsi': {
+            #TODO currently every element becomes a new experiment, we probably want functionality to combine datasets
+            'dataset_callable': partial(combine_data, dataset_callables=[partial(enfsi_data, year=2011),
+                                 partial(enfsi_data, year=2012),
+                                 partial(enfsi_data, year=2013),
+                                 partial(enfsi_data, year=2017)]),
             'fraction_test': .5,
         }
     }

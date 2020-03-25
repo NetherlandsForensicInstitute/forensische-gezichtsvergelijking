@@ -4,12 +4,12 @@ Research project to investigate algorithms that can supplement expert opinion in
 
 --
 
-### Files
+### Folders
 - lr_face package: scripts to initiate the data providers, experiment settings and evaluators
 - output folder: generated figures and result files
-- resources folder: datasets
+- resources folder: datasets. Should have resources/enfsi/2011/-copy all images from that folder in the dataset-
 - tests folder: TBD
-
+### scripts
 - run.py: run the whole pipeline
 - run_data_exploration.py: code to make plots
 - params.py: settings for experiments
