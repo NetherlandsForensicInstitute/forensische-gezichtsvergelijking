@@ -8,3 +8,4 @@ pandas
 matplotlib
 scipy
 keras
+opencv-python
