@@ -9,11 +9,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV
 
 from lr_face.data_providers import test_data
-from lr_face.testmodel import DummyModel, OpenFace
+from lr_face.models import DummyModel, OpenFaceModel, FacenetModel, VGGFaceModel, FbDeepFaceModel
 
 """How often to repeat all experiments"""
 
-TIMES = 50
+TIMES = 10
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'
@@ -89,10 +89,13 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated
 """
 SCORERS = {
-    'current_set_up': ['test', 'facenet'],
+    'current_set_up': ['openface', 'vggface', 'dummy'],
     'all': {
-        'test': DummyModel(),
-        'facenet': OpenFace()
+        'dummy': DummyModel(),
+        'openface': OpenFaceModel(),
+        'facenet': FacenetModel(),
+        'fbdeepface': FbDeepFaceModel(),
+        'vggface': VGGFaceModel()
     }
 }
 
@@ -101,7 +104,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated
 """
 CALIBRATORS = {
-    'current_set_up': ['logit', 'elub_KDE'],
+    'current_set_up': ['elub_KDE'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),
