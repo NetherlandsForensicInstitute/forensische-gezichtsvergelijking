@@ -1,6 +1,5 @@
 import numpy as np
 
-from deepface.deepface.basemodels import Facenet, FbDeepFace, VGGFace, OpenFace
 from scipy import spatial
 from lr_face.utils import resize
 
@@ -28,15 +27,14 @@ class Deepface_Lib_Model:
     deepface/Face model
     """
 
-    def __init__(self, model, resolution=(160, 160)):
-        self.model=model
-        self.resolution = resolution
+    def __init__(self, model):
+        self.model = model
 
     def predict_proba(self, X):
         scores = []
         for pair in X:
-            img1 = resize(pair[0], self.resolution)
-            img2 = resize(pair[1], self.resolution)
+            img1 = resize(pair[0], self.model.input_shape[1:3])
+            img2 = resize(pair[1], self.model.input_shape[1:3])
 
             img1_representation = self.model.predict(img1)[0, :]
             img2_representation = self.model.predict(img2)[0, :]
@@ -48,100 +46,100 @@ class Deepface_Lib_Model:
 
 
 
-class FacenetModel:
-    """
-    deepface/Face model
-    """
-
-    def __init__(self, resolution=(160, 160)):
-        self.resolution = resolution
-
-    def predict_proba(self, X):
-        model = Facenet.loadModel() #ergens anders laden waar hij blijft bestaan?
-
-        scores = []
-        for pair in X:
-            img1 = resize(pair[0], self.resolution)
-            img2 = resize(pair[1], self.resolution)
-
-            img1_representation = model.predict(img1)[0, :]
-            img2_representation = model.predict(img2)[0, :]
-
-            score = spatial.distance.cosine(img1_representation, img2_representation)
-            scores.append([1-score, score])
-
-        return np.asarray(scores)
-
-
-class OpenFaceModel:
-    """
-    deepface/OpenFace model
-    """
-
-    def __init__(self, resolution=(96, 96)):
-        self.resolution = resolution
-
-    def predict_proba(self, X):
-        model =  OpenFace.loadModel() #ergens anders laden waar hij blijft bestaan?
-
-        scores = []
-        for pair in X:
-            img1 = resize(pair[0], self.resolution)
-            img2 = resize(pair[1], self.resolution)
-
-            img1_representation = model.predict(img1)[0, :]
-            img2_representation = model.predict(img2)[0, :]
-
-            score = spatial.distance.cosine(img1_representation, img2_representation)
-            scores.append([1-score, score])
-
-        return np.asarray(scores)
-
-
-class VGGFaceModel:
-    """
-    deepface/VVGFace model
-    """
-
-    def __init__(self, resolution=(224, 224)):
-        self.resolution = resolution
-
-    def predict_proba(self, X):
-        model = VGGFace.loadModel() #ergens anders laden waar hij blijft bestaan?
-
-        scores = []
-        for pair in X:
-            img1 = resize(pair[0], self.resolution)
-            img2 = resize(pair[1], self.resolution)
-
-            img1_representation = model.predict(img1)[0, :]
-            img2_representation = model.predict(img2)[0, :]
-
-            score = spatial.distance.cosine(img1_representation, img2_representation)
-            scores.append([1-score, score])
-
-        return np.asarray(scores)
-
-
-class FbDeepFaceModel:
-    """
-    deepface/FbDeepFace
-    """
-    def __init__(self, resolution=(152, 152)):
-        self.resolution = resolution
-
-    def predict_proba(self, X):
-        model = FbDeepFace.loadModel() #ergens anders laden waar hij blijft bestaan?
-
-        scores = []
-        for pair in X:
-            img1 = resize(pair[0], self.resolution)
-            img2 = resize(pair[1], self.resolution)
-
-            img1_representation = model.predict(img1)[0, :]
-            img2_representation = model.predict(img2)[0, :]
-
-            score = spatial.distance.cosine(img1_representation, img2_representation)
-            scores.append([1-score, score])
-
-        return np.asarray(scores)
+# class FacenetModel:
+#     """
+#     deepface/Face model
+#     """
+#
+#     def __init__(self, resolution=(160, 160)):
+#         self.resolution = resolution
+#
+#     def predict_proba(self, X):
+#         model = Facenet.loadModel() #ergens anders laden waar hij blijft bestaan?
+#
+#         scores = []
+#         for pair in X:
+#             img1 = resize(pair[0], self.resolution)
+#             img2 = resize(pair[1], self.resolution)
+#
+#             img1_representation = model.predict(img1)[0, :]
+#             img2_representation = model.predict(img2)[0, :]
+#
+#             score = spatial.distance.cosine(img1_representation, img2_representation)
+#             scores.append([1-score, score])
+#
+#         return np.asarray(scores)
+#
+#
+# class OpenFaceModel:
+#     """
+#     deepface/OpenFace model
+#     """
+#
+#     def __init__(self, resolution=(96, 96)):
+#         self.resolution = resolution
+#
+#     def predict_proba(self, X):
+#         model =  OpenFace.loadModel() #ergens anders laden waar hij blijft bestaan?
+#
+#         scores = []
+#         for pair in X:
+#             img1 = resize(pair[0], self.resolution)
+#             img2 = resize(pair[1], self.resolution)
+#
+#             img1_representation = model.predict(img1)[0, :]
+#             img2_representation = model.predict(img2)[0, :]
+#
+#             score = spatial.distance.cosine(img1_representation, img2_representation)
+#             scores.append([1-score, score])
+#
+#         return np.asarray(scores)
+#
+#
+# class VGGFaceModel:
+#     """
+#     deepface/VVGFace model
+#     """
+#
+#     def __init__(self, resolution=(224, 224)):
+#         self.resolution = resolution
+#
+#     def predict_proba(self, X):
+#         model = VGGFace.loadModel() #ergens anders laden waar hij blijft bestaan?
+#
+#         scores = []
+#         for pair in X:
+#             img1 = resize(pair[0], self.resolution)
+#             img2 = resize(pair[1], self.resolution)
+#
+#             img1_representation = model.predict(img1)[0, :]
+#             img2_representation = model.predict(img2)[0, :]
+#
+#             score = spatial.distance.cosine(img1_representation, img2_representation)
+#             scores.append([1-score, score])
+#
+#         return np.asarray(scores)
+#
+#
+# class FbDeepFaceModel:
+#     """
+#     deepface/FbDeepFace
+#     """
+#     def __init__(self, resolution=(152, 152)):
+#         self.resolution = resolution
+#
+#     def predict_proba(self, X):
+#         model = FbDeepFace.loadModel() #ergens anders laden waar hij blijft bestaan?
+#
+#         scores = []
+#         for pair in X:
+#             img1 = resize(pair[0], self.resolution)
+#             img2 = resize(pair[1], self.resolution)
+#
+#             img1_representation = model.predict(img1)[0, :]
+#             img2_representation = model.predict(img2)[0, :]
+#
+#             score = spatial.distance.cosine(img1_representation, img2_representation)
+#             scores.append([1-score, score])
+#
+#         return np.asarray(scores)

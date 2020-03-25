@@ -3,14 +3,10 @@ import numpy as np
 
 from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrator, FractionCalibrator, \
     IsotonicCalibrator, DummyCalibrator
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA, LinearDiscriminantAnalysis as LDA
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import RandomizedSearchCV
 
-from deepface.deepface.basemodels import OpenFace
+from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
 from lr_face.data_providers import test_data
-from lr_face.models import DummyModel, OpenFaceModel, FacenetModel, VGGFaceModel, FbDeepFaceModel, Deepface_Lib_Model
+from lr_face.models import DummyModel, Deepface_Lib_Model
 
 """How often to repeat all experiments"""
 
@@ -94,9 +90,9 @@ SCORERS = {
     'all': {
         'dummy': DummyModel(),
         'openface': Deepface_Lib_Model(model=OpenFace.loadModel()),
-        'facenet': FacenetModel(),
-        'fbdeepface': FbDeepFaceModel(),
-        'vggface': VGGFaceModel()
+        'facenet': Deepface_Lib_Model(model=Facenet.loadModel()),
+        'fbdeepface': Deepface_Lib_Model(model=FbDeepFace.loadModel()),
+        'vggface': Deepface_Lib_Model(model=VGGFace.loadModel())
     }
 }
 
