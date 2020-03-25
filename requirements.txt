@@ -7,3 +7,4 @@ confidence
 pandas
 matplotlib
 scipy
+keras
