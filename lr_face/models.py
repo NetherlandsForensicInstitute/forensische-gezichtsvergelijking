@@ -1,7 +1,7 @@
 import numpy as np
 
 from scipy import spatial
-from lr_face.utils import resize
+from lr_face.utils import resize_and_normalize
 
 
 class DummyModel:
@@ -33,8 +33,8 @@ class Deepface_Lib_Model:
     def predict_proba(self, X):
         scores = []
         for pair in X:
-            img1 = resize(pair[0], self.model.input_shape[1:3])
-            img2 = resize(pair[1], self.model.input_shape[1:3])
+            img1 = resize_and_normalize(pair[0], self.model.input_shape[1:3])
+            img2 = resize_and_normalize(pair[1], self.model.input_shape[1:3])
 
             img1_representation = self.model.predict(img1)[0, :]
             img2_representation = self.model.predict(img2)[0, :]

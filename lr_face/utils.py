@@ -180,7 +180,7 @@ def concat_columns(df, column_names, output_column_name, separator='-'):
     return df
 
 
-def resize(img, target_size):
+def resize_and_normalize(img, target_size):
         right_size_img  = cv2.resize(img, target_size)
 
         img_pixels = image.img_to_array(right_size_img)
