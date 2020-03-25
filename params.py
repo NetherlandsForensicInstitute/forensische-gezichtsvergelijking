@@ -89,11 +89,17 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated
 """
 SCORERS = {
-    'current_set_up': ['test'],
+    'current_set_up': ['test', 'insightface'],
     'all': {
-        'test': TestModel()
+        'test': DummyModel(),
+        'insightface': InsightFace()
     }
 }
+
+'current_set_up': ['test', 'facenet'],
+'all': {
+    'test': DummyModel(),
+    'facenet': OpenFace()
 
 """ 
 New calibrators can be added to 'all'.
