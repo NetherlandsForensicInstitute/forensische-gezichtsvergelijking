@@ -19,7 +19,7 @@ class Images:
     X_test: np.ndarray
 
 
-def test_data(resolution):
+def test_data(resolution=(100,100)):
     """
     return some random numbers in the right structure to test the pipeline with
     """
