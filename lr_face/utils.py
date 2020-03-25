@@ -1,6 +1,23 @@
 import argparse
 import os
 import re
+import math
+
+import cv2
+import numpy as np
+import pandas as pd
+from PIL import Image
+from keras.preprocessing import image
+
+
+def distance(a, b):
+    x1 = a[0];
+    y1 = a[1]
+    x2 = b[0];
+    y2 = b[1]
+
+    return math.sqrt(((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)))
+
 
 
 def write_output(df, experiment_name):
@@ -171,3 +188,15 @@ def concat_columns(df, column_names, output_column_name, separator='-'):
     for i in range(1, len(column_names)):
         df[output_column_name] += separator + df[column_names[i]].astype(str)
     return df
+
+
+def crop(img, target_size=(224, 224)):
+        right_size_img  = cv2.resize(img, target_size)
+
+        img_pixels = image.img_to_array(right_size_img)
+        img_pixels = np.expand_dims(img_pixels, axis=0)
+
+        # normalize input in [0, 1]
+        img_pixels /= 255
+
+        return img_pixels

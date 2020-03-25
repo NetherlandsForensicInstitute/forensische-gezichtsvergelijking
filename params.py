@@ -9,7 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV
 
 from lr_face.data_providers import test_data
-from lr_face.testmodel import TestModel
+from lr_face.testmodel import DummyModel, OpenFace
 
 """How often to repeat all experiments"""
 
@@ -89,9 +89,10 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated
 """
 SCORERS = {
-    'current_set_up': ['test'],
+    'current_set_up': ['test', 'facenet'],
     'all': {
-        'test': TestModel()
+        'test': DummyModel(),
+        'facenet': OpenFace()
     }
 }
 
