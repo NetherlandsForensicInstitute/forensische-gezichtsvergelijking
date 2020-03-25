@@ -96,10 +96,6 @@ SCORERS = {
     }
 }
 
-'current_set_up': ['test', 'facenet'],
-'all': {
-    'test': DummyModel(),
-    'facenet': OpenFace()
 
 """ 
 New calibrators can be added to 'all'.
