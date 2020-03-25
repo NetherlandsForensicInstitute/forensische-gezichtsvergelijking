@@ -10,16 +10,6 @@ from PIL import Image
 from keras.preprocessing import image
 
 
-def distance(a, b):
-    x1 = a[0];
-    y1 = a[1]
-    x2 = b[0];
-    y2 = b[1]
-
-    return math.sqrt(((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)))
-
-
-
 def write_output(df, experiment_name):
     # %H:%M:%S -> : (colon) werkt niet in windows
     output_file = os.path.join('.', 'output', f'{experiment_name}_experiments_results.csv')
