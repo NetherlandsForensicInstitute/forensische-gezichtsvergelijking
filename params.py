@@ -8,8 +8,9 @@ from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV
 
+from deepface.deepface.basemodels import OpenFace
 from lr_face.data_providers import test_data
-from lr_face.models import DummyModel, OpenFaceModel, FacenetModel, VGGFaceModel, FbDeepFaceModel
+from lr_face.models import DummyModel, OpenFaceModel, FacenetModel, VGGFaceModel, FbDeepFaceModel, Deepface_Lib_Model
 
 """How often to repeat all experiments"""
 
@@ -92,7 +93,7 @@ SCORERS = {
     'current_set_up': ['openface', 'vggface', 'dummy'],
     'all': {
         'dummy': DummyModel(),
-        'openface': OpenFaceModel(),
+        'openface': Deepface_Lib_Model(model=OpenFace.loadModel()),
         'facenet': FacenetModel(),
         'fbdeepface': FbDeepFaceModel(),
         'vggface': VGGFaceModel()

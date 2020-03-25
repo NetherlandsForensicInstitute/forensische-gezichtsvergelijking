@@ -23,6 +23,31 @@ class DummyModel:
         return np.random.random((len(X),2))
 
 
+class Deepface_Lib_Model:
+    """
+    deepface/Face model
+    """
+
+    def __init__(self, model, resolution=(160, 160)):
+        self.model=model
+        self.resolution = resolution
+
+    def predict_proba(self, X):
+        scores = []
+        for pair in X:
+            img1 = resize(pair[0], self.resolution)
+            img2 = resize(pair[1], self.resolution)
+
+            img1_representation = self.model.predict(img1)[0, :]
+            img2_representation = self.model.predict(img2)[0, :]
+
+            score = spatial.distance.cosine(img1_representation, img2_representation)
+            scores.append([1-score, score])
+
+        return np.asarray(scores)
+
+
+
 class FacenetModel:
     """
     deepface/Face model
