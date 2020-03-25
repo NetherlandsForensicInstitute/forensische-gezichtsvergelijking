@@ -18,3 +18,31 @@ class TestModel:
         assert X.shape[1] == 2, f
         'should get n pairs, but second dimension is {X.shape[1]}'
         return np.random.random((len(X), 2))
+
+
+class Insightface:
+    """
+    insightface model
+    """
+
+    def __init__(self, resolution=(112, 112)):
+        self.resolution = resolution
+
+    def predict_proba(self, X):
+        model = insightface.face_model.FaceModel(args)
+
+        scores = []
+
+        for pair in X:
+            img = cv2.imread(img1)
+            img = model.get_input(img)
+            f1 = model.get_feature(img)
+
+            img = cv2.imread(img2)
+            img = model.get_input(img)
+            f2 = model.get_feature(img)
+
+            dist12 = np.sum(np.square(f1 - f2))
+            sim12 = np.dot(f1, f2.T)
+
+        return np.asarray(scores)
