@@ -3,13 +3,12 @@ import numpy as np
 
 from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrator, FractionCalibrator, \
     IsotonicCalibrator, DummyCalibrator
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA, LinearDiscriminantAnalysis as LDA
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import RandomizedSearchCV
 
+
+from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
+from lr_face.models import DummyModel, Deepface_Lib_Model
 from lr_face.data_providers import test_data, enfsi_data, combine_data
-from lr_face.testmodel import TestModel
+
 
 """How often to repeat all experiments"""
 
@@ -74,9 +73,13 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated
 """
 SCORERS = {
-    'current_set_up': ['test'],
+    'current_set_up': ['openface', 'vggface', 'dummy'],
     'all': {
-        'test': TestModel()
+        'dummy': DummyModel(),
+        'openface': Deepface_Lib_Model(model=OpenFace.loadModel()),
+        'facenet': Deepface_Lib_Model(model=Facenet.loadModel()),
+        'fbdeepface': Deepface_Lib_Model(model=FbDeepFace.loadModel()),
+        'vggface': Deepface_Lib_Model(model=VGGFace.loadModel())
     }
 }
 
@@ -85,7 +88,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated
 """
 CALIBRATORS = {
-    'current_set_up': ['logit', 'elub_KDE'],
+    'current_set_up': ['elub_KDE'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

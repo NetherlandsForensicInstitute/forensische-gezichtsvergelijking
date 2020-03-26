@@ -1,6 +1,11 @@
 import argparse
 import os
 import re
+import math
+
+import cv2
+import numpy as np
+from keras.preprocessing import image
 
 
 def write_output(df, experiment_name):
@@ -168,3 +173,15 @@ def concat_columns(df, column_names, output_column_name, separator='-'):
     for i in range(1, len(column_names)):
         df[output_column_name] += separator + df[column_names[i]].astype(str)
     return df
+
+
+def resize_and_normalize(img, target_size):
+        right_size_img  = cv2.resize(img, target_size)
+
+        img_pixels = image.img_to_array(right_size_img)
+        img_pixels = np.expand_dims(img_pixels, axis=0)
+
+        # normalize input in [0, 1]
+        img_pixels /= 255
+
+        return img_pixels
