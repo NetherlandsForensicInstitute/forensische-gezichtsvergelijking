@@ -69,7 +69,7 @@ def experiment(params, data_provider: Images =None, make_plots_and_save_as=None)
     # lr_system.scorer.fit(data_provider.X_train, data_provider.y_train)
     X_calib_pairs, y_calib_pairs = make_pairs(data_provider.X_calibrate, data_provider.y_calibrate)
     p = lr_system.scorer.predict_proba(X_calib_pairs)
-    lr_system.calibrator.fit(np.log10(to_odds(p[:, 1])), y_calib_pairs)
+    lr_system.calibrator.fit(p[:, 1], y_calib_pairs)
 
     return evaluate(lr_system, data_provider, make_plots_and_save_as)
 

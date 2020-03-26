@@ -40,6 +40,6 @@ class Deepface_Lib_Model:
             img2_representation = self.model.predict(img2)[0, :]
 
             score = spatial.distance.cosine(img1_representation, img2_representation)
-            scores.append([1-score, score])
+            scores.append([score, 1-score])
 
         return np.asarray(scores)
