@@ -7,7 +7,7 @@ from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrato
 
 from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
 from lr_face.models import DummyModel, Deepface_Lib_Model
-from lr_face.data_providers import test_data, enfsi_data, combine_data
+from lr_face.data_providers import test_data, enfsi_data, combine_pairs
 
 
 """How often to repeat all experiments"""
@@ -20,7 +20,7 @@ For the input of an experiment the 'current_set_up' list can be updated
 """
 PARAMS = {
 
-    'current_set_up': ['calibrate_same1'],
+    'current_set_up': ['SET1'],
     'all': {
         'SET1': {
             'fraction_training': 0.6,
@@ -59,11 +59,12 @@ DATA = {
         },
         'enfsi': {
             #TODO currently every element becomes a new experiment, we probably want functionality to combine datasets
-            'dataset_callable': partial(combine_data, dataset_callables=[partial(enfsi_data, year=2011),
+            'dataset_callable': partial(combine_pairs, dataset_callables=[partial(enfsi_data, year=2011),
                                  partial(enfsi_data, year=2012),
                                  partial(enfsi_data, year=2013),
-                                 partial(enfsi_data, year=2017)]),
-            'fraction_test': .5,
+                                 partial(enfsi_data, year=2017)
+                                                                          ]),
+            'fraction_test': .2,
         }
     }
 }
@@ -73,7 +74,7 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated
 """
 SCORERS = {
-    'current_set_up': ['openface', 'vggface', 'dummy'],
+    'current_set_up': ['openface', 'facenet', 'vggface','fbdeepface','dummy'],
     'all': {
         'dummy': DummyModel(),
         'openface': Deepface_Lib_Model(model=OpenFace.loadModel()),
@@ -88,7 +89,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated
 """
 CALIBRATORS = {
-    'current_set_up': ['elub_KDE'],
+    'current_set_up': ['KDE'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

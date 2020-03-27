@@ -1,22 +1,22 @@
 import csv
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, List
 import os
 
 import pandas as pd
 import cv2
 import numpy as np
-from sklearn.model_selection import GroupShuffleSplit
+from sklearn.model_selection import GroupShuffleSplit, train_test_split
 
 
 @dataclass
-class Images:
-    y_train: np.ndarray
-    X_train: np.ndarray
+class ImagePairs:
     y_calibrate: np.ndarray
     X_calibrate: np.ndarray
+    ids_calibrate: List
     y_test: np.ndarray
     X_test: np.ndarray
+    ids_test: List
 
 
 def test_data(resolution=(100,100)):
@@ -26,38 +26,45 @@ def test_data(resolution=(100,100)):
     return np.random.random([11, resolution[0], resolution[1], 3]), np.array([1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5])
 
 
-def enfsi_data(resolution, year) -> Tuple[np.ndarray, np.ndarray]:
+def enfsi_data(resolution, year) -> Tuple[List,List, List]:
     folder = os.path.join('resources', 'enfsi', str(year))
-    X = []
-    y = []
-    i_cls = 1 # start on 1 as ENFSI does it
+    files = os.listdir(folder)
+    n_pairs = (len(files)-1)//2
+    X = [[-1, -1] for _ in range(n_pairs)]
+    y = [-1]*n_pairs
+    ids=[-1]*n_pairs
     df = pd.read_csv(os.path.join(folder, 'truth.csv')).set_index('id')
-    for file in os.listdir(folder):
+    for file in files:
         if not file.endswith('csv'):
             # TODO check RGB/GRB ordering/colous usage on models.
             img = cv2.imread(os.path.join(folder, file), cv2.COLOR_BGR2RGB)
+            questioned_ref=None
             if year == 2011:
                 cls = int(file[:3])
+                questioned_ref = file[3]
             elif year == 2012:
                 cls = int(file[:2])
+                questioned_ref = file[2]
             elif year == 2013:
                 cls = int(file[1:3])
+                questioned_ref = file[0]
             elif year == 2017:
                 cls = int(file[1:3])
+                questioned_ref = file[0]
             else:
                 raise ValueError(f'Unknown ENFSI year {year}')
-            if df.loc[cls]['same'] == 1:
-                # same source
-                y.append(cls)
+            y[cls-1]=int(df.loc[cls]['same']==1)
+            ids[cls-1] = f"enfsi_{year}_{cls}_{int(df.loc[cls]['same']==1)}"
+            if questioned_ref=='q':
+                X[cls-1][0]=img
+            elif questioned_ref=='r':
+                X[cls-1][1]=img
             else:
-                #different source, make new class int
-                y.append(len(df)+i_cls)
-                i_cls+=1
-            X.append(img)
-    return np.array(X), np.array(y)
+                raise ValueError(f'unknown questioned/ref: {questioned_red}')
+    return X, y, ids
 
 
-def combine_data(dataset_callables, resolution) -> Tuple[np.ndarray, np.ndarray]:
+def combine_unpaired_data(dataset_callables, resolution) -> Tuple[np.ndarray, np.ndarray]:
     """
     gets the X and y for all data in the callables, and returns the total set
     """
@@ -71,34 +78,51 @@ def combine_data(dataset_callables, resolution) -> Tuple[np.ndarray, np.ndarray]
         X = np.append(X, this_X)
     return X, y.astype(int)
 
-def get_data(dataset_callable, resolution=(100, 100),
-             train_calibration_same_data=True, fraction_calibration=None, fraction_test=0.2) -> Images:
+def combine_pairs(dataset_callables, resolution) -> Tuple[List,List, List]:
     """
-    Takes a function that returns X, y, with X images and y identities. Returns a dataset with all data
+    gets the pairs for all data in the callables, and returns the total set
+    """
+    X = []
+    y = []
+    ids=[]
+    for dataset_callable in dataset_callables:
+        this_X, this_y, this_ids = dataset_callable(resolution)
+        y +=this_y
+        X +=this_X
+        ids = ids + this_ids
+    assert len(ids) == len(set(ids))
+    if X:
+        assert len(X[0]) == 2
+    return X, y, ids
+
+def get_data(dataset_callable, resolution=(100, 100), fraction_test=0.2) -> ImagePairs:
+    """
+    Takes a function that returns X, y, with X either images or pairs of images and y identities. Returns a dataset with all data
     split into the right datasets
 
 
-    fraction_calibration is the fraction of train data that is used for calibration,
-        so fraction_calibration + fraction_test can be > 1
-
     """
 
-    X, y = dataset_callable(resolution=resolution)
+    X, y, ids = dataset_callable(resolution=resolution)
     # TODO for now we will let the model resize, in future we should enforce the right resolution to come from preprocessing
     # assert this_X.shape[1:3] == resolution, f'resolution should be {resolution}, not {this_X.shape[:2]}'
     assert len(X) == len(y), f'y and X should have same length'
 
 
-    # split on identities, not on samples (so same person does not appear in both test and train
-    X_train, X_test, y_train, y_test = split_data_on_groups(X, fraction_test, y)
+    if len(X[0])==2:
+        # these are pairs
+        X_calibrate, X_test, y_calibrate, y_test, ids_calibrate, ids_test = train_test_split(X, y, ids, test_size=fraction_test, stratify=y)
 
-    if train_calibration_same_data:
-        X_calibrate = X_train
-        y_calibrate = y_train
     else:
-        X_train, X_calibrate, y_train, y_calibrate = split_data_on_groups(X_train, fraction_calibration, y_train)
-    return Images(y_train=y_train, X_train=X_train, y_test=y_test, X_test=X_test, y_calibrate=y_calibrate,
-                  X_calibrate=X_calibrate)
+        # split on identities, not on samples (so same person does not appear in both test and train
+        X_calibrate, X_test, y_calibrate, y_test = split_data_on_groups(X, fraction_test, y)
+
+        # make pairs per set
+        X_test, y_test, ids_test = make_pairs(X_test,y_test)
+        X_calibrate, y_calibrate, ids_calibrate = make_pairs(X_calibrate,y_calibrate)
+        assert len(ids_test+ids_calibrate) == len(set(ids_test+ids_calibrate))
+    return ImagePairs(y_test=y_test, X_test=X_test, ids_test=ids_test, y_calibrate=y_calibrate,
+                  X_calibrate=X_calibrate, ids_calibrate=ids_calibrate)
 
 
 def split_data_on_groups(X, fraction2, y):
@@ -111,7 +135,7 @@ def split_data_on_groups(X, fraction2, y):
     return X1, X2, y1, y2
 
 
-def make_pairs(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def make_pairs(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, List]:
     """
     takes images X and classes y, and returns a paired data and a vector indicating same or different source
 
@@ -125,6 +149,7 @@ def make_pairs(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     person_ids = np.unique(y)
     pairs = []
+    ids=[]
     same_different_source = []
     for i_person_id, person_id in enumerate(person_ids):
         idx = y == person_id
@@ -136,11 +161,13 @@ def make_pairs(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
                 # make same-person pairs by pairing all images of the person
                 pairs.append((imgs[i], imgs[j]))
                 same_different_source.append(1)
+                ids.append(hash((imgs[i], imgs[j])))
             if i_person_id > 0:
                 # make different-person pairs by pairing person i with person i-1
                 for j in range(len(imgs_prev)):
                     pairs.append((imgs[i], imgs_prev[j]))
                     same_different_source.append(0)
+                    ids.append(hash((imgs[i], imgs[j])))
 
         imgs_prev = imgs
-    return np.array(pairs), np.array(same_different_source)
+    return np.array(pairs), np.array(same_different_source), ids

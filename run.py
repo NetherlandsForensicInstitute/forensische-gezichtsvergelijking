@@ -8,7 +8,7 @@ from lir import CalibratedScorer
 from lir.util import to_odds
 from tqdm import tqdm
 
-from lr_face.data_providers import get_data, make_pairs, Images
+from lr_face.data_providers import get_data, make_pairs, ImagePairs
 from lr_face.evaluators import evaluate
 from lr_face.experiment_settings import ExperimentSettings
 from lr_face.utils import write_output, parser_setup, process_dataframe
@@ -42,6 +42,7 @@ def run(args):
                             fraction_test=params_dict['fraction_test'],
             )
         data_provider = dataproviders[(params_dict['dataset_callable'], params_dict['fraction_test'])]
+
         if row < n_experiments / TIMES:
             # for the first round, make plots
             make_plots_and_save_as = os.path.join(plots_dir,
@@ -58,7 +59,7 @@ def run(args):
     write_output(experiments_setup.data_frame, experiment_name)
 
 
-def experiment(params, data_provider: Images =None, make_plots_and_save_as=None):
+def experiment(params, data_provider: ImagePairs =None, make_plots_and_save_as=None):
     """
     Function to run a single experiment with pipeline:
     DataProvider -> fit model on train data -> fit calibrator on calibrator data -> evaluate test set
@@ -67,9 +68,8 @@ def experiment(params, data_provider: Images =None, make_plots_and_save_as=None)
     lr_system = CalibratedScorer(params['scorers'], params['calibrators'])
     # TODO training will require a different data structure
     # lr_system.scorer.fit(data_provider.X_train, data_provider.y_train)
-    X_calib_pairs, y_calib_pairs = make_pairs(data_provider.X_calibrate, data_provider.y_calibrate)
-    p = lr_system.scorer.predict_proba(X_calib_pairs)
-    lr_system.calibrator.fit(p[:, 1], y_calib_pairs)
+    p = lr_system.scorer.predict_proba(data_provider.X_calibrate, data_provider.ids_calibrate)
+    lr_system.calibrator.fit(p[:, 1], data_provider.y_calibrate)
 
     return evaluate(lr_system, data_provider, make_plots_and_save_as)
 
