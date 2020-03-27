@@ -64,12 +64,13 @@ st.dataframe(df[cols])
 
 st.header('Select scorer, calibrator and dataset:')
 # show dataframe, select calibrator, score and data
-calibrators = st.multiselect("Calibrator", set_calibrators, default=None)
-scorers = st.multiselect("Scorer", set_scorers, default=None)
-data = st.multiselect("Data", set_data, default=None)
+calibrators = st.multiselect("Calibrator", set_calibrators, default=set_calibrators)
+scorers = st.multiselect("Scorer", set_scorers, default=set_scorers)
+data = st.multiselect("Data", set_data, default=set_data)
 
-st.dataframe(df.loc[df['calibrators'].isin(calibrators)][df['scorers'].isin(scorers)]
-             [df['dataset_callable'].isin(data)][cols])
+st.dataframe(df.loc[df['calibrators'].isin(calibrators) &
+                    df['scorers'].isin(scorers) &
+                    df['dataset_callable'].isin(data)][cols])
 
 
 if research_question == 'train_calibrate_same_data':
