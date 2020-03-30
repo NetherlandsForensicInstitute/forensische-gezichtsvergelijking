@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 
 from scipy import spatial
 from lr_face.utils import resize_and_normalize
@@ -43,3 +44,27 @@ class Deepface_Lib_Model:
             scores.append([score, 1-score])
 
         return np.asarray(scores)
+    
+class InsightFace_Model:
+    """
+    InsightFace model. Model name : FaceModel
+    
+    """
+
+    def __init__(self, model):
+        self.model = model
+
+    def predict_proba(self, X):
+        scores = []
+        for pair in X:
+            img1 = cv2.imread(pair[0])
+            img2 = cv2.imread(pair[1])
+            img1_adapted = self.model.get_input(img1)
+            img2_adapted = self.model.get_input(img2)
+            img1_representation = self.model.get_feature(img1_adapted)
+            img2_representation = self.model.get_feature(img2_adapted)
+            score_cos = np.dot(img1_representation, img2_representation.T)
+            score_eucl =np.sum(np.square(img1_representation-img2_representation))
+            scores.append([score_cos, score_eucl])
+
+        return np.asarray(scores) 
