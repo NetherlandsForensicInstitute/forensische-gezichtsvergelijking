@@ -6,8 +6,13 @@ from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrato
 
 
 from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
-from lr_face.models import DummyModel, Deepface_Lib_Model
+from lr_face.models import DummyModel, Deepface_Lib_Model, InsightFace_Model #Classes
 from lr_face.data_providers import test_data, enfsi_data, combine_data
+
+from insightface.deploy import face_model_args
+
+
+
 
 
 """How often to repeat all experiments"""
@@ -51,7 +56,7 @@ PARAMS = {
 
 
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['test'],
     'all': {
         'test': {
             'dataset_callable': [test_data],
@@ -73,13 +78,14 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated
 """
 SCORERS = {
-    'current_set_up': ['openface', 'vggface', 'dummy'],
+    'current_set_up': ['dummy'],
     'all': {
         'dummy': DummyModel(),
         'openface': Deepface_Lib_Model(model=OpenFace.loadModel()),
         'facenet': Deepface_Lib_Model(model=Facenet.loadModel()),
         'fbdeepface': Deepface_Lib_Model(model=FbDeepFace.loadModel()),
-        'vggface': Deepface_Lib_Model(model=VGGFace.loadModel())
+        'vggface': Deepface_Lib_Model(model=VGGFace.loadModel()), #anadir coma luego
+        'insightface': InsightFace_Model(model=face_model_args.loadModel())
     }
 }
 
