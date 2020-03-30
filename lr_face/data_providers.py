@@ -1,5 +1,7 @@
 import csv
 from dataclasses import dataclass
+from typing_extensions import Protocol
+
 from typing import Tuple, List
 import os
 
@@ -18,15 +20,47 @@ class ImagePairs:
     X_test: np.ndarray
     ids_test: List
 
+@dataclass
+class PairsWithIds:
+    pairs: List
+    is_same_source: List
+    pair_ids: List[str]
 
-def test_data(resolution=(100,100)):
+
+class PairProvider(Protocol):
+    def __call__(self, *args, **kwargs) -> PairsWithIds:
+        pass
+
+
+@dataclass
+class ImageWithIds:
+    images: List
+    person_ids: List
+    image_ids: List[str]
+
+
+class ImageProvider(Protocol):
+    def __call__(self, resolution: Tuple[int, int], *args, **kwargs) -> ImageWithIds:
+        pass
+
+@dataclass
+class DataFunctions:
+    pair_provider: PairProvider
+    image_provider: ImageProvider
+
+
+def test_data(resolution=(100,100)) -> ImageWithIds:
     """
     return some random numbers in the right structure to test the pipeline with
     """
-    return np.random.random([11, resolution[0], resolution[1], 3]), np.array([1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5])
+    n=11
+    return ImageWithIds(
+        images=list(np.random.random([n, resolution[0], resolution[1], 3])),
+        person_ids = [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5],
+        image_ids=list(range(n)))
 
 
-def enfsi_data(resolution, year) -> Tuple[List,List, List]:
+def enfsi_data(resolution, year) -> PairsWithIds:
     folder = os.path.join('resources', 'enfsi', str(year))
     files = os.listdir(folder)
     n_pairs = (len(files)-1)//2
@@ -61,83 +95,109 @@ def enfsi_data(resolution, year) -> Tuple[List,List, List]:
                 X[cls-1][1]=img
             else:
                 raise ValueError(f'unknown questioned/ref: {questioned_red}')
-    return X, y, ids
+    return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
 
 
-def combine_unpaired_data(dataset_callables, resolution) -> Tuple[np.ndarray, np.ndarray]:
+def combine_unpaired_data(image_providers: List[ImageProvider], resolution) -> ImageWithIds:
     """
     gets the X and y for all data in the callables, and returns the total set
     """
-    X = np.array([])
+    X = []
     y = np.array([])
+    ids = []
     max_class = 0
-    for dataset_callable in dataset_callables:
-        this_X, this_y = dataset_callable(resolution)
+    for dataset_callable in image_providers:
+        this_X, this_y, this_ids = dataset_callable(resolution)
         y = np.append(y, this_y+max_class)
         max_class = max(y)
-        X = np.append(X, this_X)
-    return X, y.astype(int)
+        X +=this_X
+        ids+=this_ids
+    return ImageWithIds(images=X, person_ids=list(y.astype(int)), image_ids=ids)
 
-def combine_pairs(dataset_callables, resolution) -> Tuple[List,List, List]:
+def combine_paired_data(pair_providers: List[PairProvider], resolution) -> PairsWithIds:
     """
-    gets the pairs for all data in the callables, and returns the total set
+    gets the images and pairs for all data in the callables, constructs pai, and the images for all and returns the total set
     """
     X = []
     y = []
     ids=[]
-    for dataset_callable in dataset_callables:
-        this_X, this_y, this_ids = dataset_callable(resolution)
-        y +=this_y
-        X +=this_X
-        ids = ids + this_ids
+    for dataset_callable in pair_providers:
+        pairs = dataset_callable(resolution)
+        assert type(pairs) == PairsWithIds
+        y +=pairs.is_same_source
+        X +=pairs.pairs
+        ids = ids + pairs.pair_ids
+    # we are assuming the ids are already unique - let's check
     assert len(ids) == len(set(ids))
     if X:
         assert len(X[0]) == 2
-    return X, y, ids
+    return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
 
-def get_data(dataset_callable, resolution=(100, 100), fraction_test=0.2) -> ImagePairs:
+def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2, **kwargs) -> ImagePairs:
     """
     Takes a function that returns X, y, with X either images or pairs of images and y identities. Returns a dataset with all data
     split into the right datasets
 
 
     """
+    X_calibrate = []
+    y_calibrate = []
+    ids_calibrate = []
 
-    X, y, ids = dataset_callable(resolution=resolution)
-    # TODO for now we will let the model resize, in future we should enforce the right resolution to come from preprocessing
-    # assert this_X.shape[1:3] == resolution, f'resolution should be {resolution}, not {this_X.shape[:2]}'
-    assert len(X) == len(y), f'y and X should have same length'
+    X_test = []
+    y_test = []
+    ids_test = []
 
+    if datasets.image_provider:
+        images=datasets.image_provider(resolution)
+        X, y, ids = images.images, images.person_ids, images.image_ids
+        # TODO for now we will let the model resize, in future we should enforce the right resolution to come from preprocessing
+        # assert this_X.shape[1:3] == resolution, f'resolution should be {resolution}, not {this_X.shape[:2]}'
+        assert len(X) == len(y), f'y and X should have same length'
 
-    if len(X[0])==2:
-        # these are pairs
-        X_calibrate, X_test, y_calibrate, y_test, ids_calibrate, ids_test = train_test_split(X, y, ids, test_size=fraction_test, stratify=y)
-
-    else:
         # split on identities, not on samples (so same person does not appear in both test and train
-        X_calibrate, X_test, y_calibrate, y_test = split_data_on_groups(X, fraction_test, y)
+        images_calibrate, images_test = split_data_on_groups(X, fraction_test, y, ids)
+        assert len(images_calibrate.image_ids + images_test.image_ids) == len(set(images_calibrate.image_ids + images_test.image_ids))
 
         # make pairs per set
-        X_test, y_test, ids_test = make_pairs(X_test,y_test)
-        X_calibrate, y_calibrate, ids_calibrate = make_pairs(X_calibrate,y_calibrate)
-        assert len(ids_test+ids_calibrate) == len(set(ids_test+ids_calibrate))
+        pairs_test = make_pairs(images_test)
+        pairs_calibrate = make_pairs(images_calibrate)
+
+        X_calibrate+=pairs_calibrate.pairs
+        y_calibrate+=pairs_calibrate.is_same_source
+        ids_calibrate+=pairs_calibrate.pair_ids
+
+        X_test+=pairs_test.pairs
+        y_test+=pairs_test.is_same_source
+        ids_test+=pairs_test.pair_ids
+
+    if datasets.pair_provider:
+        pairs = datasets.pair_provider(resolution=resolution)
+        res = \
+            train_test_split(pairs.pairs, pairs.is_same_source, pairs.pair_ids, test_size=fraction_test, stratify=pairs.is_same_source)
+
+        X_calibrate += res[0]
+        y_calibrate += res[2]
+        ids_calibrate += res[4]
+
+        X_test += res[1]
+        y_test += res[3]
+        ids_test += res[5]
+
     return ImagePairs(y_test=y_test, X_test=X_test, ids_test=ids_test, y_calibrate=y_calibrate,
-                  X_calibrate=X_calibrate, ids_calibrate=ids_calibrate)
+                      X_calibrate=X_calibrate, ids_calibrate=ids_calibrate)
 
 
-def split_data_on_groups(X, fraction2, y):
+def split_data_on_groups(X, fraction2, y, ids) -> Tuple[ImageWithIds]:
     gss = GroupShuffleSplit(n_splits=1, test_size=fraction2, random_state=42)
     for train_idx, test_idx in gss.split(X, y, y):
-        X1 = X[train_idx]
-        y1 = y[train_idx]
-        X2 = X[test_idx]
-        y2 = y[test_idx]
-    return X1, X2, y1, y2
+        return (ImageWithIds(*zip(*[(X[t], y[t], ids[t]) for t in train_idx])),
+                ImageWithIds(*zip(*[(X[t], y[t], ids[t]) for t in test_idx])))
 
 
-def make_pairs(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, List]:
+def make_pairs(data: ImageWithIds) -> PairsWithIds:
     """
-    takes images X and classes y, and returns a paired data and a vector indicating same or different source
+    takes images and returns pairs
 
     Example
     [x1, .., x9], [1,2,3,4,5,6,7,8,9]
@@ -147,27 +207,29 @@ def make_pairs(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, Li
     Currently makes different sources only by pairing class n with n+1 rather than taking all ~N^2 possible pairs,
     to keep data sets limited.
     """
-    person_ids = np.unique(y)
+    person_ids = np.unique(data.person_ids)
     pairs = []
     ids=[]
     same_different_source = []
     for i_person_id, person_id in enumerate(person_ids):
-        idx = y == person_id
+        idx = data.person_ids == person_id
         nidx = sum(idx)
         # all images of this person
-        imgs = X[idx]
+        imgs = np.array(data.images)[idx]
+        img_ids = np.array(data.image_ids)[idx]
         for i in range(nidx):
             for j in range(i + 1, nidx):
                 # make same-person pairs by pairing all images of the person
                 pairs.append((imgs[i], imgs[j]))
                 same_different_source.append(1)
-                ids.append(hash((imgs[i], imgs[j])))
+                ids.append(tuple(sorted([img_ids[i], img_ids[j]])))
             if i_person_id > 0:
                 # make different-person pairs by pairing person i with person i-1
                 for j in range(len(imgs_prev)):
                     pairs.append((imgs[i], imgs_prev[j]))
                     same_different_source.append(0)
-                    ids.append(hash((imgs[i], imgs[j])))
+                    ids.append(tuple(sorted([img_ids[i], img_ids_prev[j]])))
 
         imgs_prev = imgs
-    return np.array(pairs), np.array(same_different_source), ids
+        img_ids_prev=img_ids
+    return PairsWithIds(pairs=pairs, is_same_source=same_different_source, pair_ids=ids)

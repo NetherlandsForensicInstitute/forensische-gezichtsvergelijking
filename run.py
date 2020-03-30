@@ -36,12 +36,10 @@ def run(args):
     n_experiments = experiments_setup.data_frame.shape[0]
     for row in tqdm(range(0, n_experiments)):
         params_dict = experiments_setup.data_frame[parameters_used].iloc[row].to_dict()
-        if (params_dict['dataset_callable'], params_dict['fraction_test']) not in dataproviders:
-            dataproviders[(params_dict['dataset_callable'], params_dict['fraction_test'])] = get_data(
-                dataset_callable=params_dict['dataset_callable'],
-                            fraction_test=params_dict['fraction_test'],
-            )
-        data_provider = dataproviders[(params_dict['dataset_callable'], params_dict['fraction_test'])]
+        data_params = (str(params_dict['datasets']), params_dict['fraction_test'])
+        if data_params not in dataproviders:
+            dataproviders[data_params] = get_data(**params_dict)
+        data_provider = dataproviders[data_params]
 
         if row < n_experiments / TIMES:
             # for the first round, make plots

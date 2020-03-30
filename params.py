@@ -7,7 +7,7 @@ from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrato
 
 from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
 from lr_face.models import DummyModel, Deepface_Lib_Model
-from lr_face.data_providers import test_data, enfsi_data, combine_pairs
+from lr_face.data_providers import test_data, enfsi_data, combine_paired_data, DataFunctions
 
 
 """How often to repeat all experiments"""
@@ -54,16 +54,16 @@ DATA = {
     'current_set_up': ['enfsi'],
     'all': {
         'test': {
-            'dataset_callable': [test_data],
+            'datasets': [DataFunctions(image_provider=test_data, pair_provider=None)],
             'fraction_test': .5,
         },
         'enfsi': {
-            #TODO currently every element becomes a new experiment, we probably want functionality to combine datasets
-            'dataset_callable': partial(combine_pairs, dataset_callables=[partial(enfsi_data, year=2011),
+            'datasets': [DataFunctions(image_provider=None,
+                                       pair_provider=partial(combine_paired_data, pair_providers=[partial(enfsi_data, year=2011),
                                  partial(enfsi_data, year=2012),
                                  partial(enfsi_data, year=2013),
                                  partial(enfsi_data, year=2017)
-                                                                          ]),
+                                                                          ]))],
             'fraction_test': .2,
         }
     }
