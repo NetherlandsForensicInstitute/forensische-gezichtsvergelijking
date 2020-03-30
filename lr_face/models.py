@@ -57,10 +57,12 @@ class InsightFace_Model:
     def predict_proba(self, X):
         scores = []
         for pair in X:
-            img1 = cv2.imread(pair[0])
-            img2 = cv2.imread(pair[1])
-            img1_adapted = self.model.get_input(img1)
-            img2_adapted = self.model.get_input(img2)
+            #img1 = cv2.imread(pair[0])
+            #img2 = cv2.imread(pair[1])
+            #img1 = resize_and_normalize(pair[0], self.model.input_shape[1:3])
+            #img2 = resize_and_normalize(pair[1], self.model.input_shape[1:3])
+            img1_adapted = self.model.get_input(np.array(pair[0]))
+            img2_adapted = self.model.get_input(np.array(pair[1]))
             img1_representation = self.model.get_feature(img1_adapted)
             img2_representation = self.model.get_feature(img2_adapted)
             score_cos = np.dot(img1_representation, img2_representation.T)
