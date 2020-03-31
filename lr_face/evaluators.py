@@ -35,7 +35,7 @@ def plot_tippett(predicted_log_lrs, y, savefig=None, show=None):
     perc1 = (sum(i > xplot for i in lr_1) / len(lr_1)) * 100
 
     plt.figure(figsize=(10, 10), dpi=100)
-    plt.plot(xplot, perc0, color='r', label='LRs given $\mathregular{H_0}$')
+    plt.plot(xplot, perc0, color='r', label='LRs given $\mathregular{H_2}$')
     plt.plot(xplot, perc1, color='b', label='LRs given $\mathregular{H_1}$')
     plt.axvline(x=0, color='k', linestyle='--')
     plt.xlabel('Log likelihood ratio')

@@ -46,7 +46,7 @@ latest_csv = sorted([f for f in (os.listdir('output')) if f.endswith('.csv')])[-
 df = get_csv(latest_csv)
 set_calibrators = list(set(df['calibrators']))
 set_scorers = list(set(df['scorers']))
-set_data = list(set(df['dataset_callable']))
+set_data = list(set(df['datasets']))
 
 
 st.header('General information')
@@ -58,7 +58,7 @@ st.markdown(f'calibrators: {set_calibrators}')
 
 
 # show dataframe, option to select columns
-defaultcols = ['index', 'scorers', 'calibrators', 'dataset_callable', 'cllr', 'auc', 'accuracy']
+defaultcols = ['index', 'scorers', 'calibrators', 'datasets', 'cllr', 'auc', 'accuracy']
 cols = st.multiselect("Select columns", df.columns.tolist(), default=defaultcols)
 st.dataframe(df[cols])
 
@@ -71,7 +71,7 @@ data = st.multiselect("Data", set_data, default=set_data)
 
 st.dataframe(df.loc[df['calibrators'].isin(calibrators) &
                     df['scorers'].isin(scorers) &
-                    df['dataset_callable'].isin(data)][cols])
+                    df['datasets'].isin(data)][cols])
 
 
 if research_question == 'train_calibrate_same_data':
@@ -79,23 +79,13 @@ if research_question == 'train_calibrate_same_data':
     st.header('Boxplot of metrics for each combination of dataset, scorer and calibrator:')
     for metric in ('cllr', 'auc', 'accuracy'):
         st.altair_chart(alt.Chart(df).mark_boxplot().encode(
-            x='dataset_callable',
+            x='datasets',
             y=alt.Y(metric,
                     scale=alt.Scale(domain=[0, 1.2])
                     ),
             row=alt.Row('calibrator_name', header=alt.Header(labelAngle=-90)),
             column=alt.Column('scorers')
         ).interactive())
-
-    # st.altair_chart(alt.Chart(df).mark_point().encode(
-    #     x=alt.X(alt.repeat("column"), type='quantitative', scale=alt.Scale(zero=False), ),
-    #     y=alt.Y(alt.repeat("row"), type='quantitative'),
-    #     color='train_calibration_same_data',
-    #     tooltip=list(df.columns),
-    # ).repeat(
-    #     row=['cllr'],
-    #     column=['accuracy', 'auc']
-    # ).interactive())
 
 
 st.header('Calibration and distribution plots')
@@ -120,10 +110,12 @@ n_plot_types = len(plot_types)
 n_plot_nrs = len(list_plots)
 
 for i in range(n_plot_nrs):
-    start = 3*i
-    stop = 3*(i+1)
+    start = n_plot_types*i
+    stop = n_plot_types*(i+1)
     # TODO: change width variable, width could be dependent on screen resoluation
-    st.image([f'./output/{output_plots}/{plt}' for plt in list_plots[start:stop]], width=400)
+    # TODO: improve caption
+    st.image([f'./output/{output_plots}/{plt}' for plt in list_plots[start:stop]],
+             width=400, caption=[plt[:-4] for plt in list_plots[start:stop]])
 
 
 btn = st.button("Click me!")
