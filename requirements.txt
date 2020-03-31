@@ -10,3 +10,4 @@ scipy
 keras
 opencv-python
 typing-extensions
+altair
