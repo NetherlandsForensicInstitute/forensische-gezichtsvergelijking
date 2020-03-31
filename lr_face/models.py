@@ -8,7 +8,7 @@ from lr_face.utils import resize_and_normalize
 
 class DummyModel:
     """
-    dummy model that return random scores
+    Dummy model that returns random scores.
     """
 
     def __init__(self, resolution=(100, 100)):
@@ -37,14 +37,14 @@ class Deepface_Lib_Model:
         self.cache = {}
 
     def predict_proba(self, X, ids):
-        assert len(X)==len(ids)
+        assert len(X) == len(ids)
         scores = []
         for id, pair in zip(ids, X):
             if id in self.cache:
                 score = self.cache[id]
             else:
                 score = self.score_for_pair(pair)
-                self.cache[id]=score
+                self.cache[id] = score
             scores.append([score, 1-score])
 
         return np.asarray(scores)
