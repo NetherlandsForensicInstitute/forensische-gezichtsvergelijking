@@ -6,6 +6,7 @@ streamlit run run_data_exploration.py
 """
 
 import os
+import re
 
 import altair as alt
 import numpy as np
@@ -96,3 +97,35 @@ if research_question == 'train_calibrate_same_data':
     #     column=['accuracy', 'auc']
     # ).interactive())
 
+
+st.header('Calibration and distribution plots')
+# get all images
+output_plots = latest_csv[0:19]
+list_plots = sorted([f for f in (os.listdir(f'./output/{output_plots}/')) if f.endswith('.png')])
+
+plot_types = []
+for i, plot in enumerate(list_plots):
+    x = re.search(r"_", plot)
+    plot_nr = plot[0:x.start()]
+    if i == 0:
+        first_plot_nr = plot_nr
+    if plot_nr == first_plot_nr:
+        y = re.search(r"\s(.*)", plot)
+        plot_type = plot[y.start()+1:-4]
+        plot_types += [plot_type]
+    else:
+        break
+
+n_plot_types = len(plot_types)
+n_plot_nrs = len(list_plots)
+
+for i in range(n_plot_nrs):
+    start = 3*i
+    stop = 3*(i+1)
+    # TODO: change width variable, width could be dependent on screen resoluation
+    st.image([f'./output/{output_plots}/{plt}' for plt in list_plots[start:stop]], width=400)
+
+
+btn = st.button("Click me!")
+if btn:
+    st.balloons()
