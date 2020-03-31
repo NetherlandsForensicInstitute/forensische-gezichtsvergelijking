@@ -94,7 +94,7 @@ def enfsi_data(resolution, year) -> PairsWithIds:
             elif questioned_ref=='r':
                 X[cls-1][1]=img
             else:
-                raise ValueError(f'unknown questioned/ref: {questioned_red}')
+                raise ValueError(f'unknown questioned/ref: {questioned_ref}')
     return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
 
 
@@ -135,9 +135,8 @@ def combine_paired_data(pair_providers: List[PairProvider], resolution) -> Pairs
 
 def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2, **kwargs) -> ImagePairs:
     """
-    Takes a function that returns X, y, with X either images or pairs of images and y identities. Returns a dataset with all data
-    split into the right datasets
-
+    Takes a function that can returns both pairs of images or unpaired images (with person identities).
+    Returns a dataset with all data combined into pairs and split into the right datasets
 
     """
     X_calibrate = []
