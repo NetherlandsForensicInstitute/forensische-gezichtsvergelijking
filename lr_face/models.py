@@ -23,6 +23,9 @@ class DummyModel:
         assert len(X[0]) == 2, f'should get n pairs, but second dimension is {X.shape[1]}'
         return np.random.random((len(X), 2))
 
+    def __str__(self):
+        return 'Dummy'
+
 
 class Deepface_Lib_Model:
     """
