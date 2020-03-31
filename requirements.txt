@@ -1,7 +1,7 @@
 sklearn
 numpy
 streamlit
-lir
+lir>=0.0.3
 tqdm
 confidence
 pandas
@@ -9,3 +9,4 @@ matplotlib
 scipy
 keras
 opencv-python
+typing-extensions

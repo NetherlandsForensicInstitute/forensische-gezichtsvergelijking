@@ -32,7 +32,7 @@ if research_question == 'train_calibrate_same_data':
     for metric in ('cllr', 'auc', 'accuracy'):
 
         st.altair_chart(alt.Chart(df).mark_boxplot().encode(
-            x='dataset_callable',
+            x='scorers',
             y=alt.Y(metric,
                     scale=alt.Scale(domain=[0, 1.2])
                     ),
