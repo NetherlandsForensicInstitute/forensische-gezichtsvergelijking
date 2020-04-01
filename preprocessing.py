@@ -1,6 +1,9 @@
 import argparse
 import os
 from glob import glob
+from PIL import Image
+from matplotlib import pyplot as plt
+
 
 from deepface.deepface.commons import functions
 
@@ -31,6 +34,10 @@ def run(input_folder, output_folder, dimensions, recursive):
     for path in paths:
         try:
             face = functions.detectFace(path, target_size=tuple(dimensions))
+            output_path = os.path.join(output_folder, path)
+
+            #save images to outputpath here.
+
         except ValueError as e:
             print(e)
             pass
