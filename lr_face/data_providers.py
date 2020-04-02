@@ -131,7 +131,7 @@ def combine_paired_data(pair_providers: List[PairProvider], resolution) -> Pairs
         y += pairs.is_same_source
         X += pairs.pairs
         ids = ids + pairs.pair_ids
-    # TODO: we are assuming the ids are already unique - let's check
+    # we are assuming the ids are already unique - let's check
     assert len(ids) == len(set(ids))
     if X:
         assert len(X[0]) == 2
