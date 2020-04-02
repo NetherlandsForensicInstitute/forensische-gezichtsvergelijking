@@ -56,3 +56,49 @@ class Deepface_Lib_Model:
         img2_representation = self.model.predict(img2)[0, :]
         score = spatial.distance.cosine(img1_representation, img2_representation)
         return score
+    
+
+
+class InsightFace_Model:
+    """
+    InsightFace model. Model name : FaceModel
+    
+    """
+
+    def __init__(self, model):
+        self.model = model
+        self.cache = {}
+
+    def predict_proba(self, X, ids):
+        assert len(X)==len(ids)
+        scores = []
+        for id, pair in zip(ids, X):
+            if id in self.cache:
+                score = self.cache[id]
+            else:
+                score = self.score_for_pair(pair)
+                self.cache[id]=score
+            scores.append(score)         
+        return np.asarray(scores) 
+            
+        
+    def score_for_pair(self,pair):
+        img1_adapted = self.model.get_input(np.array(pair[0]))
+        if img1_adapted is None:
+            #return [np.nan, np.nan]
+            return [-1, 2]
+        
+        img2_adapted = self.model.get_input(np.array(pair[1]))
+        if img1_adapted is None:
+            #return [np.nan, np.nan]
+            return [-1, 2]
+        
+        img1_representation = self.model.get_feature(img1_adapted)
+        img2_representation = self.model.get_feature(img2_adapted)
+        score_cos = np.dot(img1_representation, img2_representation.T)
+        score_eucl =np.sum(np.square(img1_representation-img2_representation))
+        return [score_cos, score_eucl]
+        
+        
+
+        
