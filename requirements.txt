@@ -11,3 +11,6 @@ keras
 opencv-python
 typing-extensions
 altair
+mxnet-cu90
+easydict
+scikit-image
