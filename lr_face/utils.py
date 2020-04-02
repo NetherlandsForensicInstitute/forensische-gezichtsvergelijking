@@ -17,7 +17,7 @@ def write_output(df, experiment_name):
 
 def parser_setup():
     """
-    Function that sets the different CL flags that can be used to run the project
+    Function that sets the different CL flags that can be used to run the project.
 
     :return: parser (ArgumentParser object)
     """
@@ -176,7 +176,7 @@ def concat_columns(df, column_names, output_column_name, separator='-'):
 
 
 def resize_and_normalize(img, target_size):
-        right_size_img  = cv2.resize(img, target_size)
+        right_size_img = cv2.resize(img, target_size)
 
         img_pixels = image.img_to_array(right_size_img)
         img_pixels = np.expand_dims(img_pixels, axis=0)

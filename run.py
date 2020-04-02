@@ -31,7 +31,7 @@ def run(args):
         os.makedirs(plots_dir)
 
     # caching for data
-    dataproviders= {}
+    dataproviders = {}
 
     n_experiments = experiments_setup.data_frame.shape[0]
     for row in tqdm(range(0, n_experiments)):
@@ -57,7 +57,7 @@ def run(args):
     write_output(experiments_setup.data_frame, experiment_name)
 
 
-def experiment(params, data_provider: ImagePairs =None, make_plots_and_save_as=None):
+def experiment(params, data_provider: ImagePairs = None, make_plots_and_save_as=None):
     """
     Function to run a single experiment with pipeline:
     DataProvider -> fit model on train data -> fit calibrator on calibrator data -> evaluate test set

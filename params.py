@@ -15,8 +15,8 @@ from lr_face.data_providers import test_data, enfsi_data, combine_paired_data, D
 TIMES = 10
 
 """
-Parameters to be used in an experiment, different/new sets can be added under 'all'
-For the input of an experiment the 'current_set_up' list can be updated
+Parameters to be used in an experiment, different/new sets can be added under 'all'.
+For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
 
@@ -59,10 +59,11 @@ DATA = {
         },
         'enfsi': {
             'datasets': [DataFunctions(image_provider=None,
-                                       pair_provider=partial(combine_paired_data, pair_providers=[partial(enfsi_data, year=2011),
-                                 partial(enfsi_data, year=2012),
-                                 partial(enfsi_data, year=2013),
-                                 partial(enfsi_data, year=2017)
+                                       pair_provider=partial(combine_paired_data, pair_providers=[
+                                           partial(enfsi_data, year=2011),
+                                           partial(enfsi_data, year=2012),
+                                           partial(enfsi_data, year=2013),
+                                           partial(enfsi_data, year=2017),
                                                                           ]))],
             'fraction_test': .2,
         }
@@ -71,10 +72,10 @@ DATA = {
 
 """
 New models/scorers can be added to 'all'.
-For the input of an experiment the 'current_set_up' list can be updated
+For the input of an experiment the 'current_set_up' list can be updated.
 """
 SCORERS = {
-    'current_set_up': ['openface', 'facenet', 'vggface','fbdeepface','dummy'],
+    'current_set_up': ['openface', 'facenet', 'vggface', 'fbdeepface', 'dummy'],
     'all': {
         'dummy': DummyModel(),
         'openface': Deepface_Lib_Model(model=OpenFace.loadModel()),
@@ -86,7 +87,7 @@ SCORERS = {
 
 """ 
 New calibrators can be added to 'all'.
-For the input of an experiment the 'current_set_up' list can be updated
+For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
     'current_set_up': ['KDE'],

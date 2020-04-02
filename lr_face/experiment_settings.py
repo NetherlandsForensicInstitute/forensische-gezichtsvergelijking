@@ -5,7 +5,7 @@ from params import *
 
 class ExperimentSettings:
     """
-    Object setting all scorers, calibrators and parameters for a set of experiment runs
+    Object setting all scorers, calibrators and parameters for a set of experiment runs.
     """
 
     def __init__(self, args):
@@ -23,7 +23,6 @@ class ExperimentSettings:
         """
         Function to return the scorers and calibrators to be used based on command line input or the specified
         current_set_up's
-        :param run_all: if True returns list of all possibilities in dictionary
         :param run_part: if not None returns listed possibilities in 'run_part' from dictionary
         :param dictionary: dictionary to get data from
         :return: list of objects/values from dictionary
@@ -36,7 +35,7 @@ class ExperimentSettings:
     def __set_params(self, params_cl):
         """
         Filters all parameters in PARAMS for the parameter sets listed in current_set_up or in the list that's passed
-        in the command line (params_cl)
+        in the command line (params_cl).
 
         :param params_cl: Contains the parameter set list passed to the command line if any, otherwise None
         """
@@ -61,8 +60,8 @@ class ExperimentSettings:
         """
         Returns a Pandas DataFrame of all possible combinations of the parameters in dictionary (incl. scorers
         and calibrators) to input in an experiment.
-        Column names are taken from the keys specified in params_dict
-        The total set is repeated repeat_n_times
+        Column names are taken from the keys specified in params_dict.
+        The total set is repeated repeat_n_times.
 
         :return: DataFrame
         """
@@ -89,7 +88,7 @@ class ExperimentSettings:
         Returns a Pandas DataFrame of all possible combinations of the parameters in dictionary.
         Column names are taken from the keys specified in params_dict.
 
-        Note: Exceptions are built in for repeating/tiling tuple type variables
+        Note: Exceptions are built in for repeating/tiling tuple type variables.
 
         :param: dictionary: Dictionary containing all parameters to be used
         :return: DataFrame
