@@ -43,7 +43,6 @@ def run(input_folder, output_folder, dimensions, recursive):
             pass
 
 
-
 if __name__ == '__main__':
     pars = parser()
     args = pars.parse_args()
