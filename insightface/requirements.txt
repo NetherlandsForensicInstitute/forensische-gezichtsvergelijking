@@ -1,1 +1,3 @@
 mxnet-cu90
+easydict
+scikit-image
