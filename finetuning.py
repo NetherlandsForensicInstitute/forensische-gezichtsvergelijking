@@ -6,7 +6,6 @@ from typing import List
 import numpy as np
 from tensorflow.keras.optimizers import Adam
 
-import deepface.basemodels
 from lr_face.data_providers import Triplet, test_data, make_triplets
 from lr_face.losses import TripletLoss
 from lr_face.utils import fix_tensorflow_rtx

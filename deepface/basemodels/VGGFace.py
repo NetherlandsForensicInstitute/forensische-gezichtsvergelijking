@@ -88,7 +88,7 @@ def load_training_model():
         tf.squeeze(anchor_output, axis=[1, 2]),
         tf.squeeze(positive_output, axis=[1, 2]),
         tf.squeeze(negative_output, axis=[1, 2]),
-    ], axis=-1)
+    ], axis=1)
 
     return Model(inputs=[anchor_input, positive_input, negative_input],
                  outputs=output)

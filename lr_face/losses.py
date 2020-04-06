@@ -18,14 +18,18 @@ class TripletLoss(Loss):
 
         Arguments:
             y_true: Ignored
-            y_pred: A 3D tensor of shape `(batch_size, embedding_size, 3)`.
+            y_pred: A 3D tensor of shape `(batch_size, 3, embedding_size)`.
                 It contains the embeddings for each combination of anchor,
                 positive and negative image in the batch, respectively, which
                 is represented by the last axis of size 3. Make sure that each
                 embedding vector is L2-normalized for proper convergence.
         """
-        anchor, positive, negative = tf.split(y_pred, 3, axis=-1)
-        positive_distance = self.distance_func(anchor - positive)
-        negative_distance = self.distance_func(anchor - negative)
-        return tf.maximum(
-            positive_distance - negative_distance + self.alpha, 0)
+        anchor, positive, negative = tf.split(y_pred, 3, axis=1)
+        anchor = tf.squeeze(anchor, axis=1)
+        positive = tf.squeeze(positive, axis=1)
+        negative = tf.squeeze(negative, axis=1)
+        positive_distance = self.distance_func(anchor - positive, axis=1)
+        negative_distance = self.distance_func(anchor - negative, axis=1)
+        loss = tf.maximum(
+            positive_distance - negative_distance + self.alpha, 0.)
+        return loss
