@@ -1,14 +1,14 @@
-import csv
-from dataclasses import dataclass
-from typing_extensions import Protocol
-
-from typing import Tuple, List, Optional
 import os
+import random
+from dataclasses import dataclass
+from itertools import groupby
+from typing import Tuple, List, Optional, Dict
 
-import pandas as pd
 import cv2
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit, train_test_split
+from typing_extensions import Protocol
 
 
 @dataclass
@@ -41,8 +41,23 @@ class ImageWithIds:
 
 
 class ImageProvider(Protocol):
-    def __call__(self, resolution: Tuple[int, int], *args, **kwargs) -> ImageWithIds:
+    def __call__(self, resolution: Tuple[int, int], *args,
+                 **kwargs) -> ImageWithIds:
         pass
+
+
+@dataclass
+class Triplet:
+    # Anchor image, shape `(height, width, num_channels)`.
+    anchor: np.ndarray
+
+    # Image of a face with the same identity as the face depicted on the anchor
+    # image. Shape `(height, width, num_channels)`.
+    positive: np.ndarray
+
+    # Image of a face with a different identity from the face depicted on the
+    # anchor image. Shape `(height, width, num_channels)`.
+    negative: np.ndarray
 
 
 @dataclass
@@ -65,10 +80,10 @@ def test_data(resolution=(100, 100)) -> ImageWithIds:
 def enfsi_data(resolution, year) -> PairsWithIds:
     folder = os.path.join('resources', 'enfsi', str(year))
     files = os.listdir(folder)
-    n_pairs = (len(files)-1)//2
+    n_pairs = (len(files) - 1) // 2
     X = [[-1, -1] for _ in range(n_pairs)]
-    y = [-1]*n_pairs
-    ids = [-1]*n_pairs
+    y = [-1] * n_pairs
+    ids = [-1] * n_pairs
     df = pd.read_csv(os.path.join(folder, 'truth.csv')).set_index('id')
     for file in files:
         if not file.endswith('csv'):
@@ -89,18 +104,20 @@ def enfsi_data(resolution, year) -> PairsWithIds:
                 questioned_ref = file[0]
             else:
                 raise ValueError(f'Unknown ENFSI year {year}')
-            y[cls-1] = int(df.loc[cls]['same'] == 1)
-            ids[cls-1] = f"enfsi_{year}_{cls}_{int(df.loc[cls]['same'] == 1)}"
+            y[cls - 1] = int(df.loc[cls]['same'] == 1)
+            ids[
+                cls - 1] = f"enfsi_{year}_{cls}_{int(df.loc[cls]['same'] == 1)}"
             if questioned_ref == 'q':
-                X[cls-1][0] = img
+                X[cls - 1][0] = img
             elif questioned_ref == 'r':
-                X[cls-1][1] = img
+                X[cls - 1][1] = img
             else:
                 raise ValueError(f'unknown questioned/ref: {questioned_ref}')
     return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
 
 
-def combine_unpaired_data(image_providers: List[ImageProvider], resolution) -> ImageWithIds:
+def combine_unpaired_data(image_providers: List[ImageProvider],
+                          resolution) -> ImageWithIds:
     """
     Gets the X and y for all data in the callables, and returns the total set.
     """
@@ -110,21 +127,23 @@ def combine_unpaired_data(image_providers: List[ImageProvider], resolution) -> I
     max_class = 0
     for dataset_callable in image_providers:
         this_X, this_y, this_ids = dataset_callable(resolution)
-        y = np.append(y, this_y+max_class)
+        y = np.append(y, this_y + max_class)
         max_class = max(y)
         X += this_X
         ids += this_ids
-    return ImageWithIds(images=X, person_ids=list(y.astype(int)), image_ids=ids)
+    return ImageWithIds(images=X, person_ids=list(y.astype(int)),
+                        image_ids=ids)
 
 
-def combine_paired_data(pair_providers: List[PairProvider], resolution) -> PairsWithIds:
+def combine_paired_data(pair_providers: List[PairProvider],
+                        resolution) -> PairsWithIds:
     """
     Gets the images and pairs for all data in the callables, constructs pairs, and the images for all
     and returns the total set.
     """
     X = []
     y = []
-    ids=[]
+    ids = []
     for dataset_callable in pair_providers:
         pairs = dataset_callable(resolution)
         assert type(pairs) == PairsWithIds
@@ -138,7 +157,8 @@ def combine_paired_data(pair_providers: List[PairProvider], resolution) -> Pairs
     return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
 
 
-def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2, **kwargs) -> ImagePairs:
+def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2,
+             **kwargs) -> ImagePairs:
     """
     Takes a function that can return both pairs of images or unpaired images (with person identities).
     Returns a dataset with all data combined into pairs and split into the right datasets.
@@ -159,9 +179,10 @@ def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2, 
         assert len(X) == len(y), f'y and X should have same length'
 
         # split on identities, not on samples (so same person does not appear in both test and train
-        images_calibrate, images_test = split_data_on_groups(X, fraction_test, y, ids)
+        images_calibrate, images_test = split_data_on_groups(X, fraction_test,
+                                                             y, ids)
         assert len(images_calibrate.image_ids + images_test.image_ids) == \
-            len(set(images_calibrate.image_ids + images_test.image_ids))
+               len(set(images_calibrate.image_ids + images_test.image_ids))
 
         # make pairs per set
         pairs_test = make_pairs(images_test)
@@ -177,8 +198,10 @@ def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2, 
 
     if datasets.pair_provider:
         pairs = datasets.pair_provider(resolution=resolution)
-        res = train_test_split(pairs.pairs, pairs.is_same_source, pairs.pair_ids,
-                               test_size=fraction_test, stratify=pairs.is_same_source)
+        res = train_test_split(pairs.pairs, pairs.is_same_source,
+                               pairs.pair_ids,
+                               test_size=fraction_test,
+                               stratify=pairs.is_same_source)
 
         X_calibrate += res[0]
         y_calibrate += res[2]
@@ -188,7 +211,8 @@ def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2, 
         y_test += res[3]
         ids_test += res[5]
 
-    return ImagePairs(y_test=y_test, X_test=X_test, ids_test=ids_test, y_calibrate=y_calibrate,
+    return ImagePairs(y_test=y_test, X_test=X_test, ids_test=ids_test,
+                      y_calibrate=y_calibrate,
                       X_calibrate=X_calibrate, ids_calibrate=ids_calibrate)
 
 
@@ -236,4 +260,37 @@ def make_pairs(data: ImageWithIds) -> PairsWithIds:
 
         imgs_prev = imgs
         img_ids_prev = img_ids
-    return PairsWithIds(pairs=pairs, is_same_source=same_different_source, pair_ids=ids)
+    return PairsWithIds(pairs=pairs, is_same_source=same_different_source,
+                        pair_ids=ids)
+
+
+def make_triplets(data: ImageWithIds) -> List[Triplet]:
+    unique_identities = set(data.person_ids)
+    if len(unique_identities) < 2:
+        raise ValueError(
+            "Can't make triplets if there are fewer than 2 unique identities.")
+
+    # Pair the images with their identity.
+    images_with_identity: List[Tuple[np.ndarray, int]] = \
+        list(zip(data.images, data.person_ids))
+
+    # Convert data to a more pleasant format: a mapping from identities to a
+    # list of all images with that identity.
+    images_grouped_by_identity: Dict[int, List[np.ndarray]] = {
+        identity: [t[0] for t in group] for identity, group in groupby(
+            sorted(images_with_identity, key=lambda t: t[1]),
+            key=lambda t: t[1]
+        )
+    }
+
+    triplets = []
+    for identity, images in images_grouped_by_identity.items():
+        for i, anchor in enumerate(images):
+            for positive in images[i + 1:]:
+                # TODO: better negative sampling, currently random.
+                negative_identity = random.choice(
+                    tuple(unique_identities - {identity}))
+                negative = random.choice(
+                    images_grouped_by_identity[negative_identity])
+                triplets.append(Triplet(anchor, positive, negative))
+    return triplets

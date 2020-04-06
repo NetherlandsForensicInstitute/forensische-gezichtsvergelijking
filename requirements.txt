@@ -11,3 +11,4 @@ keras
 opencv-python
 typing-extensions
 altair
+pytest==5.4.1
