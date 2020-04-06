@@ -1,9 +1,7 @@
 import argparse
 import os
 from glob import glob
-from PIL import Image
-from matplotlib import pyplot as plt
-
+import cv2
 
 from deepface.deepface.commons import functions
 
@@ -35,15 +33,19 @@ def run(input_folder, output_folder, dimensions, recursive):
         try:
             face = functions.detectFace(path, target_size=tuple(dimensions))
             output_path = os.path.join(output_folder, path)
-
-            #save images to outputpath here.
-
+            dir_path = os.path.dirname(output_path)
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            cv2.imwrite(output_path, face[0] * 255)
         except ValueError as e:
             print(e)
             pass
 
 
 if __name__ == '__main__':
+    '''
+    Example runscript: preprocessing.py -i "resources" -o "resizedeepface" -d 152 152 -r
+    '''
     pars = parser()
     args = pars.parse_args()
     run(**vars(args))
