@@ -1,4 +1,5 @@
 import argparse
+import importlib
 from enum import Enum, auto
 from typing import List
 
@@ -14,24 +15,22 @@ fix_tensorflow_rtx()
 
 
 class BaseModel(Enum):
-    """
-    A convenient Enum that can be used to configure all models that
-    we support through a single interface.
-    """
-    VGGFace: auto()
-    Facenet: auto()
-    FbDeepFace: auto()
-    OpenFace: auto()
+    VGGFace = auto()
+    Facenet = auto()
+    FbDeepFace = auto()
+    OpenFace = auto()
 
     def load_inference_model(self):
         if self.source == 'deepface':
-            module = getattr(deepface.basemodels, self.name)
+            module_name = f'deepface.basemodels.{self.name}'
+            module = importlib.import_module(module_name)
             return module.loadModel()
         raise ValueError("Unable to load inference model.")
 
     def load_training_model(self):
         if self.source == 'deepface':
-            module = getattr(deepface.basemodels, self.name)
+            module_name = f'deepface.basemodels.{self.name}'
+            module = importlib.import_module(module_name)
             return module.load_training_model()
         raise ValueError("Unable to load training model.")
 
@@ -70,23 +69,26 @@ def finetune_model(model: BaseModel, triplets: List[Triplet]):
         loss=TripletLoss(alpha=0.5),  # TODO: optimize alpha
     )
 
+    x = [np.stack(anchors), np.stack(positives), np.stack(negatives)]
+    print(x[0].shape)
     model.fit(
-        x=[np.stack(anchors), np.stack(positives), np.stack(negatives)],
-        y=np.zeros(shape=(len(triplets), 1)),
+        x=x,
+        y=np.zeros(shape=(len(triplets), 1)),  # Unused, but has to match `x`
         batch_size=2,  # TODO: make dynamic
         epochs=1  # TODO: make dynamic
     )
 
 
-def main(model: str):
-    base_model = getattr(BaseModel, model)
+def main(model_name: str):
+    base_model = getattr(BaseModel, model_name)
+    model = base_model.load_training_model()
     data = test_data(resolution=(224, 224))
     triplets = make_triplets(data)
-    finetune_model(base_model, triplets)
+    finetune_model(model, triplets)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', '-m', required=True, type=str)
+    parser.add_argument('--model-name', '-m', required=True, type=str)
     args = parser.parse_args()
     main(**vars(args))
