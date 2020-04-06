@@ -48,8 +48,8 @@ class TripletLoss(Loss):
 
         # Compute the euclidean distance between the anchor and the two
         # query images. Resulting shape: `(batch_size)`.
-        positive_distance = tf.norm(anchor - positive, axis=1)
-        negative_distance = tf.norm(anchor - negative, axis=1)
+        positive_distance = tf.reduce_sum(tf.square(anchor - positive), axis=1)
+        negative_distance = tf.reduce_sum(tf.square(anchor - negative), axis=1)
 
         # The loss is then given by the difference in distance with a minimum
         # of 0.
