@@ -18,20 +18,37 @@ fix_tensorflow_rtx()
 
 
 class BaseModel(Enum):
+    """
+    This Enum can be used to define all base model architectures that we
+    currently support, and to retrieve embedding and finetune models. This
+    abstracts away the individual implementations of various models so that
+    there is one unified way of loading models.
+
+    TODO: currently only supports Tensorflow models.
+
+    To load the embedding model for VGGFace for example, you would use:
+
+        `BaseModel.VGGFace.load_embedding_model()`
+
+    Similarly, to load a finetune model, you would use:
+
+        `BaseModel.VGGFace.load_finetune_model()`
+    """
     VGGFace = auto()
     Facenet = auto()
     FbDeepFace = auto()
     OpenFace = auto()
 
-    def load_inference_model(self) -> tf.keras.Model:
+    def load_embedding_model(self) -> tf.keras.Model:
         if self.source == 'deepface':
+            # TODO: could be nicer, but works with current deepface API.
             module_name = f'deepface.basemodels.{self.name}'
             module = importlib.import_module(module_name)
             return module.loadModel()
-        raise ValueError("Unable to load inference model.")
+        raise ValueError("Unable to load embedding model.")
 
-    def load_training_model(self) -> tf.keras.Model:
-        return FinetuneModel(self.load_inference_model())
+    def load_finetune_model(self) -> FinetuneModel:
+        return FinetuneModel(self.load_embedding_model())
 
     @property
     def source(self) -> str:
@@ -49,9 +66,11 @@ class BaseModel(Enum):
         raise ValueError("Unknown model source.")
 
 
-def finetune_model(model: tf.keras.Model, triplets: List[Triplet]):
+def finetune(model: FinetuneModel, triplets: List[Triplet]):
     """
     Fine-tunes a model.
+
+    TODO: currently only supports Tensorflow models.
 
     Arguments:
         model: A BaseModel instance that is suitable for training, i.e. whose
@@ -68,7 +87,7 @@ def finetune_model(model: tf.keras.Model, triplets: List[Triplet]):
 
     model.compile(
         optimizer=Adam(learning_rate=3e-4),  # TODO: default choice
-        loss=TripletLoss(alpha=0.5),  # TODO: optimize alpha
+        loss=TripletLoss(alpha=0.5),  # TODO: better value for alpha?
     )
 
     x = [np.stack(anchors), np.stack(positives), np.stack(negatives)]
@@ -91,15 +110,22 @@ def finetune_model(model: tf.keras.Model, triplets: List[Triplet]):
 def main(model_name: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
     base_model: BaseModel = BaseModel[model_name]
-    training_model = base_model.load_training_model()
-    data = test_data(resolution=(224, 224))  # Load data based on
+    finetune_model = base_model.load_finetune_model()
+    data = test_data(resolution=(224, 224))  # TODO: make dynamic
     triplets = make_triplets(data)
-    finetune_model(training_model, triplets)
+    finetune(finetune_model, triplets)
     weights_path = os.path.join(output_dir, 'weights.h5')
-    training_model.save_weights(weights_path)
+    finetune_model.save_weights(weights_path, overwrite=True)
 
 
 if __name__ == '__main__':
+    """
+    Example usage: 
+    
+    ```
+    python finetuning.py -m VGGFace -o scratch
+    ``` 
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--model-name',

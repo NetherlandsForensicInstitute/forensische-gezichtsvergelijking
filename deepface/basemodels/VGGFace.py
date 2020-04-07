@@ -6,12 +6,11 @@ import tensorflow as tf
 from tensorflow.keras.layers import (Convolution2D,
                                      ZeroPadding2D,
                                      MaxPooling2D,
+                                     Lambda,
                                      Flatten,
                                      Dropout,
                                      Activation)
 from tensorflow.keras.models import Model, Sequential
-
-from lr_face.models import FinetuneModel
 
 
 def baseModel():
@@ -66,8 +65,13 @@ def baseModel():
 def loadModel():
     model = baseModel()
     home = str(Path.home())
+
+    # Check if the VGGFace weights exist, and if not, download them.
     weights_path = home + '/.deepface/weights/vgg_face_weights.h5'
-    _maybe_download_weights(weights_path)
+    if not os.path.exists(weights_path):
+        print("vgg_face_weights.h5 will be downloaded...")
+        url = 'https://drive.google.com/uc?id=1CPSeum3HpopfomUEK1gybeuIVoeJT_Eo'
+        gdown.download(url, weights_path, quiet=False)
     model.load_weights(weights_path)
 
     # We take layer -5 as output because it's the final embedding layer. The
@@ -79,18 +83,8 @@ def loadModel():
     embeddings = tf.squeeze(model.layers[-5].output, axis=[1, 2])
 
     # Ensure that the embeddings are l2-normalized for stability during
-    # training.
-    embeddings = tf.math.l2_normalize(embeddings, axis=1)
+    # training. We use a `Lambda` layer for this instead of just calling
+    # `tf.math.l2_normalize()` directly, because the latter causes errors
+    # when saving the weights in h5 format due to a bug in Tensorflow 2.0.
+    embeddings = Lambda(lambda x: tf.math.l2_normalize(x, axis=1))(embeddings)
     return Model(inputs=model.layers[0].input, outputs=embeddings)
-
-
-def _maybe_download_weights(path):
-    """
-    Checks if the VGGFace weights exist, and if not, downloads them.
-
-    :param path: str, the path to where the weights should be stored
-    """
-    if not os.path.exists(path):
-        print("vgg_face_weights.h5 will be downloaded...")
-        url = 'https://drive.google.com/uc?id=1CPSeum3HpopfomUEK1gybeuIVoeJT_Eo'
-        gdown.download(url, path, quiet=False)

@@ -63,7 +63,7 @@ class Deepface_Lib_Model:
 class FinetuneModel(tf.keras.Model):
     """
     A subclass of tf.keras.Model that can be used to finetune the pre-trained
-    embedding models. This new training model takes 3 inputs, namely:
+    embedding models.This new training model takes 3 inputs, namely:
 
         anchor: A 4D tensor containing a batch of anchor images with shape
             `(batch_size, height, width, num_channels)`.
@@ -82,16 +82,35 @@ class FinetuneModel(tf.keras.Model):
     """
 
     def __init__(self, embedding_layer: tf.keras.Model, *args, **kwargs):
+        """
+        Arguments:
+            embedding_layer: A tf.keras.Model instance that given a batch of
+                images computes their embeddings. It should accept 4D tensors
+                with shape `(batch_size, height, width, num_channels)` as input
+                and output 2D tensors of shape `(batch_size, embedding_size)`.
+        """
         super().__init__(*args, **kwargs)
         self.embedding_layer = embedding_layer
-        # batch_shape, *input_shape = self.embedding_layer.input_shape
 
-    def call(self, inputs, training=None, mask=None):
+    def call(self, inputs, training=None, **kwargs):
+        """
+        Arguments:
+            inputs: A tuple of 3 tensors, representing a batch of anchor,
+                positive and negative images, respectively. Each of these 3
+                tensors has shape `(batch_size, height, width, num_channels)`.
+            training: An optional boolean flag whether the model is currently
+                being trained. For a `FinetuneModel` instance this will almost
+                always be True, except for maybe some test cases.
+
+        Returns:
+            A 3D tensor with the embeddings of all anchor, positive and
+            negative images, with shape `(batch_size, 3, embedding_size)`.
+        """
         anchor_input, positive_input, negative_input = inputs
 
-        anchor_output = self.embedding_layer(anchor_input)
-        positive_output = self.embedding_layer(positive_input)
-        negative_output = self.embedding_layer(negative_input)
+        anchor_output = self.embedding_layer(anchor_input, training)
+        positive_output = self.embedding_layer(positive_input, training)
+        negative_output = self.embedding_layer(negative_input, training)
 
         return tf.stack([
             anchor_output,
@@ -105,20 +124,27 @@ class FinetuneModel(tf.keras.Model):
         whenever we want to save the weights of this finetune model we really
         only want to save the newly updated weights of the `embedding_layer`.
         This allows us to load back the saved weights directly into the
-        original embedding/inference model.
+        original embedding/embedding model.
 
         Example:
+
+        ```python
+        embedding_model = ...  # Load the embedding model here.
+        finetune_model = FinetuneModel(embedding_model)
+        finetune_model.compile(...)
+        finetune_model.fit(...)
+        finetune_model.save_weights('weights.h5')
+        embedding_model.load_weights('weights.h5')
         ```
-            embedding_model = ...  # Load the embedding/inference model here.
-            finetune_model = FinetuneModel(embedding_model)
-            finetune_model.compile(...)
-            finetune_model.fit(...)
-            finetune_model.save_weights('weights.h5')
-            embedding_model.load_weights('weights.h5')
-        ```
+
+        For a practical dummy example of how this works, check out the unit
+        tests located at `tests/test_finetuning.py`.
         """
-        self.embedding_layer.save_weights(
-            filepath, overwrite=overwrite, save_format=save_format)
+        self.embedding_layer.save_weights(filepath, overwrite, save_format)
 
     def load_weights(self, filepath, by_name=False):
-        return self.embedding_layer.load_weights(filepath, by_name=by_name)
+        """
+        Since we override `save_weights()` we also have to override
+        `load_weights()` to make the two compatible again.
+        """
+        return self.embedding_layer.load_weights(filepath, by_name)
