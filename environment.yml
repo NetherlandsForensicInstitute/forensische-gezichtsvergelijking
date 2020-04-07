@@ -1,0 +1,8 @@
+name: LRface
+dependencies:
+  - python=3.7
+  - pip
+  - cudatoolkit=9.0
+  - future
+  - gcc_linux-64
+
