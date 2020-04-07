@@ -55,6 +55,34 @@ The outcome of the pipeline can be visualised using the Streamlit app. Specify t
 To use the streamlit app, write in terminal: `streamlit run run_data_exploration.py`
 
 
+### Docker [to review]
+
+For the models of Insightface, mxnet library may present some issues if [Cuda 9.0 Toolkit](https://developer.nvidia.com/cuda-90-download-archive) is not installed of you have a different CUDA version. If that is the case, use the following instructions to run a docker container:
+
+1) Install [Docker](https://docs.docker.com/engine/install/).
+2) Install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker).
+3) Download git repo 
+   `$git clone https://github.com/HolmesNL/forensische-gezichtsvergelijking`
+4) cd into the local folder
+`$ cd forensische-gezichtsvergelijking`
+5) Change to add-insightface-new branch 
+`$git checkout add-insightface-new`
+6) Build the docker image
+`$ docker build . -t imagename:tag`
+7) Run the docker container
+`$ docker run --gpus all -it imagename:tag /bin/bash`
+8) Run the pipeline. It can take some minutes.
+` python run.py'`
+9) Check the results in the folder output.
+`cd output`
+#### TO DO
+1) Dockerfile : `ADD git repository` directly so git repo doesn't have to be downloaded locally.
+2) Use Docker volume so datasets are not buildt inside the image.
+
+
+`
+
+
 
 
 
