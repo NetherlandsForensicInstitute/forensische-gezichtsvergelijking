@@ -9,5 +9,6 @@ matplotlib
 scipy
 keras
 opencv-python
+pillow
 typing-extensions
 altair
