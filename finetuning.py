@@ -1,5 +1,6 @@
 import argparse
 import importlib
+import os
 from enum import Enum, auto
 from typing import List
 
@@ -9,6 +10,7 @@ from tensorflow.keras.optimizers import Adam
 
 from lr_face.data_providers import Triplet, test_data, make_triplets
 from lr_face.losses import TripletLoss
+from lr_face.models import FinetuneModel
 from lr_face.utils import fix_tensorflow_rtx
 
 # Needed to make TensorFlow 2.x work with RTX Nvidia cards.
@@ -21,22 +23,23 @@ class BaseModel(Enum):
     FbDeepFace = auto()
     OpenFace = auto()
 
-    def load_inference_model(self):
+    def load_inference_model(self) -> tf.keras.Model:
         if self.source == 'deepface':
             module_name = f'deepface.basemodels.{self.name}'
             module = importlib.import_module(module_name)
             return module.loadModel()
         raise ValueError("Unable to load inference model.")
 
-    def load_training_model(self):
-        if self.source == 'deepface':
-            module_name = f'deepface.basemodels.{self.name}'
-            module = importlib.import_module(module_name)
-            return module.load_training_model()
-        raise ValueError("Unable to load training model.")
+    def load_training_model(self) -> tf.keras.Model:
+        return FinetuneModel(self.load_inference_model())
 
     @property
-    def source(self):
+    def source(self) -> str:
+        """
+        Returns a textual description of where the model comes from.
+
+        :return: str
+        """
         deepface_models = [self.VGGFace,
                            self.Facenet,
                            self.FbDeepFace,
@@ -85,12 +88,15 @@ def finetune_model(model: tf.keras.Model, triplets: List[Triplet]):
     )
 
 
-def main(model_name: str):
-    base_model = getattr(BaseModel, model_name)
-    model = base_model.load_training_model()
-    data = test_data(resolution=(224, 224))
+def main(model_name: str, output_dir: str):
+    os.makedirs(output_dir, exist_ok=True)
+    base_model: BaseModel = BaseModel[model_name]
+    training_model = base_model.load_training_model()
+    data = test_data(resolution=(224, 224))  # Load data based on
     triplets = make_triplets(data)
-    finetune_model(model, triplets)
+    finetune_model(training_model, triplets)
+    weights_path = os.path.join(output_dir, 'weights.h5')
+    training_model.save_weights(weights_path)
 
 
 if __name__ == '__main__':
@@ -101,6 +107,13 @@ if __name__ == '__main__':
         required=True,
         type=str,
         help='Should match one of the constants in the `BaseModel` Enum'
+    )
+    parser.add_argument(
+        '--output-dir',
+        '-o',
+        required=True,
+        type=str,
+        help='Path to the directory in which the weights should be stored'
     )
     args = parser.parse_args()
     main(**vars(args))

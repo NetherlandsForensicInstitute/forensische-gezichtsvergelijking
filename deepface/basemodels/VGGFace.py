@@ -8,9 +8,10 @@ from tensorflow.keras.layers import (Convolution2D,
                                      MaxPooling2D,
                                      Flatten,
                                      Dropout,
-                                     Activation,
-                                     Input)
+                                     Activation)
 from tensorflow.keras.models import Model, Sequential
+
+from lr_face.models import FinetuneModel
 
 
 def baseModel():
@@ -77,53 +78,10 @@ def loadModel():
     # shape `(batch_size, embedding_size)`.
     embeddings = tf.squeeze(model.layers[-5].output, axis=[1, 2])
 
-    # Ensure that the embeddings are l2 normalized for stability during
+    # Ensure that the embeddings are l2-normalized for stability during
     # training.
     embeddings = tf.math.l2_normalize(embeddings, axis=1)
     return Model(inputs=model.layers[0].input, outputs=embeddings)
-
-
-def load_training_model() -> tf.keras.Model:
-    """
-    Returns a tf.keras.Model instance that can be used to finetune the learned
-    embeddings. This training model takes 3 inputs, namely:
-
-        anchor: A 4D tensor containing a batch of anchor images with shape
-            `(batch_size, height, width, num_channels)`.
-        positive: A 4D tensor containing a batch of images of the same identity
-            as the anchor image with shape `(batch_size, height, width,
-            num_channels)`.
-        positive: A 4D tensor containing a batch of images of a different
-            identity than the anchor image with shape `(batch_size, height,
-            width, num_channels)`.
-
-    It outputs embeddings for each of the images and returns them as a single
-    3D tensor of shape `(batch_size, 3, embedding_size)`, where the second
-    axis represents the anchor, positive and negative images, respectively.
-    The reason for returning the results as a single tensor instead of 3
-    separate outputs is because all 3 are required for computing a single loss.
-
-    :return: tf.keras.Model
-    """
-    base_model = loadModel()
-    batch_shape, *input_shape = base_model.input_shape
-
-    anchor_input = Input(input_shape, batch_shape)
-    positive_input = Input(input_shape, batch_shape)
-    negative_input = Input(input_shape, batch_shape)
-
-    anchor_output = base_model(anchor_input)
-    positive_output = base_model(positive_input)
-    negative_output = base_model(negative_input)
-
-    inputs = [anchor_input, positive_input, negative_input]
-    outputs = tf.stack([
-        anchor_output,
-        positive_output,
-        negative_output
-    ], axis=1)
-
-    return Model(inputs=inputs, outputs=outputs)
 
 
 def _maybe_download_weights(path):
