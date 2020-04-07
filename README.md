@@ -57,7 +57,7 @@ To use the streamlit app, write in terminal: `streamlit run run_data_exploration
 
 ### Docker [to review]
 
-For the models of Insightface, mxnet library may present some issues if [Cuda 9.0 Toolkit](https://developer.nvidia.com/cuda-90-download-archive) is not installed of you have a different CUDA version. If that is the case, use the following instructions to run a docker container:
+For the models of Insightface, mxnet library may present some issues if [Cuda 9.0 Toolkit](https://developer.nvidia.com/cuda-90-download-archive) is not installed or you have a different CUDA version. If that is the case, use the following instructions to run a docker container:
 
 1) Install [Docker](https://docs.docker.com/engine/install/).
 2) Install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker).
@@ -72,7 +72,7 @@ For the models of Insightface, mxnet library may present some issues if [Cuda 9.
 7) Run the docker container
 `$ docker run --gpus all -it imagename:tag /bin/bash`
 8) Run the pipeline. It can take some minutes.
-` python run.py'`
+` python run.py`
 9) Check the results in the folder output.
 `cd output`
 #### TO DO
