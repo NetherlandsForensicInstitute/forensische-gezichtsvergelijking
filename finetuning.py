@@ -4,12 +4,14 @@ from enum import Enum, auto
 from typing import List
 
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 
 from lr_face.data_providers import Triplet, test_data, make_triplets
 from lr_face.losses import TripletLoss
 from lr_face.utils import fix_tensorflow_rtx
 
+# Needed to make TensorFlow 2.x work with RTX Nvidia cards.
 fix_tensorflow_rtx()
 
 
@@ -44,19 +46,17 @@ class BaseModel(Enum):
         raise ValueError("Unknown model source.")
 
 
-def finetune_model(model: BaseModel, triplets: List[Triplet]):
+def finetune_model(model: tf.keras.Model, triplets: List[Triplet]):
     """
     Fine-tunes a model.
 
     Arguments:
-        model: A BaseModel instance that is suitable for training,
-            i.e. whose output is compatible with the triplet loss
-            function.
-        triplets: A list of `Triplet` instances that will be used
-            for training.
+        model: A BaseModel instance that is suitable for training, i.e. whose
+            output is compatible with the triplet loss function. See
+            `BaseModel.load_training_model()` for more information.
+        triplets: A list of `Triplet` instances that will be used for training.
     """
 
-    # TODO: ensure that all embeddings in triplet are normalized.
     anchors, positives, negatives = zip(*[(
         triplet.anchor,
         triplet.positive,
@@ -69,10 +69,17 @@ def finetune_model(model: BaseModel, triplets: List[Triplet]):
     )
 
     x = [np.stack(anchors), np.stack(positives), np.stack(negatives)]
-    print(x[0].shape)
+
+    # The triplet loss that is used to train the model actually does not need
+    # any ground truth labels, since it simply aims to maximize the difference
+    # in distances to the anchor embedding between positive and negative query
+    # images. However, Keras' Loss interface still needs a `y_true` that has
+    # the same first dimension as the `y_pred` output by the model. That's why
+    # we create a dummy "ground truth" of the same length.
+    y = np.zeros(shape=(len(triplets), 1))
     model.fit(
         x=x,
-        y=np.zeros(shape=(len(triplets), 1)),  # Unused, but has to match `x`
+        y=y,
         batch_size=2,  # TODO: make dynamic
         epochs=1  # TODO: make dynamic
     )
@@ -88,6 +95,12 @@ def main(model_name: str):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model-name', '-m', required=True, type=str)
+    parser.add_argument(
+        '--model-name',
+        '-m',
+        required=True,
+        type=str,
+        help='Should match one of the constants in the `BaseModel` Enum'
+    )
     args = parser.parse_args()
     main(**vars(args))
