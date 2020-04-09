@@ -1,10 +1,10 @@
 import argparse
 import os
 import re
-import math
 
 import cv2
 import numpy as np
+import tensorflow as tf
 from keras.preprocessing import image
 
 
@@ -185,3 +185,12 @@ def resize_and_normalize(img, target_size):
         img_pixels /= 255
 
         return img_pixels
+
+
+def fix_tensorflow_rtx():
+    """
+    A fix to make tensorflow-gpu work with RTX cards (or at least the 2700).
+    """
+    gpu_devices = tf.config.experimental.list_physical_devices('GPU')
+    for device in gpu_devices:
+        tf.config.experimental.set_memory_growth(device, True)
