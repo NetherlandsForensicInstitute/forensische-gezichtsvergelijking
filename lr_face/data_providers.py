@@ -1,5 +1,6 @@
 import os
 import random
+from collections import defaultdict
 from dataclasses import dataclass
 from itertools import groupby
 from typing import Tuple, List, Optional, Dict
@@ -276,12 +277,9 @@ def make_triplets(data: ImageWithIds) -> List[Triplet]:
 
     # Convert data to a more pleasant format: a mapping from identities to a
     # list of all images with that identity.
-    images_grouped_by_identity: Dict[int, List[np.ndarray]] = {
-        identity: [t[0] for t in group] for identity, group in groupby(
-            sorted(images_with_identity, key=lambda t: t[1]),
-            key=lambda t: t[1]
-        )
-    }
+    images_grouped_by_identity = defaultdict(list)
+    for image, identity in images_with_identity:
+        images_grouped_by_identity[identity].append(image)
 
     triplets = []
     for identity, images in images_grouped_by_identity.items():
