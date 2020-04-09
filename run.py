@@ -3,9 +3,7 @@ import os
 from datetime import datetime
 
 import confidence
-import numpy as np
 from lir import CalibratedScorer
-from lir.util import to_odds
 from tqdm import tqdm
 
 from lr_face.data_providers import get_data, ImagePairs
@@ -46,7 +44,8 @@ def run(args):
             make_plots_and_save_as = os.path.join(plots_dir,
                                                   f"{'_'.join([str(v)[:25] for v in params_dict.values()])}")
             results = experiment(params_dict, data_provider=data_provider,
-                                 make_plots_and_save_as=make_plots_and_save_as)
+                                 make_plots_and_save_as=make_plots_and_save_as,
+                                 experiment_name=experiment_name)
         else:
             results = experiment(params_dict, data_provider=data_provider)
 
@@ -57,7 +56,9 @@ def run(args):
     write_output(experiments_setup.data_frame, experiment_name)
 
 
-def experiment(params, data_provider: ImagePairs = None, make_plots_and_save_as=None):
+def experiment(params, data_provider: ImagePairs = None,
+               make_plots_and_save_as=None, experiment_name=None):
+    # TODO: naam make_plots_and_save_as veranderen? Nu ook opslaan van data
     """
     Function to run a single experiment with pipeline:
     DataProvider -> fit model on train data -> fit calibrator on calibrator data -> evaluate test set
@@ -69,7 +70,11 @@ def experiment(params, data_provider: ImagePairs = None, make_plots_and_save_as=
     p = lr_system.scorer.predict_proba(data_provider.X_calibrate, data_provider.ids_calibrate)
     lr_system.calibrator.fit(p[:, 1], data_provider.y_calibrate)
 
-    return evaluate(lr_system, data_provider, make_plots_and_save_as)
+    return evaluate(lr_system=lr_system,
+                    data_provider=data_provider,
+                    params_dict=params,
+                    make_plots_and_save_as=make_plots_and_save_as,
+                    experiment_name=experiment_name)
 
 
 if __name__ == '__main__':

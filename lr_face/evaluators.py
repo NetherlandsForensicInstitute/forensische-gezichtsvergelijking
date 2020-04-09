@@ -1,3 +1,5 @@
+import os
+from csv import writer
 from typing import Dict
 
 import matplotlib.pyplot as plt
@@ -60,9 +62,36 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
             }
 
 
-def evaluate(lr_system: CalibratedScorer, data_provider: ImagePairs, make_plots_and_save_as=None) -> Dict[str, float]:
+def save_lr_results(params_dict, data_provider, LR_predicted, experiment_name):
+
+    output_file = os.path.join('.', 'output',
+                               f'{experiment_name}_lr_results.csv')
+
+    # TODO: dataset toevoegen als dit leesbaar is
+    field_names = ['scorers', 'calibrators', 'pair_id', 'LR']
+
+    if not os.path.exists(output_file):
+        with open(output_file, 'w', newline='') as f:
+            csv_writer = writer(f, delimiter=',')
+            csv_writer.writerow(field_names)
+
+    with open(output_file, 'a+', newline='') as f:
+        csv_writer = writer(f, delimiter=',')
+        for i in range(len(LR_predicted)):
+            csv_writer.writerow([params_dict['scorers'],
+                                 params_dict['calibrators'],
+                                 data_provider.ids_test[i],
+                                 LR_predicted[i],
+                                 ])
+    # TODO: evt alleen van enfsi-data de gegevens opslaan
+
+
+def evaluate(lr_system: CalibratedScorer, data_provider: ImagePairs,
+             params_dict: dict, make_plots_and_save_as=None,
+             experiment_name=None) -> Dict[str, float]:
     """
     Calculates a variety of evaluation metrics and plots data if make_plots_and_save_as is not None.
+    Creates csv-file of LR results.
     """
     scores = lr_system.scorer.predict_proba(data_provider.X_test, data_provider.ids_test)[:, 1]
     LR_predicted = lr_system.calibrator.transform(scores)
@@ -76,6 +105,11 @@ def evaluate(lr_system: CalibratedScorer, data_provider: ImagePairs, make_plots_
         plot_lr_distributions(np.log10(LR_predicted), data_provider.y_test,
                               savefig=f'{make_plots_and_save_as} lr distribution.png')
         plot_tippett(np.log10(LR_predicted), data_provider.y_test, savefig=f'{make_plots_and_save_as} tippett.png')
+
+        save_lr_results(params_dict=params_dict,
+                        data_provider=data_provider,
+                        LR_predicted=LR_predicted,
+                        experiment_name=experiment_name)
 
     metric_dict = calculate_metrics_dict(scores, data_provider.y_test, LR_predicted, '')
 
