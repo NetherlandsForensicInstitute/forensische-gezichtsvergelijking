@@ -12,3 +12,4 @@ opencv-python
 pillow
 typing-extensions
 altair
+pytest==5.4.1
