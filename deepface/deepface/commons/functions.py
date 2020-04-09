@@ -11,6 +11,7 @@ import gdown
 import hashlib
 import math
 from PIL import Image
+from typing import Tuple
 
 def distance(a, b):
 	x1 = a[0]; y1 = a[1]
@@ -108,7 +109,7 @@ def findThreshold(model_name, distance_metric):
 	
 	return threshold
 
-def detectFace(image_path, target_size=(224, 224), grayscale = False):
+def detectFace(image_path, target_size=(224, 224), grayscale = False) -> Tuple[np.ndarray, float, bool, Tuple[int]]:
 	
 	opencv_home = cv2.__file__
 	folders = opencv_home.split(os.path.sep)[0:-1]
@@ -135,14 +136,15 @@ def detectFace(image_path, target_size=(224, 224), grayscale = False):
 	#--------------------------------
 	
 	faces = face_detector.detectMultiScale(img, 1.3, 5)
-	
-	#print("found faces in ",image_path," is ",len(faces))
-	
+
+	rotation = 0
+	detected_face = None
 	if len(faces) > 0:
 		x,y,w,h = faces[0]
 		detected_face = img[int(y):int(y+h), int(x):int(x+w)]
 		detected_face_gray = cv2.cvtColor(detected_face, cv2.COLOR_BGR2GRAY)
-		
+		face_found = True
+
 		#---------------------------
 		#face alignment
 		
@@ -213,32 +215,34 @@ def detectFace(image_path, target_size=(224, 224), grayscale = False):
 				angle = 90 - angle
 			
 			img = Image.fromarray(img_raw)
-			img = np.array(img.rotate(direction * angle))
-			
+			img = np.array(img.rotate(direction*angle))
+
 			#you recover the base image and face detection disappeared. apply again.
 			faces = face_detector.detectMultiScale(img, 1.3, 5)
 			if len(faces) > 0:
 				x,y,w,h = faces[0]
 				detected_face = img[int(y):int(y+h), int(x):int(x+w)]
-			
+				# only save the rotation if it was actually applied (i.e. a face was found again)
+				rotation = direction * angle
 			#-----------------------
 		
 		#face alignment block end
 		#---------------------------
-		
-		#face alignment block needs colorful images. that's why, converting to gray scale logic moved to here.
-		if grayscale == True:
-			detected_face = cv2.cvtColor(detected_face, cv2.COLOR_BGR2GRAY)
-		
-		detected_face = cv2.resize(detected_face, target_size)
-		
-		img_pixels = image.img_to_array(detected_face)
-		img_pixels = np.expand_dims(img_pixels, axis = 0)
-		
-		#normalize input in [0, 1]
-		img_pixels /= 255
-		
-		return img_pixels
-		
-	else:
-		raise ValueError("Face could not be detected in ", image_path,". Please confirm that the picture is a face photo.")
+
+	if detected_face is None:
+		detected_face =  img
+		face_found = False
+	original_resolution = detected_face.shape
+	#face alignment block needs colorful images. that's why, converting to gray scale logic moved to here.
+	if grayscale == True:
+		detected_face = cv2.cvtColor(detected_face, cv2.COLOR_BGR2GRAY)
+
+	detected_face = cv2.resize(detected_face, target_size)
+
+	img_pixels = image.img_to_array(detected_face)
+	img_pixels = np.expand_dims(img_pixels, axis = 0)
+
+	#normalize input in [0, 1]
+	img_pixels /= 255
+
+	return img_pixels, rotation, face_found, original_resolution
