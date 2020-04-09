@@ -5,7 +5,7 @@ from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrato
     IsotonicCalibrator, DummyCalibrator
 
 
-from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
+from deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
 from lr_face.models import DummyModel, Deepface_Lib_Model
 from lr_face.data_providers import test_data, enfsi_data, combine_paired_data, DataFunctions
 

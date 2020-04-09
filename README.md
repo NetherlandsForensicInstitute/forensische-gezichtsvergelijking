@@ -5,6 +5,7 @@ Research project to investigate algorithms that can supplement expert opinion in
 --
 
 ### Folders
+- deepface package: fork from the deepface github (https://github.com/serengil/deepface)
 - lr_face package: scripts to initiate the data providers, experiment settings and evaluators
 - output folder: generated figures and result files
 - resources folder: datasets. Should have resources/enfsi/2011/-copy all images from that folder in the dataset-
