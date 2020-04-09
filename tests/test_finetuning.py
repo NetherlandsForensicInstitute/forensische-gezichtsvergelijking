@@ -11,7 +11,11 @@ from tests.src.util import scratch_dir
 
 
 def get_dummy_embedding_model(batch_input_shape) -> tf.keras.Model:
-    model = tf.keras.Sequential([tf.keras.layers.Dense(10, activation='relu')])
+    model = tf.keras.Sequential([
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(10, activation='relu'),
+        tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=-1))
+    ])
     model.build(input_shape=batch_input_shape)
     return model
 
@@ -19,8 +23,10 @@ def get_dummy_embedding_model(batch_input_shape) -> tf.keras.Model:
 def get_dummy_triplet_embedder(embedding_model: tf.keras.Model) -> \
         TripletEmbedder:
     triplet_embedder = TripletEmbedder(embedding_model)
-    triplet_embedder.compile(optimizer=Adam(learning_rate=3e-4),
-                             loss=TripletLoss(alpha=0.5))
+    triplet_embedder.compile(
+        optimizer=Adam(learning_rate=3e-4),
+        loss=TripletLoss(alpha=0.5, force_normalization=True)
+    )
     return triplet_embedder
 
 
