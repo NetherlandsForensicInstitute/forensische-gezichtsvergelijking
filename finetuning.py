@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 
-from lr_face.data_providers import Triplet, test_data, make_triplets
+from lr_face.data_providers import Triplet, TestData, make_triplets
 from lr_face.losses import TripletLoss
 from lr_face.models import TripletEmbedder
 from lr_face.utils import fix_tensorflow_rtx
@@ -111,7 +111,7 @@ def main(model_name: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
     base_model: BaseModel = BaseModel[model_name.upper()]
     triplet_embedder = base_model.load_triplet_embedder()
-    data = test_data(resolution=(224, 224))  # TODO: make dynamic
+    data = TestData()(resolution=(224, 224))  # TODO: make dynamic
     triplets = make_triplets(data)
     finetune(triplet_embedder, triplets)
     weights_path = os.path.join(output_dir, 'weights.h5')

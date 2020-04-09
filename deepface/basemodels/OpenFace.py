@@ -248,3 +248,7 @@ def loadModel():
 	#-----------------------------------
 	
 	return model
+
+
+def name():
+    return 'OpenFace'

@@ -88,3 +88,7 @@ def loadModel():
     # when saving the weights in h5 format due to a bug in Tensorflow 2.0.
     embeddings = Lambda(lambda x: tf.math.l2_normalize(x, axis=1))(embeddings)
     return Model(inputs=model.layers[0].input, outputs=embeddings)
+
+
+def name():
+    return 'VGGFace'

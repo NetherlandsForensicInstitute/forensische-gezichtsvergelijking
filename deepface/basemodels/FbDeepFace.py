@@ -44,3 +44,7 @@ def loadModel():
 	deepface_model = Model(inputs=base_model.layers[0].input, outputs=base_model.layers[-3].output)
 		
 	return deepface_model
+
+
+def name():
+    return 'FBDeepFace'
