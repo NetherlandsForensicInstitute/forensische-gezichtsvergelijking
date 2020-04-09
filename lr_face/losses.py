@@ -3,7 +3,10 @@ from tensorflow.keras.losses import Loss
 
 
 class TripletLoss(Loss):
-    def __init__(self, alpha: float, **kwargs):
+    def __init__(self,
+                 alpha: float,
+                 force_normalization: bool = True,
+                 **kwargs):
         """
         Instantiate a triplet loss instance.
 
@@ -16,13 +19,19 @@ class TripletLoss(Loss):
                 Where `dist(a, b)` is a distance measure between two embeddings
                 `a` and `b`. When `alpha` is 0, the loss can theoretically be
                 minimized by mapping every image to the same embedding.
+            force_normalization: A boolean flag indicating whether the `call()`
+                method should explicitly enforce that its input embeddings are
+                properly l2-normalized.
         """
         super().__init__(**kwargs)
         self.alpha = alpha
+        self.force_normalization = force_normalization
 
     def call(self, y_true, y_pred):
         """
-        Keras implementation of the triplet loss.
+        Keras implementation of the triplet loss. If `self.force_normalization`
+        is True, a `tf.errors.InvalidArgumentError` is raised if some of the
+        embeddings are not properly L2-normalized.
 
         See https://en.wikipedia.org/wiki/Triplet_loss for more info.
 
@@ -38,6 +47,13 @@ class TripletLoss(Loss):
             A 1D tensor with shape `(batch_size)` containing the loss for each
             triplet in the batch.
         """
+
+        if self.force_normalization:
+            squared_sum = tf.reduce_sum(tf.square(y_pred), axis=2)
+            check = tf.reduce_all(
+                tf.logical_and(squared_sum > 0.999, squared_sum < 1.001))
+            tf.assert_equal(check, True)
+
         anchor, positive, negative = tf.split(y_pred, 3, axis=1)
 
         # Squeeze the 2nd dimension of each of the split embedding

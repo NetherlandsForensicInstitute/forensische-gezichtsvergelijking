@@ -1,7 +1,7 @@
 import argparse
 import importlib
 import os
-from enum import Enum, auto
+from enum import Enum
 from typing import List
 
 import numpy as np
@@ -10,7 +10,7 @@ from tensorflow.keras.optimizers import Adam
 
 from lr_face.data_providers import Triplet, test_data, make_triplets
 from lr_face.losses import TripletLoss
-from lr_face.models import FinetuneModel
+from lr_face.models import TripletEmbedder
 from lr_face.utils import fix_tensorflow_rtx
 
 # Needed to make TensorFlow 2.x work with RTX Nvidia cards.
@@ -20,7 +20,7 @@ fix_tensorflow_rtx()
 class BaseModel(Enum):
     """
     This Enum can be used to define all base model architectures that we
-    currently support, and to retrieve embedding and finetune models. This
+    currently support, and to retrieve (triplet) embedding models. This
     abstracts away the individual implementations of various models so that
     there is one unified way of loading models.
 
@@ -28,27 +28,27 @@ class BaseModel(Enum):
 
     To load the embedding model for VGGFace for example, you would use:
 
-        `BaseModel.VGGFace.load_embedding_model()`
+        `BaseModel.VGGFACE.load_embedding_model()`
 
-    Similarly, to load a finetune model, you would use:
+    Similarly, to load a triplet embedder model, you would use:
 
-        `BaseModel.VGGFace.load_finetune_model()`
+        `BaseModel.VGGFACE.load_triplet_embedder()`
     """
-    VGGFace = auto()
-    Facenet = auto()
-    FbDeepFace = auto()
-    OpenFace = auto()
+    VGGFACE = 'VGGFace'
+    FACENET = 'Facenet'
+    FBDEEPFACE = 'FbDeepFace'
+    OPENFACE = 'OpenFace'
 
     def load_embedding_model(self) -> tf.keras.Model:
         if self.source == 'deepface':
             # TODO: could be nicer, but works with current deepface API.
-            module_name = f'deepface.basemodels.{self.name}'
+            module_name = f'deepface.basemodels.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
         raise ValueError("Unable to load embedding model.")
 
-    def load_finetune_model(self) -> FinetuneModel:
-        return FinetuneModel(self.load_embedding_model())
+    def load_triplet_embedder(self) -> TripletEmbedder:
+        return TripletEmbedder(self.load_embedding_model())
 
     @property
     def source(self) -> str:
@@ -57,16 +57,16 @@ class BaseModel(Enum):
 
         :return: str
         """
-        deepface_models = [self.VGGFace,
-                           self.Facenet,
-                           self.FbDeepFace,
-                           self.OpenFace]
+        deepface_models = [self.VGGFACE,
+                           self.FACENET,
+                           self.FBDEEPFACE,
+                           self.OPENFACE]
         if self in deepface_models:
             return 'deepface'
         raise ValueError("Unknown model source.")
 
 
-def finetune(model: FinetuneModel, triplets: List[Triplet]):
+def finetune(model: TripletEmbedder, triplets: List[Triplet]):
     """
     Fine-tunes a model.
 
@@ -109,13 +109,13 @@ def finetune(model: FinetuneModel, triplets: List[Triplet]):
 
 def main(model_name: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
-    base_model: BaseModel = BaseModel[model_name]
-    finetune_model = base_model.load_finetune_model()
+    base_model: BaseModel = BaseModel[model_name.upper()]
+    triplet_embedder = base_model.load_triplet_embedder()
     data = test_data(resolution=(224, 224))  # TODO: make dynamic
     triplets = make_triplets(data)
-    finetune(finetune_model, triplets)
+    finetune(triplet_embedder, triplets)
     weights_path = os.path.join(output_dir, 'weights.h5')
-    finetune_model.save_weights(weights_path, overwrite=True)
+    triplet_embedder.save_weights(weights_path, overwrite=True)
 
 
 if __name__ == '__main__':
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     Example usage: 
     
     ```
-    python finetuning.py -m VGGFace -o scratch
+    python finetuning.py -m vggface -o scratch
     ``` 
     """
     parser = argparse.ArgumentParser()
