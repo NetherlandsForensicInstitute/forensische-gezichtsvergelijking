@@ -4,7 +4,7 @@ from collections import defaultdict
 from glob import glob
 import cv2
 
-from deepface.deepface.commons import functions
+from deepface.commons import functions
 
 
 def parser():
