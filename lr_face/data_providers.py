@@ -262,6 +262,7 @@ def make_pairs(data: ImageWithIds) -> PairsWithIds:
     ids = []
     same_different_source = []
     imgs_prev = None
+    img_ids_prev = None
     for i_person_id, person_id in enumerate(person_ids):
         idx = data.person_ids == person_id
         nidx = sum(idx)

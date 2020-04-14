@@ -122,13 +122,11 @@ class DummyModel:
     def predict_proba(self, X, ids=None):
         # assert X.shape[2:4] == self.resolution
         if np.array(X).shape[1] != 2:
-            raise ValueError(
-                f'Should get n pairs, but second dimension is {np.array(X).shape[1]}')
+            raise ValueError(f'Should get n pairs, but second dimension is {np.array(X).shape[1]}')
         return np.random.random((len(X), 2))
 
     def __str__(self):
         return 'Dummy'
-
 
 class BaseModel(Enum):
     """
@@ -164,7 +162,7 @@ class BaseModel(Enum):
             self.module = Facenet
         else:
             raise ValueError("Unknown model source.")
-        self._model=None
+        self._model = None
 
     def load_embedding_model(self) -> tf.keras.Model:
         return self.model
@@ -186,7 +184,6 @@ class BaseModel(Enum):
         if self in deepface_models:
             return 'deepface'
         raise ValueError("Unknown model source.")
-
 
     @property
     def model(self):
@@ -219,4 +216,4 @@ class BaseModel(Enum):
         return score
 
     def __str__(self):
-        return self.name
+        return self.value
