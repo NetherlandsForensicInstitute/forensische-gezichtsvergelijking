@@ -90,8 +90,8 @@ def evaluate(lr_system: CalibratedScorer, data_provider: ImagePairs,
              params_dict: dict, make_plots_and_save_as=None,
              experiment_name=None) -> Dict[str, float]:
     """
-    Calculates a variety of evaluation metrics and plots data if make_plots_and_save_as is not None.
-    Creates csv-file of LR results.
+    Calculates a variety of evaluation metrics, saves the LR results  and
+    plots data if make_plots_and_save_as is not None.
     """
     scores = lr_system.scorer.predict_proba(data_provider.X_test, data_provider.ids_test)[:, 1]
     LR_predicted = lr_system.calibrator.transform(scores)

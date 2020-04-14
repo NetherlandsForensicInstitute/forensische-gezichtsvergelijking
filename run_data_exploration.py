@@ -41,15 +41,16 @@ def get_csv(csv):
 st.title('Data exploration for face comparison models')
 
 _max_width_()
-latest_csv = sorted([f for f in (os.listdir('output')) if f.endswith('.csv')])[-1]
-df = get_csv(latest_csv)
+latest_exp_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
+    'experiments_results.csv')])[-1]
+df = get_csv(latest_exp_csv)
 set_calibrators = list(set(df['calibrators']))
 set_scorers = list(set(df['scorers']))
 set_data = list(set(df['datasets']))
 
 
 st.header('General information')
-st.markdown(f'latest csv: {latest_csv}')
+st.markdown(f'latest csv: {latest_exp_csv}')
 st.markdown(f'no of experiments: {len(df)}')
 st.markdown(f'data: {set_data}')
 st.markdown(f'scorers: {set_scorers}')
@@ -57,7 +58,8 @@ st.markdown(f'calibrators: {set_calibrators}')
 
 
 # show dataframe, option to select columns
-defaultcols = ['index', 'scorers', 'calibrators', 'datasets', 'cllr', 'auc', 'accuracy']
+defaultcols = ['index', 'scorers', 'calibrators', 'datasets', 'cllr',
+               'auc', 'accuracy']
 cols = st.multiselect("Select columns", df.columns.tolist(), default=defaultcols)
 st.dataframe(df[cols])
 
@@ -75,7 +77,8 @@ st.dataframe(df.loc[df['calibrators'].isin(calibrators) &
 
 if research_question == 'train_calibrate_same_data':
 
-    st.header('Boxplot of metrics for each combination of dataset, scorer and calibrator:')
+    st.header('Metrics for each combination of dataset, scorer and '
+              'calibrator:')
     for metric in ('cllr', 'auc', 'accuracy'):
         st.altair_chart(alt.Chart(df).mark_boxplot().encode(
             x='datasets',
@@ -89,8 +92,9 @@ if research_question == 'train_calibrate_same_data':
 
 st.header('Calibration and distribution plots')
 # get all images
-output_plots = latest_csv[0:19]
-list_plots = sorted([f for f in (os.listdir(f'./output/{output_plots}/')) if f.endswith('.png')])
+output_plots = latest_exp_csv[0:19]
+list_plots = sorted([f for f in (os.listdir(f'./output/{output_plots}/')) if
+                     f.endswith('.png')])
 
 plot_types = []
 for i, plot in enumerate(list_plots):
@@ -111,10 +115,38 @@ n_plot_nrs = len(list_plots)
 for i in range(n_plot_nrs):
     start = n_plot_types*i
     stop = n_plot_types*(i+1)
-    # TODO: change width variable, width could be dependent on screen resoluation
+    # TODO: change width variable, dependent on screen resolution
     # TODO: improve caption
-    st.image([f'./output/{output_plots}/{plt}' for plt in list_plots[start:stop]],
+    st.image([f'./output/{output_plots}/{plt}' for plt in list_plots[
+                                                           start:stop]],
              width=400, caption=[plt[:-4] for plt in list_plots[start:stop]])
+
+
+st.header('LR results')
+# get LR results, same as exp.results
+latest_lr_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
+    'lr_results.csv')])[-1]
+
+if len(latest_lr_csv) == 0 or latest_exp_csv[:19] != latest_lr_csv[:19]:
+    st.markdown('No LR results available.')
+else:
+    pass
+
+
+
+df = get_csv(latest_lr_csv)
+set_calibrators = list(set(df['calibrators']))
+set_scorers = list(set(df['scorers']))
+set_data = list(set(df['datasets']))
+
+
+st.header('General information')
+st.markdown(f'latest csv: {latest_exp_csv}')
+st.markdown(f'no of experiments: {len(df)}')
+st.markdown(f'data: {set_data}')
+st.markdown(f'scorers: {set_scorers}')
+st.markdown(f'calibrators: {set_calibrators}')
+
 
 
 btn = st.button("Click me!")
