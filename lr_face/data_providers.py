@@ -210,8 +210,6 @@ def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2, 
         y_test += res[3]
         ids_test += res[5]
 
-        print(len(y_test) + len(y_calibrate))
-
     return ImagePairs(y_test=y_test, X_test=X_test, ids_test=ids_test, y_calibrate=y_calibrate,
                       X_calibrate=X_calibrate, ids_calibrate=ids_calibrate)
 
@@ -260,5 +258,4 @@ def make_pairs(data: ImageWithIds) -> PairsWithIds:
 
         imgs_prev = imgs
         img_ids_prev = img_ids
-    print(len(pairs))
     return PairsWithIds(pairs=pairs, is_same_source=same_different_source, pair_ids=ids)
