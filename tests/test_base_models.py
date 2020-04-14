@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from finetuning import BaseModel
+from lr_face.models import BaseModel
 
 
 def test_load_embedding_models():

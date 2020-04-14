@@ -1,63 +1,11 @@
+from enum import Enum
+
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
 
+from deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
 from lr_face.utils import resize_and_normalize
-
-
-class DummyModel:
-    """
-    Dummy model that returns random scores.
-    """
-
-    def __init__(self, resolution=(100, 100)):
-        self.resolution = resolution
-
-    def fit(self, X, y):
-        assert X.shape[1:3] == self.resolution
-        pass
-
-    def predict_proba(self, X, ids=None):
-        # assert X.shape[2:4] == self.resolution
-        if X.shape[1] != 2:
-            raise ValueError(
-                f'Should get n pairs, but second dimension is {X.shape[1]}')
-        return np.random.random((len(X), 2))
-
-    def __str__(self):
-        return 'Dummy'
-
-
-class Deepface_Lib_Model:
-    """
-    deepface/Face model
-    """
-
-    def __init__(self, model):
-        self.model = model
-        self.cache = {}
-
-    def predict_proba(self, X, ids):
-        assert len(X) == len(ids)
-        scores = []
-        for id, pair in zip(ids, X):
-            if id in self.cache:
-                score = self.cache[id]
-            else:
-                score = self.score_for_pair(pair)
-                self.cache[id] = score
-            scores.append([score, 1 - score])
-
-        return np.asarray(scores)
-
-    def score_for_pair(self, pair):
-        img1 = resize_and_normalize(pair[0], self.model.input_shape[1:3])
-        img2 = resize_and_normalize(pair[1], self.model.input_shape[1:3])
-        img1_representation = self.model.predict(img1)[0, :]
-        img2_representation = self.model.predict(img2)[0, :]
-        score = spatial.distance.cosine(img1_representation,
-                                        img2_representation)
-        return score
 
 
 class TripletEmbedder(tf.keras.Model):
@@ -157,3 +105,118 @@ class TripletEmbedder(tf.keras.Model):
         `load_weights()` to make the two compatible again.
         """
         return self.embedding_model.load_weights(filepath, by_name)
+
+
+class DummyModel:
+    """
+    Dummy model that returns random scores.
+    """
+
+    def __init__(self, resolution=(100, 100)):
+        self.resolution = resolution
+
+    def fit(self, X, y):
+        assert X.shape[1:3] == self.resolution
+        pass
+
+    def predict_proba(self, X, ids=None):
+        # assert X.shape[2:4] == self.resolution
+        if np.array(X).shape[1] != 2:
+            raise ValueError(
+                f'Should get n pairs, but second dimension is {np.array(X).shape[1]}')
+        return np.random.random((len(X), 2))
+
+    def __str__(self):
+        return 'Dummy'
+
+
+class BaseModel(Enum):
+    """
+    This Enum can be used to define all base model architectures that we
+    currently support, and to retrieve (triplet) embedding models. This
+    abstracts away the individual implementations of various models so that
+    there is one unified way of loading models.
+
+    TODO: currently only supports Tensorflow models.
+
+    To load the embedding model for VGGFace for example, you would use:
+
+        `BaseModel.VGGFACE.load_embedding_model()`
+
+    Similarly, to load a triplet embedder model, you would use:
+
+        `BaseModel.VGGFACE.load_triplet_embedder()`
+    """
+    VGGFACE = 'VGGFace'
+    FACENET = 'Facenet'
+    FBDEEPFACE = 'FbDeepFace'
+    OPENFACE = 'OpenFace'
+
+    def __init__(self, model_name):
+        self.cache = {}
+        if model_name == 'VGGFace':
+            self.module = VGGFace
+        elif model_name == 'FbDeepFace':
+            self.module = FbDeepFace
+        elif model_name == 'OpenFace':
+            self.module = OpenFace
+        elif model_name == 'Facenet':
+            self.module = Facenet
+        else:
+            raise ValueError("Unknown model source.")
+        self._model=None
+
+    def load_embedding_model(self) -> tf.keras.Model:
+        return self.model
+
+    def load_triplet_embedder(self) -> TripletEmbedder:
+        return TripletEmbedder(self.load_embedding_model())
+
+    @property
+    def source(self) -> str:
+        """
+        Returns a textual description of where the model comes from.
+
+        :return: str
+        """
+        deepface_models = [self.VGGFACE,
+                           self.FACENET,
+                           self.FBDEEPFACE,
+                           self.OPENFACE]
+        if self in deepface_models:
+            return 'deepface'
+        raise ValueError("Unknown model source.")
+
+
+    @property
+    def model(self):
+        # TODO assumes deepface like loadModel
+        if not self._model:
+            self._model = self.module.loadModel()
+        return self._model
+
+    def predict_proba(self, X, ids):
+        assert len(X) == len(ids)
+        scores = []
+        for id, pair in zip(ids, X):
+            if id in self.cache:
+                score = self.cache[id]
+            else:
+                score = self.score_for_pair(pair)
+                self.cache[id] = score
+            scores.append([score, 1 - score])
+        return np.asarray(scores)
+
+    def score_for_pair(self, pair):
+        # TODO assumes resizing is necessary
+        img1 = resize_and_normalize(pair[0], self.model.input_shape[1:3])
+        img2 = resize_and_normalize(pair[1], self.model.input_shape[1:3])
+        # TODO assumes deepface like predict
+        img1_representation = self.model.predict(img1)[0, :]
+        img2_representation = self.model.predict(img2)[0, :]
+        score = spatial.distance.cosine(img1_representation,
+                                        img2_representation)
+        return score
+
+    def __str__(self):
+        return self.name
