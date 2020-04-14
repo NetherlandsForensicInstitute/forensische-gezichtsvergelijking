@@ -117,6 +117,69 @@ def enfsi_data(resolution, year) -> PairsWithIds:
     return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
 
 
+def lfw_data(resolution) -> PairsWithIds:
+    folder = os.path.join('resources', 'lfw')
+    df = pd.read_csv(os.path.join(folder, 'pairs.txt'), sep="\t", names=['col1', 'col2', 'col3', 'col4'])
+    
+    num_images_batch = int(df.loc[0]['col2'])
+    num_batch = int(df.loc[0]['col1'])
+    
+    df = df.drop([0],axis=0).reset_index(drop=True)
+    n_pairs = df.shape[0]
+    cls = 0
+    X = [[-1, -1] for _ in range(n_pairs)]
+    y = [-1] * n_pairs
+    ids = [-1] * n_pairs
+    
+    for batch in range(num_batch):
+        for same_source in range(num_images_batch):
+            person1 = df.loc[cls]['col1']
+            folder_img1 = os.path.join(folder,person1)
+            
+            img1_num = int(df.loc[cls]['col2'])
+            img2_num = int(df.loc[cls]['col3'])
+            img1_filename = f'{person1}_{img1_num:04}.jpg'
+            img2_filename = f'{person1}_{img2_num:04}.jpg'
+            img1 = cv2.imread(os.path.join(folder_img1, img1_filename), cv2.COLOR_BGR2RGB)
+            img2 = cv2.imread(os.path.join(folder_img1, img2_filename), cv2.COLOR_BGR2RGB)
+            
+            X[cls][0] = img1
+            X[cls][1] = img2
+            y[cls] = int(1)
+            ids[cls] = f"lfw_{cls}_1"
+            cls+=1
+
+            
+            
+        for dif_source in range(num_images_batch):
+            
+            #Person1
+            person1 = df.loc[cls]['col1']
+            folder_img1 = os.path.join(folder, person1)
+            img1_num = int(df.loc[cls]['col2'])
+            
+            img1_filename = f'{person1}_{img1_num:04}.jpg'
+            
+            img1 = cv2.imread(os.path.join(folder_img1, img1_filename), cv2.COLOR_BGR2RGB)
+            
+
+            #Person2
+            person2 = df.loc[cls]['col3']
+            folder_img2 = os.path.join(folder,person2)
+            img2_num = int(df.loc[cls]['col4'])
+            img2_filename = f'{person2}_{img2_num:04}.jpg'
+            img2 = cv2.imread(os.path.join(folder_img2, img2_filename), cv2.COLOR_BGR2RGB)
+            
+            X[cls][0] = img1
+            X[cls][1] = img2
+            y[cls] = int(0)
+            ids[cls] = f"lfw_{cls}_0"
+            cls+=1  
+    
+    
+    return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
+
+
 def combine_unpaired_data(image_providers: List[ImageProvider],
                           resolution) -> ImageWithIds:
     """
