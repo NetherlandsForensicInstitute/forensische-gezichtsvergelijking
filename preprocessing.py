@@ -2,6 +2,7 @@ import argparse
 import os
 from collections import defaultdict
 from glob import glob
+
 import cv2
 
 from deepface.commons import functions
@@ -40,15 +41,14 @@ def run(input_folder, output_folder, dimensions, recursive):
                 os.makedirs(dir_path)
             cv2.imwrite(output_path, face[0] * 255)
             # save meta info per folder
-            meta[dir_path].append([file_name, round(rotation,2), face_found, original_res])
+            meta[dir_path].append([file_name, round(rotation, 2), face_found, original_res])
         except ValueError as e:
             print(e)
             pass
     for folder in meta:
         with open(os.path.join(folder, "meta.txt"), "w") as file:
             file.write('file; rotation; face found; original resolution\n')
-            file.writelines(';'.join(map(str,line))+'\n' for line in sorted(meta[folder], key=lambda x:x[0]))
-
+            file.writelines(';'.join(map(str, line)) + '\n' for line in sorted(meta[folder], key=lambda x: x[0]))
 
 
 if __name__ == '__main__':
