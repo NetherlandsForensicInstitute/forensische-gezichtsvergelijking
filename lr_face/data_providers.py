@@ -4,6 +4,7 @@ from typing_extensions import Protocol
 
 from typing import Tuple, List, Optional
 import os
+import random
 
 import pandas as pd
 import cv2
@@ -100,6 +101,28 @@ def enfsi_data(resolution, year) -> PairsWithIds:
     return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
 
 
+def forenface_data(resolution) -> ImageWithIds:
+    folder = os.path.join("resources", "forenface")
+    files = os.listdir(folder)
+
+    # only take randomly selected items from forenface, to keep it small
+    #todo: make max_files configurable in params.py
+    max_files = 200
+    random_ids = random.sample(range(len(files)), max_files)
+    downsized_files = [j for i, j in enumerate(files) if i in random_ids]
+
+    images = []
+    person_ids = []
+    image_ids = list(range(max_files))
+    for file in downsized_files:
+        id = int(file[:3])
+        img = cv2.imread(os.path.join(folder, file), cv2.COLOR_BGR2RGB)
+        images.append(img)
+        person_ids.append(id)
+    return ImageWithIds(images=images, person_ids=person_ids, image_ids=image_ids)
+
+
+
 def combine_unpaired_data(image_providers: List[ImageProvider], resolution) -> ImageWithIds:
     """
     Gets the X and y for all data in the callables, and returns the total set.
@@ -188,6 +211,8 @@ def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2, 
         y_test += res[3]
         ids_test += res[5]
 
+        print(len(y_test) + len(y_calibrate))
+
     return ImagePairs(y_test=y_test, X_test=X_test, ids_test=ids_test, y_calibrate=y_calibrate,
                       X_calibrate=X_calibrate, ids_calibrate=ids_calibrate)
 
@@ -236,4 +261,5 @@ def make_pairs(data: ImageWithIds) -> PairsWithIds:
 
         imgs_prev = imgs
         img_ids_prev = img_ids
+    print(len(pairs))
     return PairsWithIds(pairs=pairs, is_same_source=same_different_source, pair_ids=ids)

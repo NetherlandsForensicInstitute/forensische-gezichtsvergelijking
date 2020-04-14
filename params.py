@@ -7,7 +7,8 @@ from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrato
 
 from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
 from lr_face.models import DummyModel, Deepface_Lib_Model
-from lr_face.data_providers import test_data, enfsi_data, combine_paired_data, DataFunctions
+from lr_face.data_providers import test_data, enfsi_data, forenface_data, combine_paired_data, \
+    DataFunctions
 
 
 """How often to repeat all experiments"""
@@ -51,7 +52,7 @@ PARAMS = {
 
 
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['forenface'],
     'all': {
         'test': {
             'datasets': [DataFunctions(image_provider=test_data, pair_provider=None)],
@@ -66,6 +67,10 @@ DATA = {
                                            partial(enfsi_data, year=2017),
                                                                           ]))],
             'fraction_test': .2,
+        },
+        'forenface': {
+            'datasets': [DataFunctions(image_provider=forenface_data, pair_provider=None)],
+            'fraction_test': .5,
         }
     }
 }
@@ -75,7 +80,7 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 SCORERS = {
-    'current_set_up': ['openface', 'facenet', 'vggface', 'fbdeepface', 'dummy'],
+    'current_set_up': ['vggface'],
     'all': {
         'dummy': DummyModel(),
         'openface': Deepface_Lib_Model(model=OpenFace.loadModel()),
