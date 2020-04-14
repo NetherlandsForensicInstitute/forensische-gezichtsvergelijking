@@ -7,7 +7,7 @@ from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrato
 
 from deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
 from lr_face.models import DummyModel, Deepface_Lib_Model
-from lr_face.data_providers import test_data, enfsi_data, combine_paired_data, DataFunctions
+from lr_face.data_providers import test_data, enfsi_data, lfw_data, combine_paired_data, DataFunctions
 
 
 """How often to repeat all experiments"""
@@ -64,6 +64,13 @@ DATA = {
                                            partial(enfsi_data, year=2012),
                                            partial(enfsi_data, year=2013),
                                            partial(enfsi_data, year=2017),
+                                                                          ]))],
+            'fraction_test': .2,
+        },
+        'lfw': {
+            'datasets': [DataFunctions(image_provider=None,
+                                       pair_provider=partial(combine_paired_data, pair_providers=[
+                                           partial(lfw_data),
                                                                           ]))],
             'fraction_test': .2,
         }
