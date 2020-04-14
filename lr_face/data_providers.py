@@ -133,7 +133,7 @@ class EnfsiData:
                     else:
                         raise ValueError(f'unknown questioned/ref: {questioned_ref}')
         sets.append(PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids))
-        return combine_paired_data(sets, resolution)
+        return combine_paired_data(sets)
 
     def __str__(self):
         if len(self.years) == 4:

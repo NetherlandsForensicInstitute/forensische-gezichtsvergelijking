@@ -5,8 +5,7 @@ from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrato
     IsotonicCalibrator, DummyCalibrator
 
 
-from deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
-from lr_face.models import DummyModel, Deepface_Lib_Model
+from lr_face.models import DummyModel, BaseModel
 from lr_face.data_providers import TestData, DataFunctions, EnfsiData
 
 """How often to repeat all experiments"""
@@ -72,10 +71,10 @@ SCORERS = {
     'current_set_up': ['openface', 'facenet', 'vggface', 'fbdeepface', 'dummy'],
     'all': {
         'dummy': DummyModel(),
-        'openface': Deepface_Lib_Model(module=OpenFace),
-        'facenet': Deepface_Lib_Model(module=Facenet),
-        'fbdeepface': Deepface_Lib_Model(module=FbDeepFace),
-        'vggface': Deepface_Lib_Model(module=VGGFace)
+        'openface': BaseModel.OPENFACE,
+        'facenet': BaseModel.FACENET,
+        'fbdeepface': BaseModel.FBDEEPFACE,
+        'vggface': BaseModel.VGGFACE,
     }
 }
 
