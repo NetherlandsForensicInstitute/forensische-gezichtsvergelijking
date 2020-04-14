@@ -51,7 +51,7 @@ PARAMS = {
 
 
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['lfw'],
     'all': {
         'test': {
             'datasets': [DataFunctions(image_provider=test_data, pair_provider=None)],
