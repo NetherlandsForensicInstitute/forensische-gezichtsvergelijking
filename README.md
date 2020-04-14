@@ -66,15 +66,15 @@ For the models of Insightface, mxnet library may present some issues if [Cuda 9.
 4) cd into the local folder
 `$ cd forensische-gezichtsvergelijking`
 5) Change to add-insightface-new branch 
-`$git checkout add-insightface-new`
+`$git checkout add_insightface_new`
 6) Build the docker image
 `$ docker build . -t imagename:tag`
 7) Run the docker container
 `$ docker run --gpus all -it imagename:tag /bin/bash`
 8) Run the pipeline. It can take some minutes.
-` python run.py`
+` $ python run.py`
 9) Check the results in the folder output.
-`cd output`
+`$ cd output`
 #### TO DO
 1) Dockerfile : `ADD git repository` directly so git repo doesn't have to be downloaded locally.
 2) Use Docker volume so datasets are not buildt inside the image.
