@@ -4,12 +4,10 @@ import numpy as np
 from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrator, FractionCalibrator, \
     IsotonicCalibrator, DummyCalibrator
 
-
 from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
 from lr_face.models import DummyModel, Deepface_Lib_Model
 from lr_face.data_providers import test_data, enfsi_data, forenface_data, combine_paired_data, \
     DataFunctions
-
 
 """How often to repeat all experiments"""
 
@@ -50,7 +48,6 @@ PARAMS = {
     }
 }
 
-
 DATA = {
     'current_set_up': ['forenface'],
     'all': {
@@ -65,7 +62,7 @@ DATA = {
                                            partial(enfsi_data, year=2012),
                                            partial(enfsi_data, year=2013),
                                            partial(enfsi_data, year=2017),
-                                                                          ]))],
+                                       ]))],
             'fraction_test': .2,
         },
         'forenface': {

@@ -66,10 +66,10 @@ def test_data(resolution=(100, 100)) -> ImageWithIds:
 def enfsi_data(resolution, year) -> PairsWithIds:
     folder = os.path.join('resources', 'enfsi', str(year))
     files = os.listdir(folder)
-    n_pairs = (len(files)-1)//2
+    n_pairs = (len(files) - 1) // 2
     X = [[-1, -1] for _ in range(n_pairs)]
-    y = [-1]*n_pairs
-    ids = [-1]*n_pairs
+    y = [-1] * n_pairs
+    ids = [-1] * n_pairs
     df = pd.read_csv(os.path.join(folder, 'truth.csv')).set_index('id')
     for file in files:
         if not file.endswith('csv'):
@@ -90,12 +90,12 @@ def enfsi_data(resolution, year) -> PairsWithIds:
                 questioned_ref = file[0]
             else:
                 raise ValueError(f'Unknown ENFSI year {year}')
-            y[cls-1] = int(df.loc[cls]['same'] == 1)
-            ids[cls-1] = f"enfsi_{year}_{cls}_{int(df.loc[cls]['same'] == 1)}"
+            y[cls - 1] = int(df.loc[cls]['same'] == 1)
+            ids[cls - 1] = f"enfsi_{year}_{cls}_{int(df.loc[cls]['same'] == 1)}"
             if questioned_ref == 'q':
-                X[cls-1][0] = img
+                X[cls - 1][0] = img
             elif questioned_ref == 'r':
-                X[cls-1][1] = img
+                X[cls - 1][1] = img
             else:
                 raise ValueError(f'unknown questioned/ref: {questioned_ref}')
     return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
@@ -106,7 +106,7 @@ def forenface_data(resolution) -> ImageWithIds:
     files = os.listdir(folder)
 
     # only take randomly selected items from forenface, to keep it small
-    #todo: make max_files configurable in params.py
+    # todo: make max_files configurable in params.py
     max_files = 200
     random_ids = random.sample(range(len(files)), max_files)
     downsized_files = [j for i, j in enumerate(files) if i in random_ids]
@@ -122,7 +122,6 @@ def forenface_data(resolution) -> ImageWithIds:
     return ImageWithIds(images=images, person_ids=person_ids, image_ids=image_ids)
 
 
-
 def combine_unpaired_data(image_providers: List[ImageProvider], resolution) -> ImageWithIds:
     """
     Gets the X and y for all data in the callables, and returns the total set.
@@ -133,7 +132,7 @@ def combine_unpaired_data(image_providers: List[ImageProvider], resolution) -> I
     max_class = 0
     for dataset_callable in image_providers:
         this_X, this_y, this_ids = dataset_callable(resolution)
-        y = np.append(y, this_y+max_class)
+        y = np.append(y, this_y + max_class)
         max_class = max(y)
         X += this_X
         ids += this_ids
@@ -147,7 +146,7 @@ def combine_paired_data(pair_providers: List[PairProvider], resolution) -> Pairs
     """
     X = []
     y = []
-    ids=[]
+    ids = []
     for dataset_callable in pair_providers:
         pairs = dataset_callable(resolution)
         assert type(pairs) == PairsWithIds
@@ -184,7 +183,7 @@ def get_data(datasets: DataFunctions, resolution=(100, 100), fraction_test=0.2, 
         # split on identities, not on samples (so same person does not appear in both test and train
         images_calibrate, images_test = split_data_on_groups(X, fraction_test, y, ids)
         assert len(images_calibrate.image_ids + images_test.image_ids) == \
-            len(set(images_calibrate.image_ids + images_test.image_ids))
+               len(set(images_calibrate.image_ids + images_test.image_ids))
 
         # make pairs per set
         pairs_test = make_pairs(images_test)
