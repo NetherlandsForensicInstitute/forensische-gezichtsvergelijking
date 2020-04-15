@@ -1,0 +1,25 @@
+<View>
+  <Image name="img" value="$image"></Image>
+  <Text name="Yaw" value="Yaw"></Text>
+  <Choices name="yaw" toName="img" choice="single" showInLine="true">
+    <Choice value="recht" hotkey="q"></Choice>
+    <Choice value="licht gedraaid" hotkey="w"></Choice>
+    <Choice value="ver gedraaid" hotkey="e"></Choice>
+  </Choices>
+  <Text name="Pitch" value="Pitch"></Text>
+  <Choices name="pitch" toName="img" choice="single" showInLine="true">
+    <Choice value="ver naar boven" hotkey="a"></Choice>
+    <Choice value="licht naar boven" hotkey="s"></Choice>
+    <Choice value="recht" hotkey="d"></Choice>
+    <Choice value="licht naar onder" hotkey="f"></Choice>
+    <Choice value="ver naar onder" hotkey="g"></Choice>
+  </Choices>
+  <Text name="Overig" value="Overig"></Text>
+  <Choices name="overig" toName="img" choice="multiple" showInLine="true">
+    <Choice value="hoofddeksel" hotkey="z"></Choice>
+    <Choice value="baard" hotkey="x"></Choice>
+    <Choice value="bril" hotkey="c"></Choice>
+    <Choice value="occlusion overig" hotkey="v"></Choice>
+    <Choice value="slechte kwaliteit" hotkey="b"></Choice>
+  </Choices>
+</View>
