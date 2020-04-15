@@ -106,19 +106,19 @@ def forenface_data(resolution) -> ImageWithIds:
     files = os.listdir(folder)
 
     # only take randomly selected items from forenface, to keep it small
-    # todo: make max_files configurable in params.py
-    max_files = 200
-    random_ids = random.sample(range(len(files)), max_files)
-    downsized_files = [j for i, j in enumerate(files) if i in random_ids]
+    # todo: make no_of_images configurable in params.py
+    no_of_images = min(200, len(files))
+    sampled_files = random.sample(files,no_of_images)
 
     images = []
     person_ids = []
-    image_ids = list(range(max_files))
-    for file in downsized_files:
+    image_ids = []
+    for file in sampled_files:
         id = int(file[:3])
         img = cv2.imread(os.path.join(folder, file), cv2.COLOR_BGR2RGB)
         images.append(img)
         person_ids.append(id)
+        image_ids.append(os.path.join("forenface", file))
     return ImageWithIds(images=images, person_ids=person_ids, image_ids=image_ids)
 
 
