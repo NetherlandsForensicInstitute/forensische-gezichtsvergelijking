@@ -164,7 +164,7 @@ class BaseModel(Enum):
             self.module = Facenet
         else:
             raise ValueError("Unknown model source.")
-        self._model=None
+        self._model = None
 
     def load_embedding_model(self) -> tf.keras.Model:
         return self.model
@@ -186,7 +186,6 @@ class BaseModel(Enum):
         if self in deepface_models:
             return 'deepface'
         raise ValueError("Unknown model source.")
-
 
     @property
     def model(self):
@@ -219,4 +218,4 @@ class BaseModel(Enum):
         return score
 
     def __str__(self):
-        return self.name
+        return self.value

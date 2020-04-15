@@ -1,12 +1,11 @@
-from functools import partial
 import numpy as np
-
 from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrator, FractionCalibrator, \
     IsotonicCalibrator, DummyCalibrator
 
 
-from lr_face.models import DummyModel, BaseModel
 from lr_face.data_providers import TestData, DataFunctions, EnfsiData
+from lr_face.models import DummyModel, BaseModel
+
 
 """How often to repeat all experiments"""
 
@@ -46,7 +45,6 @@ PARAMS = {
         },
     }
 }
-
 
 DATA = {
     'current_set_up': ['enfsi'],
