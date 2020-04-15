@@ -76,7 +76,7 @@ class FacePair:
         """
         return self.first.identity == self.second.identity
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[FaceImage]:
         """
         A simple iterator implementation that allows unpacking a `FacePair`
         instance, i.e.
@@ -96,7 +96,7 @@ class FaceTriplet:
     positive: FaceImage
     negative: FaceImage
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[FaceImage]:
         """
         A simple iterator implementation that allows unpacking a `FaceTriplet`
         instance, i.e.
@@ -522,7 +522,8 @@ def to_array(data: Union[Dataset,
                          List[FaceImage],
                          List[FacePair],
                          List[FaceTriplet]],
-             resolution: Tuple[int, int]) -> np.ndarray:
+             resolution: Tuple[int, int],
+             normalize: bool = True) -> np.ndarray:
     """
     Converts the `data` to a numpy array of the appropriate shape. This method
     accepts a variety of data types, which influence the shape of the returned
@@ -535,31 +536,34 @@ def to_array(data: Union[Dataset,
             shape `(num_pairs, 3, height, width, num_channels)`.
     To ensure all images have the same spatial dimensions, a `resolution`
     should be provided as a `(width, height)` tuple. All images will be resized
-    to these dimensions.
+    to these dimensions. If `normalize` is True, the pixel values will also
+    be normalized. See the `FaceImage.read()` docstring for more information on
+    how this normalization is done.
 
     :param data:
     :param resolution: Tuple[int, int]
+    :param normalize: bool
     :return: np.ndarray
     """
 
     # When `data` is a `Dataset` or a list of `FaceImage` instances.
     if isinstance(data, Dataset) or all(
             isinstance(x, FaceImage) for x in data):
-        return np.array([x.read(resolution) for x in data])
+        return np.array([x.read(resolution, normalize) for x in data])
 
     # When `data` is a list of `FacePair` instances.
     if all(isinstance(x, FacePair) for x in data):
         return np.array([[
-            first.read(resolution),
-            second.read(resolution)
+            first.read(resolution, normalize),
+            second.read(resolution, normalize)
         ] for first, second in data])
 
     # When `data` is a list of `FaceTriplet` instances.
     if all(isinstance(x, FaceTriplet) for x in data):
         return np.array([[
-            anchor.read(resolution),
-            positive.read(resolution),
-            negative.read(resolution)
+            anchor.read(resolution, normalize),
+            positive.read(resolution, normalize),
+            negative.read(resolution, normalize)
         ] for anchor, positive, negative in data])
 
     # If we haven't returned something by now it means an invalid data type
