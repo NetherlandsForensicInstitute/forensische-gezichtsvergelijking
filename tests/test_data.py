@@ -1,5 +1,4 @@
 import os
-import random
 from functools import wraps
 from typing import List
 
@@ -105,6 +104,24 @@ def test_face_image_get_image(dummy_images, scratch):
     face_image = FaceImage(image_path, dummy_images[0].identity)
     reloaded_image = face_image.get_image(resolution)
     assert reloaded_image.shape == (*resolution, 3)
+
+
+#################
+# `FaceTriplet` #
+#################
+
+def test_face_triplet_raises_exception_on_wrong_identities():
+    anchor = FaceImage('', identity='A')
+    false_positive = FaceImage('', identity='B')
+    true_positive = FaceImage('', identity='A')
+    false_negative = FaceImage('', identity='A')
+    true_negative = FaceImage('', identity='B')
+    with pytest.raises(ValueError):
+        FaceTriplet(anchor, false_positive, true_negative)
+    with pytest.raises(ValueError):
+        FaceTriplet(anchor, true_positive, false_negative)
+    with pytest.raises(ValueError):
+        FaceTriplet(anchor, false_positive, false_negative)
 
 
 ################
@@ -334,7 +351,7 @@ def test_face_images_to_array_with_various_resolutions(dummy_images, scratch):
 
 def test_zero_face_images_to_array():
     array = to_array([])
-    assert array.shape == (0, )
+    assert array.shape == (0,)
 
 
 def test_face_pairs_to_array(dummy_pairs):

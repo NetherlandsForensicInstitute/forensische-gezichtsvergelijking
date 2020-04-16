@@ -8,8 +8,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 
-from lr_face.data import FaceTriplet, make_triplets, to_array, \
-    EnfsiDataset
+from lr_face.data import FaceTriplet, to_array, EnfsiDataset
 from lr_face.losses import TripletLoss
 from lr_face.models import TripletEmbeddingModel, BaseModel
 from lr_face.utils import fix_tensorflow_rtx
@@ -80,6 +79,8 @@ def lr_test(model: TripletEmbeddingModel, triplets: List[FaceTriplet]):
     plot_path = f'scratch/learning_rate_test-{DATASET}.jpg'
     plt.plot(list(map(schedule, range(epochs))), history.history['loss'])
     plt.xscale('log')
+    plt.xlabel('Learning rate')
+    plt.ylabel('Loss')
     plt.savefig(plot_path)
     print(f'Saved plot to {plot_path}')
     plt.show()
@@ -87,8 +88,7 @@ def lr_test(model: TripletEmbeddingModel, triplets: List[FaceTriplet]):
 
 def main():
     triplet_embedding_model = BASE_MODEL.get_triplet_embedding_model()
-    triplets = make_triplets(DATASET)
-    lr_test(triplet_embedding_model, triplets)
+    lr_test(triplet_embedding_model, DATASET.triplets)
 
 
 if __name__ == '__main__':
