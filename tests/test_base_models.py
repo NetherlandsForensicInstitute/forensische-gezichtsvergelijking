@@ -6,13 +6,13 @@ from lr_face.models import BaseModel
 
 
 @pytest.mark.skip(reason="Fails on Github because model weights don't exist")
-def test_load_embedding_models():
+def test_get_embedding_models():
     """
     Tests whether no exceptions are thrown when we try to load the embedding
     models for each defined BaseModel.
     """
     for base_model in BaseModel:
-        base_model.load_embedding_model()
+        base_model.get_embedding_model()
 
 
 @pytest.mark.skip(reason="Not all BaseModel outputs have been normalized yet")
@@ -22,7 +22,7 @@ def test_embedding_models_return_normalized_embeddings():
     that are L2-normalized.
     """
     for base_model in BaseModel:
-        embedding_model: tf.keras.Model = base_model.load_embedding_model()
+        embedding_model: tf.keras.Model = base_model.get_embedding_model()
         batch_input_shape = embedding_model.input_shape
         x = np.random.normal(size=(2, *batch_input_shape[1:]))
         embedding = embedding_model.predict(x)
@@ -32,10 +32,10 @@ def test_embedding_models_return_normalized_embeddings():
 
 
 @pytest.mark.skip(reason="Fails on Github because model weights don't exist")
-def test_load_triplet_embedders():
+def test_get_triplet_embedding_models():
     """
     Tests whether no exceptions are thrown when we try to load the finetune
     models for each defined BaseModel.
     """
     for base_model in BaseModel:
-        base_model.load_triplet_embedder()
+        base_model.get_triplet_embedding_model()

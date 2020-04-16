@@ -1,19 +1,20 @@
 import argparse
 import os
+import time
 
 import numpy as np
 from tensorflow.keras.optimizers import Adam
 
 from lr_face.data import make_triplets, EnfsiDataset, to_array
 from lr_face.losses import TripletLoss
-from lr_face.models import TripletEmbedder, BaseModel
+from lr_face.models import TripletEmbeddingModel, BaseModel
 from lr_face.utils import fix_tensorflow_rtx
 
 # Needed to make TensorFlow 2.x work with RTX Nvidia cards.
 fix_tensorflow_rtx()
 
 
-def finetune(model: TripletEmbedder,
+def finetune(model: TripletEmbeddingModel,
              anchors: np.ndarray,
              positives: np.ndarray,
              negatives: np.ndarray):
@@ -58,22 +59,22 @@ def finetune(model: TripletEmbedder,
 def main(model_name: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
     base_model: BaseModel = BaseModel[model_name.upper()]
-    triplet_embedder = base_model.load_triplet_embedder()
+    triplet_embedding_model = base_model.get_triplet_embedding_model()
     dataset = EnfsiDataset(years=[2011, 2012, 2013, 2017])
     triplets = make_triplets(dataset)
-    x = to_array(triplets, (224, 224))  # TODO: Make resolution dynamic
-    anchors, positives, negatives = np.split(x, 3, axis=1)
+
+    anchors, positives, negatives = to_array(triplets,
+                                             resolution=base_model.resolution,
+                                             normalize=True)
     try:
-        finetune(triplet_embedder,
-                 np.squeeze(anchors, axis=1),
-                 np.squeeze(positives, axis=1),
-                 np.squeeze(negatives, axis=1))
+        finetune(triplet_embedding_model, anchors, positives, negatives)
     except KeyboardInterrupt:
         # Allow user to manually interrupt training and still save checkpoint.
         pass
 
-    weights_path = os.path.join(output_dir, 'weights.h5')
-    triplet_embedder.save_weights(weights_path, overwrite=True)
+    weights_name = f"{dataset}-{time.strftime('%Y_%m_%d-%H_%M_%S')}"
+    weights_path = os.path.join(output_dir, f'{weights_name}.h5')
+    triplet_embedding_model.save_weights(weights_path, overwrite=True)
 
 
 if __name__ == '__main__':

@@ -1,11 +1,23 @@
 import os
+import random
 from functools import wraps
+from typing import List
 
+import cv2
 import pytest
 
-from lr_face.data import make_triplets, DummyFaceImage, make_pairs, \
-    EnfsiDataset, ForenFaceDataset, Dataset
-from tests.src.util import get_project_path
+from lr_face.data import (FaceImage,
+                          FacePair,
+                          FaceTriplet,
+                          DummyFaceImage,
+                          Dataset,
+                          EnfsiDataset,
+                          ForenFaceDataset,
+                          LfwDataset,
+                          make_pairs,
+                          make_triplets,
+                          to_array)
+from tests.src.util import get_project_path, scratch_dir
 
 
 def dataset_testable(func):
@@ -31,9 +43,23 @@ def skip_if_missing(dataset: Dataset):
 
 
 @pytest.fixture
-def dummy_images():
+def dummy_images() -> List[FaceImage]:
     ids = [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5]
     return [DummyFaceImage(path='', identity=f'TEST-{idx}') for idx in ids]
+
+
+@pytest.fixture
+def dummy_pairs() -> List[FacePair]:
+    ids = [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5]
+    images = [DummyFaceImage(path='', identity=f'TEST-{idx}') for idx in ids]
+    return make_pairs(images)
+
+
+@pytest.fixture
+def dummy_triplets() -> List[FaceTriplet]:
+    ids = [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5]
+    images = [DummyFaceImage(path='', identity=f'TEST-{idx}') for idx in ids]
+    return make_triplets(images)
 
 
 @pytest.fixture
@@ -52,6 +78,76 @@ def enfsi_all():
 @dataset_testable
 def forenface():
     return ForenFaceDataset()
+
+
+@pytest.fixture
+@dataset_testable
+def lfw():
+    return LfwDataset()
+
+
+@pytest.fixture()
+def scratch():
+    yield from scratch_dir('scratch/test_data')
+
+
+###############
+# `FaceImage` #
+###############
+
+def test_face_image_get_image(dummy_images, scratch):
+    width = 100
+    height = 50
+    resolution = (height, width)
+    image = dummy_images[0].get_image(resolution, normalize=False)
+    image_path = os.path.join(scratch, 'tmp.jpg')
+    cv2.imwrite(image_path, image)
+    face_image = FaceImage(image_path, dummy_images[0].identity)
+    reloaded_image = face_image.get_image(resolution)
+    assert reloaded_image.shape == (*resolution, 3)
+
+
+################
+# `LfwDataset` #
+################
+
+@skip_if_missing(LfwDataset)
+def test_lfw_dataset_has_correct_num_images(lfw):
+    assert len(lfw.images) == 13233
+
+
+@skip_if_missing(LfwDataset)
+def test_lfw_dataset_has_correct_num_pairs(lfw):
+    assert len(lfw.pairs) == 6000
+
+
+##################
+# `EnfsiDataset` #
+##################
+
+@skip_if_missing(EnfsiDataset)
+def test_enfsi_dataset_has_correct_num_images(enfsi_all):
+    assert len(enfsi_all.images) == 270
+
+
+@skip_if_missing(EnfsiDataset)
+def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
+    assert len(enfsi_all.pairs) == 135
+    assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.pairs])
+
+
+###############
+# `ForenFace` #
+###############
+
+@skip_if_missing(ForenFaceDataset)
+def test_forenface_dataset_has_correct_num_images(forenface):
+    assert len(forenface.images) == 2476
+
+
+@skip_if_missing(ForenFaceDataset)
+def test_forenface_dataset_has_correct_num_pairs(forenface):
+    assert len(forenface.pairs) == 60798
 
 
 ##################
@@ -214,4 +310,48 @@ def test_make_triplets_six_pairs_per_identity():
 # `to_array()` #
 ################
 
-# TODO: add tests for `to_array()`
+def test_face_images_to_array(dummy_images):
+    resolution = (50, 100)
+    array = to_array(dummy_images, resolution=resolution)
+    assert array.shape == (len(dummy_images), *resolution, 3)
+
+
+def test_face_images_to_array_with_various_resolutions(dummy_images, scratch):
+    face_images = []
+    for i, dummy_image in enumerate(dummy_images):
+        image = dummy_image.get_image(normalize=False)
+        dimensions = (50 + i, 100)
+        image = cv2.resize(image, dimensions)
+        image_path = os.path.join(scratch, f'tmp_{i}.jpg')
+        cv2.imwrite(image_path, image)
+        face_images.append(FaceImage(image_path, dummy_images[0].identity))
+
+    # Should raise an exception, because we do not allow `to_array` to accept
+    # images of various shapes.
+    with pytest.raises(ValueError):
+        to_array(face_images)
+
+
+def test_zero_face_images_to_array():
+    array = to_array([])
+    assert array.shape == (0, )
+
+
+def test_face_pairs_to_array(dummy_pairs):
+    resolution = (50, 100)
+    left, right = to_array(dummy_pairs, resolution=resolution)
+    expected_shape = (len(dummy_pairs), *resolution, 3)
+    assert left.shape == expected_shape
+    assert right.shape == expected_shape
+
+
+def test_face_triplets_to_array(dummy_triplets):
+    resolution = (50, 100)
+    anchors, positives, negatives = to_array(
+        dummy_triplets,
+        resolution=resolution
+    )
+    expected_shape = (len(dummy_triplets), *resolution, 3)
+    assert anchors.shape == expected_shape
+    assert positives.shape == expected_shape
+    assert negatives.shape == expected_shape

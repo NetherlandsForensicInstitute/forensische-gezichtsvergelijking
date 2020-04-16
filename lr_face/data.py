@@ -4,6 +4,7 @@ import random
 from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
+from itertools import islice
 from typing import Dict, Any, Tuple, List, Optional, Union, Iterator
 
 import cv2
@@ -38,7 +39,7 @@ class FaceImage:
                   normalize: bool = False) -> np.ndarray:
         """
         Returns a 3D array of shape `(height, width, num_channels)`. Optionally
-        a `resolution` may be specified as a `(width, height)` tuple to resize
+        a `resolution` may be specified as a `(height, width)` tuple to resize
         the image to those dimensions. If `normalize` is True, the returned
         array will contain values scaled between [0, 1] to be compatible with
         the input format expected by models.
@@ -53,7 +54,7 @@ class FaceImage:
         if res.shape[-1] != 3:
             raise ValueError(f'Expected 3 channels, got {res.shape[-1]}')
         if resolution:
-            res = cv2.resize(res, resolution)
+            res = cv2.resize(res, (resolution[1], resolution[0]))
         if normalize:
             res = res / 255
         return res
@@ -73,6 +74,12 @@ class FaceImage:
     def __post_init__(self):
         if not self.meta:
             self.meta = dict()
+
+    def __hash__(self) -> int:
+        return hash(self.path + self.identity)
+
+    def __eq__(self, other) -> bool:
+        return isinstance(other, self.__class__) and self.path == other.path
 
 
 @dataclass
@@ -151,7 +158,9 @@ class DummyFaceImage(FaceImage):
         Since dummy instances don't have a real path, we override the
         `get_image()` method to just return random pixel data.
         """
-        image = np.random.random(size=(resolution[1], resolution[0], 3))
+        if not resolution:
+            resolution = (100, 100)
+        image = np.random.random(size=(*resolution, 3))
         if normalize:
             image = image / 255
         return image
@@ -265,14 +274,15 @@ class LfwDataset(Dataset):
     @cache
     def images(self) -> List[FaceImage]:
         data = []
-        for person in os.listdir(self.RESOURCE_FOLDER):
-            identity = self._create_identity(person)
-            person_dir = os.path.join(self.RESOURCE_FOLDER, person)
-            for image_file in os.listdir(person_dir):
-                image_path = os.path.join(person_dir, image_file)
-                data.append(FaceImage(image_path, identity, {
-                    'source': str(self)
-                }))
+        for person in os.listdir(self.ROOT):
+            if os.path.isdir(os.path.join(self.ROOT, person)):
+                identity = self._create_identity(person)
+                person_dir = os.path.join(self.ROOT, person)
+                for image_file in os.listdir(person_dir):
+                    image_path = os.path.join(person_dir, image_file)
+                    data.append(FaceImage(image_path, identity, {
+                        'source': str(self)
+                    }))
         return data
 
     @property
@@ -280,28 +290,33 @@ class LfwDataset(Dataset):
     def pairs(self) -> List[FacePair]:
         pairs = []
         with open(os.path.join(self.RESOURCE_FOLDER, 'pairs.txt'), 'r') as f:
-            # Skip the first line.
-            _, *lines = [line.strip() for line in f.readlines()]
+            # The first line tells us how many splits in the data there are,
+            # and how many positive and negative pairs there are per split.
+            # This second number is therefore half the split size, since each
+            # split consists of an equal number of positive and negative pairs.
+            num_splits, half_split_size = map(int, f.readline().split('\t'))
+            lines = iter(line.strip() for line in f.readlines())
 
-            # The first half of the remaining lines consists of positive
-            # pairs (images with the same identity).
-            positive_lines = lines[:len(lines) // 2]
-            negative_lines = lines[len(lines) // 2:]
-            for line in positive_lines:
-                person, idx1, idx2 = line.split('\t')
-                pairs.append(FacePair(
-                    self._create_face_image(person, int(idx1)),
-                    self._create_face_image(person, int(idx2))
-                ))
+            for i in range(num_splits):
+                # The first half of the lines in each split consists of
+                # positive pairs (images with the same identity).
+                positive_lines = islice(lines, half_split_size)
+                for line in positive_lines:
+                    person, idx1, idx2 = line.split('\t')
+                    pairs.append(FacePair(
+                        self._create_face_image(person, int(idx1)),
+                        self._create_face_image(person, int(idx2))
+                    ))
 
-            # The second half consists of negative pairs (images with
-            # different identities).
-            for line in negative_lines:
-                person1, idx1, person2, idx2 = line.split('\t')
-                pairs.append(FacePair(
-                    self._create_face_image(person1, int(idx1)),
-                    self._create_face_image(person2, int(idx2))
-                ))
+                # The second half consists of negative pairs (images with
+                # different identities).
+                negative_lines = islice(lines, half_split_size)
+                for line in negative_lines:
+                    person1, idx1, person2, idx2 = line.split('\t')
+                    pairs.append(FacePair(
+                        self._create_face_image(person1, int(idx1)),
+                        self._create_face_image(person2, int(idx2))
+                    ))
         return pairs
 
     def _create_face_image(self, person: str, idx: int) -> FaceImage:
@@ -553,49 +568,59 @@ def to_array(data: Union[Dataset,
                          List[FaceImage],
                          List[FacePair],
                          List[FaceTriplet]],
-             resolution: Tuple[int, int],
-             normalize: bool = True) -> np.ndarray:
+             resolution: Optional[Tuple[int, int]] = None,
+             normalize: bool = True) -> Union[np.ndarray, List[np.ndarray]]:
     """
-    Converts the `data` to a numpy array of the appropriate shape. This method
-    accepts a variety of data types, which influence the shape of the returned
-    array:
+    Converts the `data` to one or more numpy arrays of the appropriate shape.
+    This method accepts a variety of data types. Depending on the input, one of
+    various data types is returned:
         - If `data` is a `Dataset` or a list of `FaceImage` instances: Returns
             a 4D array of shape `(num_images, height, width, num_channels)`.
-        - If `data` is a list of `FacePair` instances: Returns a 5D array of
-            shape `(num_pairs, 2, height, width, num_channels)`.
-        - If `data` is a list of `FaceTriplet` instances: Returns a 5D array of
-            shape `(num_pairs, 3, height, width, num_channels)`.
+        - If `data` is a list of `FacePair` instances: Returns two 4D arrays of
+            shape `(num_pairs, height, width, num_channels)`. These arrays
+            represent the `first` and `second` images in each pair,
+            respectively.
+        - If `data` is a list of `FaceTriplet` instances: Returns three 4D
+            arrays of shape `(num_triplets, height, width, num_channels)`.
+            These arrays represent the `anchor`, `positive` and `negative`
+            images in each triplet, respectively.
+
     To ensure all images have the same spatial dimensions, a `resolution`
-    should be provided as a `(width, height)` tuple. All images will be resized
-    to these dimensions. If `normalize` is True, the pixel values will also
+    should be provided as a `(height, width)` tuple so that all images can be
+    resized to the same dimensions. If no `resolution` is provided, it is
+    assumed all images already have the same dimensions.
+
+    If `normalize` is True, the pixel values will also
     be normalized. See the `FaceImage.get_image()` docstring for more
     information on how this normalization is done.
 
     :param data:
-    :param resolution: Tuple[int, int]
+    :param resolution: Optional[Tuple[int, int]]
     :param normalize: bool
-    :return: np.ndarray
+    :return: Union[np.ndarray, List[np.ndarray]]
     """
 
     # When `data` is a `Dataset` or a list of `FaceImage` instances.
     if isinstance(data, Dataset) or all(
             isinstance(x, FaceImage) for x in data):
-        return np.array([x.get_image(resolution, normalize) for x in data])
+        image_data = [x.get_image(resolution, normalize) for x in data]
+        if len(set([x.shape for x in image_data])) > 1:
+            print(set([x.shape for x in image_data]))
+            raise ValueError(
+                'Not all images have the same dimensions, '
+                'cannot convert them to a single array.')
+        return np.array(image_data)
 
-    # When `data` is a list of `FacePair` instances.
-    if all(isinstance(x, FacePair) for x in data):
-        return np.array([[
-            first.get_image(resolution, normalize),
-            second.get_image(resolution, normalize)
-        ] for first, second in data])
-
-    # When `data` is a list of `FaceTriplet` instances.
-    if all(isinstance(x, FaceTriplet) for x in data):
-        return np.array([[
-            anchor.get_image(resolution, normalize),
-            positive.get_image(resolution, normalize),
-            negative.get_image(resolution, normalize)
-        ] for anchor, positive, negative in data])
+    # When `data` is a list of `FacePair` instances or `FaceTriplet` instances
+    # we recursively apply this method on each separate list of images we can
+    # make from the pairs or triplets.
+    if all(isinstance(x, FacePair) for x in data) or all(
+            isinstance(x, FaceTriplet) for x in data):
+        return [to_array(
+            x,
+            resolution,
+            normalize
+        ) for x in map(list, zip(*data))]
 
     # If we haven't returned something by now it means an invalid data type
     # was passed along, so we let the user know about that.
