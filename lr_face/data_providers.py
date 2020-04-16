@@ -175,7 +175,7 @@ class LfwData:
             ids[cls] = f"lfw_{cls}_1"
             cls+=1
             
-        for index, row in df_f.iterrows():
+        for index, row in df_d.iterrows():
             folder_img1 = row['Person 1']
             folder_img2 = row['Person 2']
             img1_filename = row['Image 1']
