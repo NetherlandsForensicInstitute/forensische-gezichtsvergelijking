@@ -56,7 +56,7 @@ The outcome of the pipeline can be visualised using the Streamlit app. Specify t
 To use the streamlit app, write in terminal: `streamlit run run_data_exploration.py`
 
 
-###Labeling
+### Labeling
 
 For labeling we will use label-studio, which can be installed via pip. In order to set up you labeling project 
 use the following commands: 
