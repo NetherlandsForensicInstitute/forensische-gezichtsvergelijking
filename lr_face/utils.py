@@ -1,6 +1,8 @@
 import argparse
 import os
 import re
+from functools import wraps
+from typing import Callable
 
 import cv2
 import numpy as np
@@ -194,3 +196,57 @@ def fix_tensorflow_rtx():
     gpu_devices = tf.config.experimental.list_physical_devices('GPU')
     for device in gpu_devices:
         tf.config.experimental.set_memory_growth(device, True)
+
+
+def cache(func):
+    """
+    A decorator for functions whose return values should be cached. Only works
+    for functions whose `args` and `kwargs` are hashable.
+
+    Example usage:
+
+    ```python
+    @cache
+    def add(a, b):
+        print('Computing...')
+        return a + b
+    ```
+
+    <<< add(1, 2)
+    Computing...
+    3
+
+    <<< add(1, 2)
+    3
+
+    <<< add(2, 1)
+    3
+
+    <<< add(a=1, b=2)
+    Computing...
+    3
+
+    <<< add(b=2, a=1)
+    3
+
+    <<< add(10, 10)
+    Computing...
+    20
+    """
+
+    # We use a dict to keep track of previously returned values, with `args`
+    # and `kwargs` as key. This requires `args` and `kwargs` to be hashable.
+    func.cache = dict()
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Make sure the args and kwargs are hashable, as we will be using them
+        # as a key.
+        key = frozenset(set(args) | set(kwargs.items()))
+        # If we haven't encountered these arguments before, compute the return
+        # value and store it.
+        if key not in func.cache:
+            func.cache[key] = func(*args, **kwargs)
+        # Return the cached result.
+        return func.cache[key]
+    return wrapper

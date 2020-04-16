@@ -8,6 +8,9 @@ from typing import Dict, Any, Tuple, List, Optional, Union, Iterator
 
 import cv2
 import numpy as np
+import tensorflow as tf
+
+from lr_face.utils import cache
 
 
 @dataclass
@@ -16,8 +19,6 @@ class FaceImage:
     A simple data structure that can be used throughout the application to
     handle annotated images in a unified way. All datasets should preferably
     be a wrapper around handling lists of `FaceImage` instances.
-
-    TODO: we could cache `read()` internally: decentralized and hidden away.
     """
 
     # The path to the image file.
@@ -31,9 +32,10 @@ class FaceImage:
     # metadata about the image can be stored.
     meta: Dict[str, Any] = None
 
-    def read(self,
-             resolution: Optional[Tuple[int, int]] = None,
-             normalize: bool = False) -> np.ndarray:
+    @cache
+    def get_image(self,
+                  resolution: Optional[Tuple[int, int]] = None,
+                  normalize: bool = False) -> np.ndarray:
         """
         Returns a 3D array of shape `(height, width, num_channels)`. Optionally
         a `resolution` may be specified as a `(width, height)` tuple to resize
@@ -53,8 +55,15 @@ class FaceImage:
         if resolution:
             res = cv2.resize(res, resolution)
         if normalize:
-            res = res / 255.  # Normalize input between [0, 1]
+            res = res / 255
         return res
+
+    @cache
+    def get_embedding(self, model: tf.keras.models.Model) -> np.ndarray:
+        """
+
+        """
+        raise NotImplementedError
 
     def __post_init__(self):
         if not self.meta:
@@ -67,7 +76,7 @@ class FacePair:
     second: FaceImage
 
     @property
-    def same(self) -> bool:
+    def same_identity(self) -> bool:
         """
         Returns whether or not the two images in this pair share the same
         identity or not.
@@ -129,32 +138,37 @@ class DummyFaceImage(FaceImage):
     A dummy class that can be used in place of a real `FaceImage` for testing.
     """
 
-    def read(self,
-             resolution: Optional[Tuple[int, int]] = None,
-             normalize: bool = False) -> np.ndarray:
+    @cache
+    def get_image(self,
+                  resolution: Optional[Tuple[int, int]] = None,
+                  normalize: bool = False) -> np.ndarray:
         """
-        Since dummy instances don't have a real path, we override the `read()`
-        method to just return random pixel data.
+        Since dummy instances don't have a real path, we override the
+        `get_image()` method to just return random pixel data.
         """
-        return np.random.random(size=(resolution[1], resolution[0], 3))
+        image = np.random.random(size=(resolution[1], resolution[0], 3))
+        if normalize:
+            image = image / 255
+        return image
 
 
 class Dataset:
-    def __init__(self):
-        self._data = None
-
     @property
+    @cache
+    @abstractmethod
     def images(self) -> List[FaceImage]:
         """
         Returns a list of all `FaceImage` instances that make up this dataset.
+        This abstract method is meant to be implemented by each subclass. Using
+        the `@cache` decorator we ensure that the heavy computation for loading
+        all the data is only done once.
 
         :return: List[FaceImage]
         """
-        if not self._data:
-            self._data = self.load_data()
-        return self._data
+        raise NotImplementedError
 
     @property
+    @cache
     def pairs(self) -> List[FacePair]:
         """
         Returns a list of `FacePair` instances from the images stored in this
@@ -167,6 +181,7 @@ class Dataset:
         return make_pairs(self.images)
 
     @property
+    @cache
     def triplets(self) -> List[FaceTriplet]:
         """
         Returns a list of `FaceTriplet` instances from the images stored in
@@ -186,17 +201,6 @@ class Dataset:
         :return: int
         """
         return len(set(x.identity for x in self.images))
-
-    @abstractmethod
-    def load_data(self) -> List[FaceImage]:
-        """
-        This abstract method is meant to be implemented by each subclass. It is
-        used to lazily load the data only when it is necessary. To access the
-        images inside a `Dataset` instance, always use the `images` property.
-
-        :return: List[FaceImage]
-        """
-        raise NotImplementedError
 
     def __iter__(self) -> Iterator[FaceImage]:
         """
@@ -219,7 +223,9 @@ class Dataset:
 
 
 class TestDataset(Dataset):
-    def load_data(self) -> List[FaceImage]:
+    @property
+    @cache
+    def images(self) -> List[FaceImage]:
         ids = [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5]
         return [DummyFaceImage(path='', identity=f'TEST-{idx}') for idx in ids]
 
@@ -227,13 +233,14 @@ class TestDataset(Dataset):
 class ForenFaceDataset(Dataset):
     ROOT = os.path.join('resources', 'forenface')
 
-    def __init__(self, max_num_images: int):
+    def __init__(self, max_num_images: Optional[int] = None):
         self.max_num_images = max_num_images
-        super().__init__()
 
-    def load_data(self) -> List[FaceImage]:
+    @property
+    @cache
+    def images(self) -> List[FaceImage]:
         files = os.listdir(self.ROOT)
-        if self.max_num_images > len(files):
+        if self.max_num_images and self.max_num_images < len(files):
             files = random.sample(files, self.max_num_images)
 
         data = []
@@ -249,50 +256,9 @@ class ForenFaceDataset(Dataset):
 class LfwDataset(Dataset):
     ROOT = os.path.join('resources', 'lfw')
 
-    def __init__(self):
-        super().__init__()
-        self._pairs = None
-
     @property
-    def pairs(self) -> List[FacePair]:
-        if not self._pairs:
-            pairs = []
-            with open(os.path.join(self.ROOT, 'pairs.txt'), 'r') as f:
-                # Skip the first line.
-                _, *lines = [line.strip() for line in f.readlines()]
-
-                # The first half of the remaining lines consists of positive
-                # pairs (images with the same identity).
-                positive_lines = lines[:len(lines) // 2]
-                negative_lines = lines[len(lines) // 2:]
-                for line in positive_lines:
-                    person, idx1, idx2 = line.split('\t')
-                    pairs.append(FacePair(
-                        self._create_face_image(person, int(idx1)),
-                        self._create_face_image(person, int(idx2))
-                    ))
-
-                # The second half consists of negative pairs (images with
-                # different identities).
-                for line in negative_lines:
-                    person1, idx1, person2, idx2 = line.split('\t')
-                    pairs.append(FacePair(
-                        self._create_face_image(person1, int(idx1)),
-                        self._create_face_image(person2, int(idx2))
-                    ))
-            self._pairs = pairs
-        return self._pairs
-
-    def _create_face_image(self, person: str, idx: int) -> FaceImage:
-        return FaceImage(
-            path=self._get_path(person, idx),
-            identity=self._create_identity(person),
-            meta={
-                'source': str(self)
-            }
-        )
-
-    def load_data(self) -> List[FaceImage]:
+    @cache
+    def images(self) -> List[FaceImage]:
         data = []
         for person in os.listdir(self.ROOT):
             identity = self._create_identity(person)
@@ -304,11 +270,50 @@ class LfwDataset(Dataset):
                 }))
         return data
 
+    @property
+    @cache
+    def pairs(self) -> List[FacePair]:
+        pairs = []
+        with open(os.path.join(self.ROOT, 'pairs.txt'), 'r') as f:
+            # Skip the first line.
+            _, *lines = [line.strip() for line in f.readlines()]
+
+            # The first half of the remaining lines consists of positive
+            # pairs (images with the same identity).
+            positive_lines = lines[:len(lines) // 2]
+            negative_lines = lines[len(lines) // 2:]
+            for line in positive_lines:
+                person, idx1, idx2 = line.split('\t')
+                pairs.append(FacePair(
+                    self._create_face_image(person, int(idx1)),
+                    self._create_face_image(person, int(idx2))
+                ))
+
+            # The second half consists of negative pairs (images with
+            # different identities).
+            for line in negative_lines:
+                person1, idx1, person2, idx2 = line.split('\t')
+                pairs.append(FacePair(
+                    self._create_face_image(person1, int(idx1)),
+                    self._create_face_image(person2, int(idx2))
+                ))
+        return pairs
+
+    def _create_face_image(self, person: str, idx: int) -> FaceImage:
+        return FaceImage(
+            path=self._get_path(person, idx),
+            identity=self._create_identity(person),
+            meta={
+                'source': str(self)
+            }
+        )
+
     @staticmethod
     def _create_identity(person: str) -> str:
         return f'LFW-{person}'
 
-    def _get_path(self, person: str, idx: int) -> str:
+    @classmethod
+    def _get_path(cls, person: str, idx: int) -> str:
         """
         Get the full path to the image file corresponding to the given `person`
         and `idx`.
@@ -317,7 +322,7 @@ class LfwDataset(Dataset):
         :param idx: int
         :return: str
         """
-        return os.path.join(self.ROOT, f'{person}_{idx:04}.jpg')
+        return os.path.join(cls.ROOT, f'{person}_{idx:04}.jpg')
 
 
 class EnfsiDataset(Dataset):
@@ -325,9 +330,10 @@ class EnfsiDataset(Dataset):
 
     def __init__(self, years: List[int]):
         self.years = years
-        super().__init__()
 
-    def load_data(self) -> List[FaceImage]:
+    @property
+    @cache
+    def images(self) -> List[FaceImage]:
         data = []
         for year in self.years:
             folder = os.path.join(self.ROOT, str(year))
@@ -344,16 +350,36 @@ class EnfsiDataset(Dataset):
                     path = os.path.join(folder, reference)
                     data.append(FaceImage(path, reference_id, {
                         'source': str(self),
-                        'year': year
+                        'year': year,
+                        'idx': idx
                     }))
 
                     # Create a record for the query image.
                     path = os.path.join(folder, query)
                     data.append(FaceImage(path, query_id, {
                         'source': str(self),
-                        'year': year
+                        'year': year,
+                        'idx': idx
                     }))
         return data
+
+    @property
+    @cache
+    def pairs(self) -> List[FacePair]:
+        pairs = []
+        for first, second in zip(self.images[0::2], self.images[1::2]):
+            # Check if the images are in the right order (i.e. every pair of
+            # subsequent images make a pair, having the same `year` and `idx`
+            # meta attribute
+            if first.meta['year'] == second.meta['year'] \
+                    and first.meta['idx'] == second.meta['idx']:
+                pairs.append(FacePair(first, second))
+
+            # If that's not the case, raise an exception, since there is
+            # something wrong with the data integrity.
+            else:
+                raise ValueError('Images have incorrect order to make pairs')
+        return pairs
 
     @staticmethod
     def _create_reference_id(year: int, idx: int) -> str:
@@ -426,7 +452,7 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
         same: An optional boolean flag. When set to True, only pairs of images
             that depict the same person are returned. When set to False, only
             pairs of images that depict different people are returned. When
-            omitted, an equal number of positive and negative pairs are
+            omitted, a roughly equal number of positive and negative pairs are
             returned. In this case, the negative pairs may contain duplicates.
         n: The number of pairs to return. When omitted, as many pairs as
             possible are returned. This number then depends on `same`:
@@ -444,7 +470,7 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
         images_by_identity[x.identity].append(x)
 
     res = []
-    identities = set(x.identity for x in data)
+    identities = set(images_by_identity.keys())
 
     # First we handle the case when `same` is False, meaning we don't have to
     # make any positive pairs, just negative pairs.
@@ -486,7 +512,7 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
             # negative pairs that contain at least one of the images from each
             # positive pair and a randomly chosen other image with a different
             # identity.
-            for first, second in res:
+            for first, second in res.copy():  # Copy, because we modify `res`.
                 identity = first.identity
                 negative_id = random.choice(tuple(identities - {identity}))
                 negative = random.choice(images_by_identity[negative_id])
@@ -498,14 +524,14 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
 
 
 def make_triplets(data: Union[Dataset, List[FaceImage]]) -> List[FaceTriplet]:
-    identities = set(x.identity for x in data)
-    if len(identities) < 2:
-        raise ValueError(
-            "Can't make triplets if there are fewer than 2 unique identities.")
-
     images_by_identity = defaultdict(list)
     for x in data:
         images_by_identity[x.identity].append(x)
+
+    identities = set(images_by_identity.keys())
+    if len(identities) < 2:
+        raise ValueError(
+            "Can't make triplets if there are fewer than 2 unique identities.")
 
     triplets = []
     for identity, images in images_by_identity.items():
@@ -537,8 +563,8 @@ def to_array(data: Union[Dataset,
     To ensure all images have the same spatial dimensions, a `resolution`
     should be provided as a `(width, height)` tuple. All images will be resized
     to these dimensions. If `normalize` is True, the pixel values will also
-    be normalized. See the `FaceImage.read()` docstring for more information on
-    how this normalization is done.
+    be normalized. See the `FaceImage.get_image()` docstring for more
+    information on how this normalization is done.
 
     :param data:
     :param resolution: Tuple[int, int]
@@ -549,21 +575,21 @@ def to_array(data: Union[Dataset,
     # When `data` is a `Dataset` or a list of `FaceImage` instances.
     if isinstance(data, Dataset) or all(
             isinstance(x, FaceImage) for x in data):
-        return np.array([x.read(resolution, normalize) for x in data])
+        return np.array([x.get_image(resolution, normalize) for x in data])
 
     # When `data` is a list of `FacePair` instances.
     if all(isinstance(x, FacePair) for x in data):
         return np.array([[
-            first.read(resolution, normalize),
-            second.read(resolution, normalize)
+            first.get_image(resolution, normalize),
+            second.get_image(resolution, normalize)
         ] for first, second in data])
 
     # When `data` is a list of `FaceTriplet` instances.
     if all(isinstance(x, FaceTriplet) for x in data):
         return np.array([[
-            anchor.read(resolution, normalize),
-            positive.read(resolution, normalize),
-            negative.read(resolution, normalize)
+            anchor.get_image(resolution, normalize),
+            positive.get_image(resolution, normalize),
+            negative.get_image(resolution, normalize)
         ] for anchor, positive, negative in data])
 
     # If we haven't returned something by now it means an invalid data type
