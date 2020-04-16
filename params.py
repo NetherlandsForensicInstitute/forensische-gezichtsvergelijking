@@ -1,13 +1,10 @@
-from functools import partial
 import numpy as np
-
 from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrator, FractionCalibrator, \
     IsotonicCalibrator, DummyCalibrator
 
 
-from deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
-from lr_face.models import DummyModel, Deepface_Lib_Model
-from lr_face.data_providers import test_data, enfsi_data, combine_paired_data, DataFunctions, lfw_data
+from lr_face.data_providers import TestData, DataFunctions, EnfsiData, LfwData
+from lr_face.models import DummyModel, BaseModel
 
 
 """How often to repeat all experiments"""
@@ -49,29 +46,21 @@ PARAMS = {
     }
 }
 
-
 DATA = {
     'current_set_up': ['lfw'],
     'all': {
         'test': {
-            'datasets': [DataFunctions(image_provider=test_data, pair_provider=None)],
+            'datasets': [DataFunctions(image_provider=TestData(), pair_provider=None)],
             'fraction_test': .5,
         },
         'enfsi': {
             'datasets': [DataFunctions(image_provider=None,
-                                       pair_provider=partial(combine_paired_data, pair_providers=[
-                                           partial(enfsi_data, year=2011),
-                                           partial(enfsi_data, year=2012),
-                                           partial(enfsi_data, year=2013),
-                                           partial(enfsi_data, year=2017),
-                                                                          ]))],
+                                       pair_provider=EnfsiData())],
             'fraction_test': .2,
         },
         'lfw': {
             'datasets': [DataFunctions(image_provider=None,
-                                       pair_provider=partial(combine_paired_data, pair_providers=[
-                                           partial(lfw_data),
-                                                                          ]))],
+                                       pair_provider=LfwData())],
             'fraction_test': .2,
         }
     }
@@ -82,13 +71,13 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 SCORERS = {
-    'current_set_up': ['openface', 'facenet', 'vggface', 'fbdeepface', 'dummy'],
+    'current_set_up': ['openface','facenet','fbdeepface','vggface'],
     'all': {
         #'dummy': DummyModel(),
-        'openface': Deepface_Lib_Model(model=OpenFace.loadModel()),
-        'facenet': Deepface_Lib_Model(model=Facenet.loadModel()),
-        'fbdeepface': Deepface_Lib_Model(model=FbDeepFace.loadModel()),
-        'vggface': Deepface_Lib_Model(model=VGGFace.loadModel())
+        'openface': BaseModel.OPENFACE
+        'facenet': BaseModel.FACENET,
+        'fbdeepface': BaseModel.FBDEEPFACE,
+        'vggface': BaseModel.VGGFACE,
     }
 }
 
