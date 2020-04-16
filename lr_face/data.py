@@ -8,8 +8,8 @@ from typing import Dict, Any, Tuple, List, Optional, Union, Iterator
 
 import cv2
 import numpy as np
-import tensorflow as tf
 
+from lr_face.models import BaseModel
 from lr_face.utils import cache
 
 
@@ -59,9 +59,14 @@ class FaceImage:
         return res
 
     @cache
-    def get_embedding(self, model: tf.keras.models.Model) -> np.ndarray:
+    def get_embedding(self, model: BaseModel) -> np.ndarray:
         """
+        Uses the specified `model` to compute an embedding of this image.
+        Depending on the model, the dimensionality of the embedding may differ.
+        Returns a 1D array of shape `(embedding_size)`.
 
+        TODO: implement.
+        TODO: implement hashing in `BaseModel`, otherwise caching doesn't work.
         """
         raise NotImplementedError
 
