@@ -181,14 +181,25 @@ if len(latest_lr_csv) == 0 or latest_exp_csv[:19] != latest_lr_csv[:19]:
     st.markdown('No LR results available.')
 else:
     df_models = get_csv(latest_lr_csv)
-    df_enfsi = get_enfsi_lrs()
-    # dataframes samenvoegen
-    # df_lrs =
+    df_models['pair_id'] = df_models.apply(lambda row: f'{row.pair_id[:-2]}',
+                                           axis=1)
+    df_models['model'] = df_models.apply(lambda row: f'{row.scorers}_{row.calibrators}',
+                                           axis=1)
+    set_models = list(set(df_models['model']))
+
+    df_lrs = get_enfsi_lrs()
+
+    for model in set_models:
+        df_lrs[f'LR_{model}'] = np.nan
+
+    for row in df_models.iterrows():
+        df_lrs.loc[(df_lrs['pair_id'] == row['pair_id']), [row['model']]] = \
+            row['LR']
 
     set_calibrators = list(set(df_models['calibrators']))
     set_scorers = list(set(df_models['scorers']))
 
-    st.header('General information')
+    st.subheader('General information')
     st.markdown(f'latest LR csv: {latest_lr_csv}')
     st.markdown(f'scorers: {set_scorers}')
     st.markdown(f'calibrators: {set_calibrators}')
