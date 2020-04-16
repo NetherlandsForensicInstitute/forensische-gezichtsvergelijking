@@ -297,7 +297,7 @@ class LfwDataset(Dataset):
             num_splits, half_split_size = map(int, f.readline().split('\t'))
             lines = iter(line.strip() for line in f.readlines())
 
-            for i in range(num_splits):
+            for _ in range(num_splits):
                 # The first half of the lines in each split consists of
                 # positive pairs (images with the same identity).
                 positive_lines = islice(lines, half_split_size)
@@ -605,7 +605,6 @@ def to_array(data: Union[Dataset,
             isinstance(x, FaceImage) for x in data):
         image_data = [x.get_image(resolution, normalize) for x in data]
         if len(set([x.shape for x in image_data])) > 1:
-            print(set([x.shape for x in image_data]))
             raise ValueError(
                 'Not all images have the same dimensions, '
                 'cannot convert them to a single array.')
