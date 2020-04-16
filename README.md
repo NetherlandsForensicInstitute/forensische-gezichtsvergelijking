@@ -56,6 +56,20 @@ The outcome of the pipeline can be visualised using the Streamlit app. Specify t
 To use the streamlit app, write in terminal: `streamlit run run_data_exploration.py`
 
 
+###Labeling
 
+For labeling we will use label-studio, which can be installed via pip. In order to set up you labeling project 
+use the following commands: 
 
+```
+label-studio init annotations/<project-id> \          
+    --input-path <path/to/images>  \
+    --input-format image-dir \
+    --label-config label-studio.xml
+
+label-studio start annotations/<project-id>
+```
+
+You can then start labeling at localhost:8200, your labels will be saved in the annotations/<project-id> folder. 
+(It might automatically open localost:8200/start, remove the /start to start labeling in that case). 
 
