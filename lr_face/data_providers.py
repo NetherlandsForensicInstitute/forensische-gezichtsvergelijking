@@ -66,119 +66,136 @@ class DataFunctions:
     pair_provider: Optional[PairProvider]
     image_provider: Optional[ImageProvider]
 
-
-def test_data(resolution=(100, 100)) -> ImageWithIds:
-    """
-    Return some random numbers in the right structure to test the pipeline with.
-    """
-    n = 11
-    return ImageWithIds(
-        images=list(np.random.random([n, resolution[0], resolution[1], 3])),
-        person_ids=[1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5],
-        image_ids=list(range(n)))
+    def __str__(self):
+        desc = ''
+        if self.pair_provider:
+            desc+=str(self.pair_provider)
+        if self.image_provider:
+            desc+=str(self.image_provider)
+        return desc
 
 
-def enfsi_data(resolution, year) -> PairsWithIds:
-    folder = os.path.join('resources', 'enfsi', str(year))
-    files = os.listdir(folder)
-    n_pairs = (len(files) - 1) // 2
-    X = [[-1, -1] for _ in range(n_pairs)]
-    y = [-1] * n_pairs
-    ids = [-1] * n_pairs
-    df = pd.read_csv(os.path.join(folder, 'truth.csv')).set_index('id')
-    for file in files:
-        if not file.endswith('csv'):
-            # TODO check RGB/GRB ordering/colous usage on models.
-            img = cv2.imread(os.path.join(folder, file), cv2.COLOR_BGR2RGB)
-            questioned_ref = None
-            if year == 2011:
-                cls = int(file[:3])
-                questioned_ref = file[3]
-            elif year == 2012:
-                cls = int(file[:2])
-                questioned_ref = file[2]
-            elif year == 2013:
-                cls = int(file[1:3])
-                questioned_ref = file[0]
-            elif year == 2017:
-                cls = int(file[1:3])
-                questioned_ref = file[0]
-            else:
-                raise ValueError(f'Unknown ENFSI year {year}')
-            y[cls - 1] = int(df.loc[cls]['same'] == 1)
-            ids[
-                cls - 1] = f"enfsi_{year}_{cls}_{int(df.loc[cls]['same'] == 1)}"
-            if questioned_ref == 'q':
-                X[cls - 1][0] = img
-            elif questioned_ref == 'r':
-                X[cls - 1][1] = img
-            else:
-                raise ValueError(f'unknown questioned/ref: {questioned_ref}')
-    return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
+class TestData:
+    def __call__(self, resolution=(100,100)):
+        """
+        Return some random numbers in the right structure to test the pipeline with.
+        """
+        n = 11
+        return ImageWithIds(
+            images=list(np.random.random([n, resolution[0], resolution[1], 3])),
+            person_ids=[1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5],
+            image_ids=list(range(n)))
+
+    def __str__(self):
+        return 'test data'
 
 
-def lfw_data(resolution) -> PairsWithIds:
-    folder = os.path.join('resources', 'lfw')
-    df = pd.read_csv(os.path.join(folder, 'pairs.txt'), sep="\t", names=['col1', 'col2', 'col3', 'col4'])
+class EnfsiData:
+    def __init__(self, years=(2011, 2012, 2013, 2017)):
+        self.years = years
+
+    def __call__(self, resolution) -> PairsWithIds:
+        sets=[]
+        for year in self.years:
+            folder = os.path.join('resources', 'enfsi', str(year))
+            files = os.listdir(folder)
+            n_pairs = (len(files) - 1) // 2
+            X = [[-1, -1] for _ in range(n_pairs)]
+            y = [-1] * n_pairs
+            ids = [-1] * n_pairs
+            df = pd.read_csv(os.path.join(folder, 'truth.csv')).set_index('id')
+            for file in files:
+                if not file.endswith('csv'):
+                    # TODO check RGB/GRB ordering/colous usage on models.
+                    img = cv2.imread(os.path.join(folder, file), cv2.COLOR_BGR2RGB)
+                    questioned_ref = None
+                    if year == 2011:
+                        cls = int(file[:3])
+                        questioned_ref = file[3]
+                    elif year == 2012:
+                        cls = int(file[:2])
+                        questioned_ref = file[2]
+                    elif year == 2013:
+                        cls = int(file[1:3])
+                        questioned_ref = file[0]
+                    elif year == 2017:
+                        cls = int(file[1:3])
+                        questioned_ref = file[0]
+                    else:
+                        raise ValueError(f'Unknown ENFSI year {year}')
+                    y[cls - 1] = int(df.loc[cls]['same'] == 1)
+                    ids[
+                        cls - 1] = f"enfsi_{year}_{cls}_{int(df.loc[cls]['same'] == 1)}"
+                    if questioned_ref == 'q':
+                        X[cls - 1][0] = img
+                    elif questioned_ref == 'r':
+                        X[cls - 1][1] = img
+                    else:
+                        raise ValueError(f'unknown questioned/ref: {questioned_ref}')
+            sets.append(PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids))
+        return combine_paired_data(sets)
+
+    def __str__(self):
+        if len(self.years) == 4:
+            return 'ENFSI'
+        return 'ENFSI '+', '.join(map(lambda x: str(x-2000), self.years))
+
+
+
+
+
+class LfwData:
+    def __init__(self):
+        pass
     
-    num_images_batch = int(df.loc[0]['col2'])
-    num_batch = int(df.loc[0]['col1'])
     
-    df = df.drop([0],axis=0).reset_index(drop=True)
-    n_pairs = df.shape[0]
-    cls = 0
-    X = [[-1, -1] for _ in range(n_pairs)]
-    y = [-1] * n_pairs
-    ids = [-1] * n_pairs
-    
-    for batch in range(num_batch):
-        for same_source in range(num_images_batch):
-            person1 = df.loc[cls]['col1']
-            folder_img1 = os.path.join(folder,person1)
+    def __call__(self,resolution) -> PairsWithIds:
+        folder = os.path.join('resources', 'lfw')
+        df_s = pd.read_csv(os.path.join(folder, 'SamePerson.csv'))
+        df_d = pd.read_csv(os.path.join(folder, 'DifPerson.csv'))       
             
-            img1_num = int(df.loc[cls]['col2'])
-            img2_num = int(df.loc[cls]['col3'])
-            img1_filename = f'{person1}_{img1_num:04}.jpg'
-            img2_filename = f'{person1}_{img2_num:04}.jpg'
+        n_pairs = df_s.shape[0] + df_d.shape[0]        
+        X = [[-1, -1] for _ in range(n_pairs)]
+        y = [-1] * n_pairs
+        ids = [-1] * n_pairs
+        
+        cls = 0
+        for index, row in df_s.iterrows():
+            folder_img1 = row['Person 1']
+            folder_img2 = row['Person 2']
+            img1_filename = row['Image 1']
+            img2_filename = row['Image 2']
+        
             img1 = cv2.imread(os.path.join(folder_img1, img1_filename), cv2.COLOR_BGR2RGB)
             img2 = cv2.imread(os.path.join(folder_img1, img2_filename), cv2.COLOR_BGR2RGB)
-            
+                    
             X[cls][0] = img1
             X[cls][1] = img2
-            y[cls] = int(1)
+            y[cls] = int(row['Same person'])
             ids[cls] = f"lfw_{cls}_1"
             cls+=1
-
             
-            
-        for dif_source in range(num_images_batch):
-            
-            #Person1
-            person1 = df.loc[cls]['col1']
-            folder_img1 = os.path.join(folder, person1)
-            img1_num = int(df.loc[cls]['col2'])
-            
-            img1_filename = f'{person1}_{img1_num:04}.jpg'
-            
+        for index, row in df_f.iterrows():
+            folder_img1 = row['Person 1']
+            folder_img2 = row['Person 2']
+            img1_filename = row['Image 1']
+            img2_filename = row['Image 2']
+        
             img1 = cv2.imread(os.path.join(folder_img1, img1_filename), cv2.COLOR_BGR2RGB)
-            
-
-            #Person2
-            person2 = df.loc[cls]['col3']
-            folder_img2 = os.path.join(folder,person2)
-            img2_num = int(df.loc[cls]['col4'])
-            img2_filename = f'{person2}_{img2_num:04}.jpg'
-            img2 = cv2.imread(os.path.join(folder_img2, img2_filename), cv2.COLOR_BGR2RGB)
-            
+            img2 = cv2.imread(os.path.join(folder_img1, img2_filename), cv2.COLOR_BGR2RGB)
+                    
             X[cls][0] = img1
             X[cls][1] = img2
-            y[cls] = int(0)
+            y[cls] = int(row['Same person'])
             ids[cls] = f"lfw_{cls}_0"
-            cls+=1  
+            cls+=1
     
+        return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
+     
+    def __str__(self):
+        return 'LFW data'
     
-    return PairsWithIds(pairs=X, is_same_source=y, pair_ids=ids)
-
+        
 
 def combine_unpaired_data(image_providers: List[ImageProvider],
                           resolution) -> ImageWithIds:
@@ -199,17 +216,14 @@ def combine_unpaired_data(image_providers: List[ImageProvider],
                         image_ids=ids)
 
 
-def combine_paired_data(pair_providers: List[PairProvider],
-                        resolution) -> PairsWithIds:
+def combine_paired_data(pair_lists: List[PairsWithIds]) -> PairsWithIds:
     """
-    Gets the images and pairs for all data in the callables, constructs pairs, and the images for all
-    and returns the total set.
+    Appends the datasets
     """
     X = []
     y = []
     ids = []
-    for dataset_callable in pair_providers:
-        pairs = dataset_callable(resolution)
+    for pairs in pair_lists:
         assert type(pairs) == PairsWithIds
         y += pairs.is_same_source
         X += pairs.pairs
@@ -303,6 +317,8 @@ def make_pairs(data: ImageWithIds) -> PairsWithIds:
     pairs = []
     ids = []
     same_different_source = []
+    imgs_prev = None
+    img_ids_prev = None
     for i_person_id, person_id in enumerate(person_ids):
         idx = data.person_ids == person_id
         nidx = sum(idx)
