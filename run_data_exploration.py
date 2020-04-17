@@ -33,12 +33,12 @@ def _max_width_():
     )
 
 
-@st.cache
+# @st.cache
 def get_csv(csv):
     return pd.read_csv(os.path.join('output', csv))
 
 
-@st.cache
+# @st.cache
 def get_enfsi_lrs():
     enfsi_data = {
         '2011': {
@@ -187,14 +187,23 @@ else:
                                            axis=1)
     set_models = list(set(df_models['model']))
 
-    df_lrs = get_enfsi_lrs()
+    df_enfsi = get_enfsi_lrs()
+    df_lrs = df_enfsi
 
     for model in set_models:
-        df_lrs[f'LR_{model}'] = np.nan
+        df_lrs[f'{model}'] = np.nan
 
-    for row in df_models.iterrows():
+    for index, row in df_models.iterrows():
         df_lrs.loc[(df_lrs['pair_id'] == row['pair_id']), [row['model']]] = \
-            row['LR']
+            np.log10(row['LR'])
+
+    df_lrs = df_lrs[df_lrs[set_models[0]].notnull()]
+    df_lrs_long = pd.melt(df_lrs, id_vars='pair_id', value_vars=list(df_lrs)[
+                                                               3:],
+                          var_name='model', value_name='LR')
+
+    df_lrs_long.loc[df_lrs_long['model'].isin(range(0, 100)), 'model'] = \
+        'expert'
 
     set_calibrators = list(set(df_models['calibrators']))
     set_scorers = list(set(df_models['scorers']))
@@ -203,6 +212,35 @@ else:
     st.markdown(f'latest LR csv: {latest_lr_csv}')
     st.markdown(f'scorers: {set_scorers}')
     st.markdown(f'calibrators: {set_calibrators}')
+
+    st.altair_chart(alt.Chart(df_lrs_long, width=40).mark_circle(
+        size=20).encode(
+        x=alt.X(
+            'jitter:Q',
+            title=None,
+            axis=alt.Axis(values=[0], ticks=True, grid=False, labels=False),
+            scale=alt.Scale(),
+        ),
+        y=alt.Y('LR:Q'),
+        color=alt.Color('model:N'),
+        column=alt.Column(
+            'pair_id:N',
+            header=alt.Header(
+                labelAngle=-90,
+                titleOrient='top',
+                labelOrient='bottom',
+                labelAlign='right',
+                labelPadding=3,
+            ),
+        ),
+    ).transform_calculate(
+        # Generate Gaussian jitter with a Box-Muller transform
+        jitter='sqrt(-2*log(random()))*cos(2*PI*random())'
+    ).configure_facet(
+        spacing=0
+    ).configure_view(
+        stroke=None
+    ))
 
 
 btn = st.button("Click me!")
