@@ -1,3 +1,6 @@
+venv
+.pytest_cache
+
 *~
 *.pyc
 __pycache__
@@ -9,5 +12,6 @@ __pycache__
 /.idea
 /results
 /output
+/scratch
 /resources/*
 .DS_Store

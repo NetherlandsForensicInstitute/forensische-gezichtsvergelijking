@@ -1,13 +1,10 @@
-from functools import partial
 import numpy as np
-
 from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrator, FractionCalibrator, \
     IsotonicCalibrator, DummyCalibrator
 
 
-from deepface.deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
-from lr_face.models import DummyModel, Deepface_Lib_Model
-from lr_face.data_providers import test_data, enfsi_data, combine_paired_data, DataFunctions
+from lr_face.data_providers import TestData, DataFunctions, EnfsiData
+from lr_face.models import DummyModel, BaseModel
 
 
 """How often to repeat all experiments"""
@@ -49,22 +46,16 @@ PARAMS = {
     }
 }
 
-
 DATA = {
     'current_set_up': ['enfsi'],
     'all': {
         'test': {
-            'datasets': [DataFunctions(image_provider=test_data, pair_provider=None)],
+            'datasets': [DataFunctions(image_provider=TestData(), pair_provider=None)],
             'fraction_test': .5,
         },
         'enfsi': {
             'datasets': [DataFunctions(image_provider=None,
-                                       pair_provider=partial(combine_paired_data, pair_providers=[
-                                           partial(enfsi_data, year=2011),
-                                           partial(enfsi_data, year=2012),
-                                           partial(enfsi_data, year=2013),
-                                           partial(enfsi_data, year=2017),
-                                                                          ]))],
+                                       pair_provider=EnfsiData())],
             'fraction_test': .2,
         }
     }
@@ -78,10 +69,10 @@ SCORERS = {
     'current_set_up': ['openface', 'facenet', 'vggface', 'fbdeepface', 'dummy'],
     'all': {
         'dummy': DummyModel(),
-        'openface': Deepface_Lib_Model(model=OpenFace.loadModel()),
-        'facenet': Deepface_Lib_Model(model=Facenet.loadModel()),
-        'fbdeepface': Deepface_Lib_Model(model=FbDeepFace.loadModel()),
-        'vggface': Deepface_Lib_Model(model=VGGFace.loadModel())
+        'openface': BaseModel.OPENFACE,
+        'facenet': BaseModel.FACENET,
+        'fbdeepface': BaseModel.FBDEEPFACE,
+        'vggface': BaseModel.VGGFACE,
     }
 }
 

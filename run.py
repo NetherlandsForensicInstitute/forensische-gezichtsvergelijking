@@ -65,8 +65,6 @@ def experiment(params, data_provider: ImagePairs = None,
 
     """
     lr_system = CalibratedScorer(params['scorers'], params['calibrators'])
-    # TODO training will require a different data structure
-    # lr_system.scorer.fit(data_provider.X_train, data_provider.y_train)
     p = lr_system.scorer.predict_proba(data_provider.X_calibrate, data_provider.ids_calibrate)
     lr_system.calibrator.fit(p[:, 1], data_provider.y_calibrate)
 
