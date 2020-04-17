@@ -271,13 +271,6 @@ def test_make_pairs_negative_only_large_n(dummy_images):
     assert len(negative_pairs) == len(pairs) == n
 
 
-################
-# `LfwDataset` #
-################
-
-# TODO: add tests for LfwDataset.
-
-
 ##################
 # `EnfsiDataset` #
 ##################

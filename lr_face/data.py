@@ -274,10 +274,10 @@ class LfwDataset(Dataset):
     @cache
     def images(self) -> List[FaceImage]:
         data = []
-        for person in os.listdir(self.ROOT):
-            if os.path.isdir(os.path.join(self.ROOT, person)):
+        for person in os.listdir(self.RESOURCE_FOLDER):
+            if os.path.isdir(os.path.join(self.RESOURCE_FOLDER, person)):
                 identity = self._create_identity(person)
-                person_dir = os.path.join(self.ROOT, person)
+                person_dir = os.path.join(self.RESOURCE_FOLDER, person)
                 for image_file in os.listdir(person_dir):
                     image_path = os.path.join(person_dir, image_file)
                     data.append(FaceImage(image_path, identity, {
