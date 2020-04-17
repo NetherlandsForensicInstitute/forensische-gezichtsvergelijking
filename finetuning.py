@@ -1,44 +1,42 @@
 import argparse
 import os
-from typing import List
+import time
 
 import numpy as np
 from tensorflow.keras.optimizers import Adam
 
-from lr_face.data_providers import Triplet, TestData, make_triplets
+from lr_face.data import EnfsiDataset, to_array
 from lr_face.losses import TripletLoss
-from lr_face.models import TripletEmbedder, BaseModel
+from lr_face.models import TripletEmbeddingModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
 # Needed to make TensorFlow 2.x work with RTX Nvidia cards.
 fix_tensorflow_rtx()
 
 
-def finetune(model: TripletEmbedder, triplets: List[Triplet]):
+def finetune(model: TripletEmbeddingModel,
+             anchors: np.ndarray,
+             positives: np.ndarray,
+             negatives: np.ndarray):
     """
-    Fine-tunes a model.
-
-    TODO: currently only supports Tensorflow models.
+    Fine-tunes a Tensorflow model.
 
     Arguments:
-        model: A BaseModel instance that is suitable for training, i.e. whose
-            output is compatible with the triplet loss function. See
-            `BaseModel.load_training_model()` for more information.
-        triplets: A list of `Triplet` instances that will be used for training.
+        model: A `TripletEmbeddingModel` instance.
+        anchors: A 4D array containing a batch of anchor images with shape
+            `(batch_size, height, width, num_channels)`.
+        positives: A 4D array containing a batch of images of the same identity
+            as the anchor image with shape `(batch_size, height, width,
+            num_channels)`.
+        negatives: A 4D array containing a batch of images of a different
+            identity than the anchor image with shape `(batch_size, height,
+            width, num_channels)`.
     """
 
-    anchors, positives, negatives = zip(*[(
-        triplet.anchor,
-        triplet.positive,
-        triplet.negative
-    ) for triplet in triplets])
-
     model.compile(
-        optimizer=Adam(learning_rate=3e-4),  # TODO: default choice
-        loss=TripletLoss(alpha=0.5),  # TODO: better value for alpha?
+        optimizer=Adam(learning_rate=3e-5),
+        loss=TripletLoss(alpha=.2),  # TODO: better value for alpha?
     )
-
-    x = [np.stack(anchors), np.stack(positives), np.stack(negatives)]
 
     # The triplet loss that is used to train the model actually does not need
     # any ground truth labels, since it simply aims to maximize the difference
@@ -46,24 +44,33 @@ def finetune(model: TripletEmbedder, triplets: List[Triplet]):
     # images. However, Keras' Loss interface still needs a `y_true` that has
     # the same first dimension as the `y_pred` output by the model. That's why
     # we create a dummy "ground truth" of the same length.
-    y = np.zeros(shape=(len(triplets), 1))
+    inputs = [anchors, positives, negatives]
+    y = np.zeros(shape=(anchors.shape[0], 1))
     model.fit(
-        x=x,
+        x=inputs,
         y=y,
         batch_size=2,  # TODO: make dynamic
-        epochs=1  # TODO: make dynamic
+        epochs=100  # TODO: make dynamic
     )
 
 
 def main(model_name: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
-    base_model: BaseModel = BaseModel[model_name.upper()]
-    triplet_embedder = base_model.load_triplet_embedder()
-    data = TestData()(resolution=(224, 224))  # TODO: make dynamic
-    triplets = make_triplets(data)
-    finetune(triplet_embedder, triplets)
-    weights_path = os.path.join(output_dir, 'weights.h5')
-    triplet_embedder.save_weights(weights_path, overwrite=True)
+    architecture = Architecture[model_name.upper()]
+    triplet_embedding_model = architecture.get_triplet_embedding_model()
+    dataset = EnfsiDataset(years=[2011, 2012, 2013, 2017])
+
+    anchors, positives, negatives = to_array(
+        dataset.triplets, resolution=architecture.resolution, normalize=True)
+    try:
+        finetune(triplet_embedding_model, anchors, positives, negatives)
+    except KeyboardInterrupt:
+        # Allow user to manually interrupt training and still save checkpoint.
+        pass
+
+    weights_name = f"{dataset}-{time.strftime('%Y_%m_%d-%H_%M_%S')}"
+    weights_path = os.path.join(output_dir, f'{weights_name}.h5')
+    triplet_embedding_model.save_weights(weights_path, overwrite=True)
 
 
 if __name__ == '__main__':
@@ -80,7 +87,7 @@ if __name__ == '__main__':
         '-m',
         required=True,
         type=str,
-        help='Should match one of the constants in the `BaseModel` Enum'
+        help='Should match one of the constants in the `Architecture` Enum'
     )
     parser.add_argument(
         '--output-dir',

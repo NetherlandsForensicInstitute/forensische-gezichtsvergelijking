@@ -6,6 +6,7 @@ class TripletLoss(Loss):
     def __init__(self,
                  alpha: float,
                  force_normalization: bool = True,
+                 verbose: bool = False,
                  **kwargs):
         """
         Instantiate a triplet loss instance.
@@ -22,10 +23,13 @@ class TripletLoss(Loss):
             force_normalization: A boolean flag indicating whether the `call()`
                 method should explicitly enforce that its input embeddings are
                 properly l2-normalized.
+            verbose: A boolean flag indicating whether or not to print
+                debugging information while running.
         """
         super().__init__(**kwargs)
         self.alpha = alpha
         self.force_normalization = force_normalization
+        self.verbose = verbose
 
     def call(self, y_true, y_pred):
         """
@@ -67,10 +71,25 @@ class TripletLoss(Loss):
         positive_distance = tf.reduce_sum(tf.square(anchor - positive), axis=1)
         negative_distance = tf.reduce_sum(tf.square(anchor - negative), axis=1)
 
-        # The loss is then given by the difference in distance with a minimum
-        # of 0.
-        loss = tf.maximum(
-            positive_distance - negative_distance + self.alpha, 0.)
+        # The loss is then given by the difference between the distances with a
+        # minimum of 0.
+        margin = positive_distance - negative_distance
+        loss = tf.maximum(margin + self.alpha, 0.)
+
+        if self.verbose:
+            tf.print('Number of zeroes in embeddings:')
+            tf.print(tf.reduce_sum(tf.where(anchor == 0., 1, 0), axis=1))
+            tf.print('')
+            tf.print('Positive distances:')
+            tf.print(positive_distance)
+            tf.print('')
+            tf.print('Negative distances:')
+            tf.print(negative_distance)
+            tf.print('')
+            tf.print('Margins:')
+            tf.print(margin)
+            tf.print('')
+
         return loss
 
     def get_config(self):

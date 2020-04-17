@@ -1,26 +1,86 @@
+import importlib
 from enum import Enum
+from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
 
-from deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
-from lr_face.utils import resize_and_normalize
+from lr_face.utils import resize_and_normalize, cache
 
 
-class TripletEmbedder(tf.keras.Model):
+class DummyScorerModel:
+    """
+    Dummy model that returns random scores.
+    """
+
+    def __init__(self, resolution=(100, 100)):
+        self.resolution = resolution
+
+    def fit(self, X, y):
+        assert X.shape[1:3] == self.resolution
+        pass
+
+    def predict_proba(self, X, ids=None):
+        # assert X.shape[2:4] == self.resolution
+        array = np.array(X)
+        if array.shape[1] != 2:
+            raise ValueError(
+                f'Should get n pairs, but 2nd dimension is {array.shape[1]}')
+        return np.random.random(array.shape)
+
+    def __str__(self):
+        return 'Dummy'
+
+
+class ScorerModel:
+    def __init__(self, embedding_model: tf.keras.Model, name: str):
+        self.embedding_model = embedding_model
+        self.name = name
+        self.cache = dict()
+
+    def predict_proba(self, X, ids):
+        assert len(X) == len(ids)
+        scores = []
+        for id, pair in zip(ids, X):
+            if id in self.cache:
+                score = self.cache[id]
+            else:
+                score = self.score_for_pair(pair)
+                self.cache[id] = score
+            scores.append([score, 1 - score])
+        return np.asarray(scores)
+
+    def score_for_pair(self, pair):
+        # TODO assumes resizing is necessary
+        img1 = resize_and_normalize(
+            pair[0], self.embedding_model.input_shape[1:3])
+        img2 = resize_and_normalize(
+            pair[1], self.embedding_model.input_shape[1:3])
+        # TODO assumes deepface like predict
+        img1_representation = self.embedding_model.predict(img1)[0, :]
+        img2_representation = self.embedding_model.predict(img2)[0, :]
+        score = spatial.distance.cosine(img1_representation,
+                                        img2_representation)
+        return score
+
+    def __str__(self):
+        return self.name
+
+
+class TripletEmbeddingModel(tf.keras.Model):
     """
     A subclass of tf.keras.Model that can be used to finetune an existing, pre-
     trained embedding model using a triplet loss.
 
     ```python
     embedding_model = ...
-    triplet_embedder = TripletEmbedder(embedding_model)
-    triplet_embedder.compile(loss=TripletLoss(...))
-    triplet_embedder.fit(...)
+    triplet_embedding_model = TripletEmbeddingModel(embedding_model)
+    triplet_embedding_model.compile(loss=TripletLoss(...))
+    triplet_embedding_model.fit(...)
     ```
 
-    When called, the `TripletEmbedder` takes 3 inputs, namely:
+    When called, the `TripletEmbeddingModel` takes 3 inputs, namely:
 
         anchor: A 4D tensor containing a batch of anchor images with shape
             `(batch_size, height, width, num_channels)`.
@@ -56,7 +116,7 @@ class TripletEmbedder(tf.keras.Model):
                 positive and negative images, respectively. Each of these 3
                 tensors has shape `(batch_size, height, width, num_channels)`.
             training: An optional boolean flag whether the model is currently
-                being trained. For a `TripletEmbedder` instance this will
+                being trained. For a `TripletEmbeddingModel` instance this will
                 almost always be True, except for maybe some test cases.
 
         Returns:
@@ -87,10 +147,10 @@ class TripletEmbedder(tf.keras.Model):
 
         ```python
         embedding_model = ...  # Load the embedding model here.
-        triplet_embedder = TripletEmbedder(embedding_model)
-        triplet_embedder.compile(...)
-        triplet_embedder.fit(...)
-        triplet_embedder.save_weights('weights.h5')
+        triplet_embedding_model = TripletEmbeddingModel(embedding_model)
+        triplet_embedding_model.compile(...)
+        triplet_embedding_model.fit(...)
+        triplet_embedding_model.save_weights('weights.h5')
         embedding_model.load_weights('weights.h5')
         ```
 
@@ -107,70 +167,62 @@ class TripletEmbedder(tf.keras.Model):
         return self.embedding_model.load_weights(filepath, by_name)
 
 
-class DummyModel:
-    """
-    Dummy model that returns random scores.
-    """
-
-    def __init__(self, resolution=(100, 100)):
-        self.resolution = resolution
-
-    def fit(self, X, y):
-        assert X.shape[1:3] == self.resolution
-        pass
-
-    def predict_proba(self, X, ids=None):
-        # assert X.shape[2:4] == self.resolution
-        if np.array(X).shape[1] != 2:
-            raise ValueError(
-                f'Should get n pairs, but second dimension is {np.array(X).shape[1]}')
-        return np.random.random((len(X), 2))
-
-    def __str__(self):
-        return 'Dummy'
-
-
-class BaseModel(Enum):
+class Architecture(Enum):
     """
     This Enum can be used to define all base model architectures that we
-    currently support, and to retrieve (triplet) embedding models. This
-    abstracts away the individual implementations of various models so that
-    there is one unified way of loading models.
-
-    TODO: currently only supports Tensorflow models.
+    currently support, and to build appropriate Python objects to apply those
+    models. This abstracts away the individual implementations of various
+    models so that there is one standard way of loading them.
 
     To load the embedding model for VGGFace for example, you would use:
 
-        `BaseModel.VGGFACE.load_embedding_model()`
+    ```python
+    embedding_model = Architecture.VGGFACE.get_embedding_model()`
+    ```
 
     Similarly, to load a triplet embedder model, you would use:
 
-        `BaseModel.VGGFACE.load_triplet_embedder()`
+    ```python
+    triplet_embedding_model = \
+        Architecture.VGGFACE.get_triplet_embedding_model()`
+    ```
+
+    Finally, to load a scorer model, you would use:
+
+    ```python
+    scorer_model = Architecture.VGGFACE.get_scorer_model()
+    ```
     """
     VGGFACE = 'VGGFace'
-    FACENET = 'Facenet'
+    FACENET = 'FaceNet'
     FBDEEPFACE = 'FbDeepFace'
     OPENFACE = 'OpenFace'
 
-    def __init__(self, model_name):
-        self.cache = {}
-        if model_name == 'VGGFace':
-            self.module = VGGFace
-        elif model_name == 'FbDeepFace':
-            self.module = FbDeepFace
-        elif model_name == 'OpenFace':
-            self.module = OpenFace
-        elif model_name == 'Facenet':
-            self.module = Facenet
-        else:
-            raise ValueError("Unknown model source.")
-        self._model = None
+    @cache
+    def get_embedding_model(self) -> tf.keras.Model:
+        if self.source == 'deepface':
+            module_name = f'deepface.basemodels.{self.value}'
+            module = importlib.import_module(module_name)
+            model = module.loadModel()
+            # TODO: once we start finetuning, load the finetuned weights.
+            return model
+        raise ValueError("Unable to load embedding model.")
 
-    def load_embedding_model(self) -> tf.keras.Model:
-        return self.model
+    def get_triplet_embedding_model(self) -> TripletEmbeddingModel:
+        return TripletEmbeddingModel(self.get_embedding_model())
 
-    def load_triplet_embedder(self) -> TripletEmbedder:
-        return TripletEmbedder(self.load_embedding_model())
+    def get_scorer_model(self) -> ScorerModel:
+        return ScorerModel(self.get_embedding_model(), self.value)
+
+    @property
+    def resolution(self) -> Tuple[int, int]:
+        """
+        Returns the expected spatial dimensions of the input image as a
+        `(height, width)` tuple.
+
+        :return: Tuple[int, int]
+        """
+        return self.get_embedding_model().input_shape[1:3]
 
     @property
     def source(self) -> str:
@@ -186,36 +238,3 @@ class BaseModel(Enum):
         if self in deepface_models:
             return 'deepface'
         raise ValueError("Unknown model source.")
-
-    @property
-    def model(self):
-        # TODO assumes deepface like loadModel
-        if not self._model:
-            self._model = self.module.loadModel()
-        return self._model
-
-    def predict_proba(self, X, ids):
-        assert len(X) == len(ids)
-        scores = []
-        for id, pair in zip(ids, X):
-            if id in self.cache:
-                score = self.cache[id]
-            else:
-                score = self.score_for_pair(pair)
-                self.cache[id] = score
-            scores.append([score, 1 - score])
-        return np.asarray(scores)
-
-    def score_for_pair(self, pair):
-        # TODO assumes resizing is necessary
-        img1 = resize_and_normalize(pair[0], self.model.input_shape[1:3])
-        img2 = resize_and_normalize(pair[1], self.model.input_shape[1:3])
-        # TODO assumes deepface like predict
-        img1_representation = self.model.predict(img1)[0, :]
-        img2_representation = self.model.predict(img2)[0, :]
-        score = spatial.distance.cosine(img1_representation,
-                                        img2_representation)
-        return score
-
-    def __str__(self):
-        return self.value
