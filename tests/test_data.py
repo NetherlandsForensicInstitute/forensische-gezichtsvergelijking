@@ -350,8 +350,8 @@ def test_face_images_to_array_with_various_resolutions(dummy_images, scratch):
 
 
 def test_zero_face_images_to_array():
-    array = to_array([])
-    assert array.shape == (0,)
+    with pytest.raises(ValueError):
+        to_array([])
 
 
 def test_face_pairs_to_array(dummy_pairs):

@@ -600,6 +600,12 @@ def to_array(data: Union[Dataset,
     :return: Union[np.ndarray, List[np.ndarray]]
     """
 
+    # When `data` is empty the desired return type is ambiguous, so we raise
+    # an exception.
+    if not data:
+        raise ValueError(
+            'Return type for `to_array()` with empty data is ambiguous')
+
     # When `data` is a `Dataset` or a list of `FaceImage` instances.
     if isinstance(data, Dataset) or all(
             isinstance(x, FaceImage) for x in data):

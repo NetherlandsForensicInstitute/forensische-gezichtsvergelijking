@@ -16,6 +16,7 @@ from lr_face.utils import fix_tensorflow_rtx
 # Needed to make TensorFlow 2.x work with RTX Nvidia cards.
 fix_tensorflow_rtx()
 
+# Change settings below for a different experimental setup.
 BATCH_SIZE = 4
 INITIAL_LEARNING_RATE = 1e-8
 STEP_SIZE = 10 ** 0.1
@@ -39,6 +40,17 @@ def get_learning_rate(step: int, step_size: float, initial: float) -> float:
 
 
 def lr_test(model: TripletEmbeddingModel, triplets: List[FaceTriplet]):
+    """
+    Performs a mock training loop where the learning rate is increased after
+    each iteration up to a predefined maximum. Afterwards, a plot is generated
+    that plots the training loss vs the learning rate. This plot can give
+    valuable insights into what an optimal learning rate for a real training
+    process would be.
+
+    :param model: TripletEmbeddingModel
+    :param triplets: List[FaceTriplet]
+    """
+
     def batches():
         random.shuffle(triplets)
         for i in range(0, len(triplets), BATCH_SIZE):
