@@ -10,7 +10,7 @@ from tensorflow.keras.optimizers import Adam
 
 from lr_face.data import FaceTriplet, to_array, EnfsiDataset
 from lr_face.losses import TripletLoss
-from lr_face.models import TripletEmbeddingModel, BaseModel
+from lr_face.models import TripletEmbeddingModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
 # Needed to make TensorFlow 2.x work with RTX Nvidia cards.
@@ -21,7 +21,7 @@ BATCH_SIZE = 4
 INITIAL_LEARNING_RATE = 1e-8
 STEP_SIZE = 10 ** 0.1
 MAX_LEARNING_RATE = .1
-BASE_MODEL = BaseModel.VGGFACE
+BASE_MODEL = Architecture.VGGFACE
 DATASET = EnfsiDataset(years=[2011, 2012, 2013, 2017])
 OPTIMIZER = Adam
 FOCAL_LOSS_ALPHA = 0.5

@@ -10,7 +10,7 @@ from typing import Dict, Any, Tuple, List, Optional, Union, Iterator
 import cv2
 import numpy as np
 
-from lr_face.models import BaseModel
+from lr_face.models import Architecture
 from lr_face.utils import cache
 
 
@@ -60,14 +60,14 @@ class FaceImage:
         return res
 
     @cache
-    def get_embedding(self, model: BaseModel) -> np.ndarray:
+    def get_embedding(self, architecture: Architecture) -> np.ndarray:
         """
-        Uses the specified `model` to compute an embedding of this image.
-        Depending on the model, the dimensionality of the embedding may differ.
-        Returns a 1D array of shape `(embedding_size)`.
+        Uses the specified `architecture` to compute an embedding of the image.
+        Depending on the architecture, the dimensionality of the embedding may
+        differ. Returns a 1D array of shape `(embedding_size)`.
 
         TODO: implement.
-        TODO: implement hashing in `BaseModel`, otherwise caching doesn't work.
+        TODO: implement hashing in `Architecture`, otherwise caching doesn't work.
         """
         raise NotImplementedError
 

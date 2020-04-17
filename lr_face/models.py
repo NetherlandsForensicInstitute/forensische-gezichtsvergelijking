@@ -167,7 +167,7 @@ class TripletEmbeddingModel(tf.keras.Model):
         return self.embedding_model.load_weights(filepath, by_name)
 
 
-class BaseModel(Enum):
+class Architecture(Enum):
     """
     This Enum can be used to define all base model architectures that we
     currently support, and to build appropriate Python objects to apply those
@@ -177,19 +177,20 @@ class BaseModel(Enum):
     To load the embedding model for VGGFace for example, you would use:
 
     ```python
-    embedding_model = `BaseModel.VGGFace.get_embedding_model()`
+    embedding_model = Architecture.VGGFACE.get_embedding_model()`
     ```
 
     Similarly, to load a triplet embedder model, you would use:
 
     ```python
-    triplet_embedding_model = `BaseModel.VGGFace.get_triplet_embedding_model()`
+    triplet_embedding_model = \
+        Architecture.VGGFACE.get_triplet_embedding_model()`
     ```
 
     Finally, to load a scorer model, you would use:
 
     ```python
-    scorer_model = `BaseModel.VGGFace.get_scorer_model()
+    scorer_model = Architecture.VGGFACE.get_scorer_model()
     ```
     """
     VGGFACE = 'VGGFace'

@@ -8,7 +8,7 @@ from lir import (LogitCalibrator,
                  DummyCalibrator)
 
 from lr_face.data import TestDataset, EnfsiDataset
-from lr_face.models import DummyModel, BaseModel
+from lr_face.models import DummyScorerModel, Architecture
 
 """How often to repeat all experiments"""
 
@@ -71,11 +71,11 @@ SCORERS = {
     'current_set_up': ['openface', 'facenet', 'vggface', 'fbdeepface',
                        'dummy'],
     'all': {
-        'dummy': DummyModel(),
-        'openface': BaseModel.OPENFACE,
-        'facenet': BaseModel.FACENET,
-        'fbdeepface': BaseModel.FBDEEPFACE,
-        'vggface': BaseModel.VGGFACE,
+        'dummy': DummyScorerModel(),
+        'openface': Architecture.OPENFACE.get_scorer_model(),
+        'facenet': Architecture.FACENET.get_scorer_model(),
+        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(),
+        'vggface': Architecture.VGGFACE.get_scorer_model(),
     }
 }
 

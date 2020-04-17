@@ -5,9 +5,9 @@ import time
 import numpy as np
 from tensorflow.keras.optimizers import Adam
 
-from lr_face.data import make_triplets, EnfsiDataset, to_array
+from lr_face.data import EnfsiDataset, to_array
 from lr_face.losses import TripletLoss
-from lr_face.models import TripletEmbeddingModel, BaseModel
+from lr_face.models import TripletEmbeddingModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
 # Needed to make TensorFlow 2.x work with RTX Nvidia cards.
@@ -22,9 +22,7 @@ def finetune(model: TripletEmbeddingModel,
     Fine-tunes a Tensorflow model.
 
     Arguments:
-        model: A BaseModel instance that is suitable for training, i.e. whose
-            output is compatible with the triplet loss function. See
-            `BaseModel.load_training_model()` for more information.
+        model: A `TripletEmbeddingModel` instance.
         anchors: A 4D array containing a batch of anchor images with shape
             `(batch_size, height, width, num_channels)`.
         positives: A 4D array containing a batch of images of the same identity
@@ -36,8 +34,8 @@ def finetune(model: TripletEmbeddingModel,
     """
 
     model.compile(
-        optimizer=Adam(learning_rate=3e-5),  # TODO: default choice
-        loss=TripletLoss(alpha=1.),  # TODO: better value for alpha?
+        optimizer=Adam(learning_rate=3e-5),
+        loss=TripletLoss(alpha=.2),  # TODO: better value for alpha?
     )
 
     # The triplet loss that is used to train the model actually does not need
@@ -58,14 +56,12 @@ def finetune(model: TripletEmbeddingModel,
 
 def main(model_name: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
-    base_model: BaseModel = BaseModel[model_name.upper()]
-    triplet_embedding_model = base_model.get_triplet_embedding_model()
+    architecture = Architecture[model_name.upper()]
+    triplet_embedding_model = architecture.get_triplet_embedding_model()
     dataset = EnfsiDataset(years=[2011, 2012, 2013, 2017])
-    triplets = make_triplets(dataset)
 
-    anchors, positives, negatives = to_array(triplets,
-                                             resolution=base_model.resolution,
-                                             normalize=True)
+    anchors, positives, negatives = to_array(
+        dataset.triplets, resolution=architecture.resolution, normalize=True)
     try:
         finetune(triplet_embedding_model, anchors, positives, negatives)
     except KeyboardInterrupt:
@@ -91,7 +87,7 @@ if __name__ == '__main__':
         '-m',
         required=True,
         type=str,
-        help='Should match one of the constants in the `BaseModel` Enum'
+        help='Should match one of the constants in the `Architecture` Enum'
     )
     parser.add_argument(
         '--output-dir',
