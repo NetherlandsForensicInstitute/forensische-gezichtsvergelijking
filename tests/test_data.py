@@ -12,21 +12,22 @@ def dataset_testable(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         dataset = func(*args, **kwargs)
-        if hasattr(dataset, 'ROOT'):
-            dataset.ROOT = get_project_path(dataset.ROOT)
+        if hasattr(dataset, 'RESOURCE_FOLDER'):
+            dataset.RESOURCE_FOLDER = get_project_path(dataset.RESOURCE_FOLDER)
         return dataset
 
     return wrapper
 
 
 def skip_if_missing(dataset: Dataset):
-    if hasattr(dataset, 'ROOT'):
-        root = get_project_path(dataset.ROOT)
+    if hasattr(dataset, 'RESOURCE_FOLDER'):
+        root = get_project_path(dataset.RESOURCE_FOLDER)
         return pytest.mark.skipif(
             not os.path.exists(root),
             reason=f'{dataset} does not exist'
         )
-    raise ValueError('Cannot check for missing dataset without `ROOT` attr')
+    raise ValueError(
+        'Cannot check for missing dataset without `RESOURCE_FOLDER` attr')
 
 
 @pytest.fixture
@@ -186,11 +187,6 @@ def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
 @skip_if_missing(ForenFaceDataset)
 def test_forenface_dataset_has_correct_num_images(forenface):
     assert len(forenface.images) == 2476
-
-
-@skip_if_missing(ForenFaceDataset)
-def test_forenface_dataset_has_correct_num_pairs(forenface):
-    assert len(forenface.pairs) == 60798
 
 
 #####################

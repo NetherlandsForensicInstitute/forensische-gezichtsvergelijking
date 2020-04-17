@@ -236,7 +236,7 @@ class TestDataset(Dataset):
 
 
 class ForenFaceDataset(Dataset):
-    ROOT = os.path.join('resources', 'forenface')
+    RESOURCE_FOLDER = os.path.join('resources', 'forenface')
 
     def __init__(self, max_num_images: Optional[int] = None):
         self.max_num_images = max_num_images
@@ -244,13 +244,13 @@ class ForenFaceDataset(Dataset):
     @property
     @cache
     def images(self) -> List[FaceImage]:
-        files = os.listdir(self.ROOT)
+        files = os.listdir(self.RESOURCE_FOLDER)
         if self.max_num_images and self.max_num_images < len(files):
             files = random.sample(files, self.max_num_images)
 
         data = []
         for file in files:
-            path = os.path.join(self.ROOT, file)
+            path = os.path.join(self.RESOURCE_FOLDER, file)
             identity = f'FORENFACE-{file[:3]}'
             data.append(FaceImage(path, identity, {
                 'source': str(self)
@@ -259,15 +259,15 @@ class ForenFaceDataset(Dataset):
 
 
 class LfwDataset(Dataset):
-    ROOT = os.path.join('resources', 'lfw')
+    RESOURCE_FOLDER = os.path.join('resources', 'lfw')
 
     @property
     @cache
     def images(self) -> List[FaceImage]:
         data = []
-        for person in os.listdir(self.ROOT):
+        for person in os.listdir(self.RESOURCE_FOLDER):
             identity = self._create_identity(person)
-            person_dir = os.path.join(self.ROOT, person)
+            person_dir = os.path.join(self.RESOURCE_FOLDER, person)
             for image_file in os.listdir(person_dir):
                 image_path = os.path.join(person_dir, image_file)
                 data.append(FaceImage(image_path, identity, {
@@ -279,7 +279,7 @@ class LfwDataset(Dataset):
     @cache
     def pairs(self) -> List[FacePair]:
         pairs = []
-        with open(os.path.join(self.ROOT, 'pairs.txt'), 'r') as f:
+        with open(os.path.join(self.RESOURCE_FOLDER, 'pairs.txt'), 'r') as f:
             # Skip the first line.
             _, *lines = [line.strip() for line in f.readlines()]
 
@@ -327,11 +327,11 @@ class LfwDataset(Dataset):
         :param idx: int
         :return: str
         """
-        return os.path.join(cls.ROOT, f'{person}_{idx:04}.jpg')
+        return os.path.join(cls.RESOURCE_FOLDER, f'{person}_{idx:04}.jpg')
 
 
 class EnfsiDataset(Dataset):
-    ROOT = os.path.join('resources', 'enfsi_cropped')  # TODO: change back
+    RESOURCE_FOLDER = os.path.join('resources', 'enfsi')
 
     def __init__(self, years: List[int]):
         self.years = years
@@ -341,7 +341,7 @@ class EnfsiDataset(Dataset):
     def images(self) -> List[FaceImage]:
         data = []
         for year in self.years:
-            folder = os.path.join(self.ROOT, str(year))
+            folder = os.path.join(self.RESOURCE_FOLDER, str(year))
             with open(os.path.join(folder, 'truth.csv')) as f:
                 reader = csv.DictReader(f)
                 for line in reader:
