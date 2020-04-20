@@ -29,15 +29,18 @@ def plot_tippett(predicted_log_lrs, y, savefig=None, show=None):
     """
     Plots the 10log LRs in a Tippett plot.
     """
-    xplot = np.linspace(np.min(predicted_log_lrs), np.max(predicted_log_lrs),
-                        100)
+    xplot = np.linspace(
+        start=np.min(predicted_log_lrs),
+        stop=np.max(predicted_log_lrs),
+        num=100
+    )
     lr_0, lr_1 = Xy_to_Xn(predicted_log_lrs, y)
     perc0 = (sum(i > xplot for i in lr_0) / len(lr_0)) * 100
     perc1 = (sum(i > xplot for i in lr_1) / len(lr_1)) * 100
 
     plt.figure(figsize=(10, 10), dpi=100)
-    plt.plot(xplot, perc1, color='b', label='LRs given $\mathregular{H_1}$')
-    plt.plot(xplot, perc0, color='r', label='LRs given $\mathregular{H_2}$')
+    plt.plot(xplot, perc1, color='b', label=r'LRs given $\mathregular{H_1}$')
+    plt.plot(xplot, perc0, color='r', label=r'LRs given $\mathregular{H_2}$')
     plt.axvline(x=0, color='k', linestyle='--')
     plt.xlabel('Log likelihood ratio')
     plt.ylabel('Cumulative proportion')
@@ -65,7 +68,8 @@ def evaluate(lr_system: CalibratedScorer,
              test_pairs: List[FacePair],
              make_plots_and_save_as: Optional[str] = None) -> Dict[str, float]:
     """
-    Calculates a variety of evaluation metrics and plots data if make_plots_and_save_as is not None.
+    Calculates a variety of evaluation metrics and plots data if
+    `make_plots_and_save_as` is not None.
     """
     scores = lr_system.scorer.predict_proba(test_pairs)[:, 1]
     lr_predicted = lr_system.calibrator.transform(scores)

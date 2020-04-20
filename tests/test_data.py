@@ -1,4 +1,5 @@
 import os
+import pickle
 from functools import wraps
 from typing import List
 
@@ -34,7 +35,7 @@ def dataset_testable(func):
     return wrapper
 
 
-def skip_if_missing(dataset: Dataset):
+def skip_if_missing_dataset(dataset: Dataset):
     if hasattr(dataset, 'RESOURCE_FOLDER'):
         root = get_project_path(dataset.RESOURCE_FOLDER)
         return pytest.mark.skipif(
@@ -133,6 +134,21 @@ def test_get_vggface_embedding_is_deterministic(dummy_images, scratch):
     assert all(embeddings[0] == embeddings[2])
 
 
+def test_get_vggface_embedding_with_filesystem_caching(dummy_images, scratch):
+    dummy_image = dummy_images[0]
+    architecture = Architecture.VGGFACE
+
+    # Override the storage path.
+    dummy_image._get_embedding_path = lambda _: os.path.join(scratch, 'a.obj')
+    store_path = dummy_image._get_embedding_path(architecture)
+    assert not os.path.exists(store_path)
+    embedding = dummy_image.get_embedding(architecture, store=True)
+    assert os.path.exists(store_path)
+    with open(store_path, 'rb') as f:
+        cached_embedding = pickle.load(f)
+    assert all(embedding == cached_embedding)
+
+
 #################
 # `FaceTriplet` #
 #################
@@ -155,12 +171,12 @@ def test_face_triplet_raises_exception_on_wrong_identities():
 # `LfwDataset` #
 ################
 
-@skip_if_missing(LfwDataset)
+@skip_if_missing_dataset(LfwDataset)
 def test_lfw_dataset_has_correct_num_images(lfw):
     assert len(lfw.images) == 13233
 
 
-@skip_if_missing(LfwDataset)
+@skip_if_missing_dataset(LfwDataset)
 def test_lfw_dataset_has_correct_num_pairs(lfw):
     assert len(lfw.pairs) == 6000
 
@@ -169,12 +185,12 @@ def test_lfw_dataset_has_correct_num_pairs(lfw):
 # `EnfsiDataset` #
 ##################
 
-@skip_if_missing(EnfsiDataset)
+@skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_images(enfsi_all):
     assert len(enfsi_all.images) == 270
 
 
-@skip_if_missing(EnfsiDataset)
+@skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
     assert len(enfsi_all.pairs) == 135
     assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.pairs])
@@ -184,12 +200,12 @@ def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
 # `ForenFace` #
 ###############
 
-@skip_if_missing(ForenFaceDataset)
+@skip_if_missing_dataset(ForenFaceDataset)
 def test_forenface_dataset_has_correct_num_images(forenface):
     assert len(forenface.images) == 2476
 
 
-@skip_if_missing(ForenFaceDataset)
+@skip_if_missing_dataset(ForenFaceDataset)
 def test_forenface_dataset_has_correct_num_pairs(forenface):
     assert len(forenface.pairs) == 60798
 
@@ -302,12 +318,12 @@ def test_make_pairs_negative_only_large_n(dummy_images):
 # `EnfsiDataset` #
 ##################
 
-@skip_if_missing(EnfsiDataset)
+@skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_images(enfsi_all):
     assert len(enfsi_all.images) == 270
 
 
-@skip_if_missing(EnfsiDataset)
+@skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
     assert len(enfsi_all.pairs) == 135
     assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.pairs])
@@ -317,7 +333,7 @@ def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
 # `ForenFace` #
 ###############
 
-@skip_if_missing(ForenFaceDataset)
+@skip_if_missing_dataset(ForenFaceDataset)
 def test_forenface_dataset_has_correct_num_images(forenface):
     assert len(forenface.images) == 2476
 
@@ -406,6 +422,7 @@ def test_split_pairs(dummy_pairs):
     `B` is treated as being the same as another `FacePair` where `first` has
     identity `B` and `second` has identity `A`.
     """
+
     def get_pair_id(pair: FacePair):
         return '|'.join(sorted(x.identity for x in pair))
 

@@ -283,8 +283,7 @@ class Dataset:
         return hash(str(self))
 
     def __eq__(self, other) -> bool:
-        return isinstance(other, self.__class__) \
-               and set(self.images) == set(other.images)
+        return isinstance(other, self.__class__) and str(self) == str(other)
 
     def __str__(self) -> str:
         return self.__class__.__name__
@@ -693,9 +692,13 @@ def split_pairs(
 ) -> Tuple[List[FacePair], List[FacePair]]:
     """
     Takes a single collection of pairs and splits them in two separate sets in
-    such a way that `(1 - fraction_test)` of the identities are put in the
-    first set and the remaining `fraction_test` of the identities in the
-    second. An optional `random_state` can be specified to make the resulting
+    such a way that `(1 - fraction_test)` of the unique paired identities end
+    up in the first set and the remaining `fraction_test` of the unique pair
+    identities end up in the second. A pair identity is defined as the
+    combination of the two individual identities contained in a pair. When
+    determining uniqueness, their ordering inside the pair does not matter.
+
+    An optional `random_state` can be specified to make the resulting
     split deterministic.
 
     :param pairs: List[FacePair]
@@ -704,10 +707,9 @@ def split_pairs(
     :return: Tuple[List[FacePair], List[FacePair]]
     """
 
-    gss = GroupShuffleSplit(
-        n_splits=1, test_size=fraction_test, random_state=random_state)
-
-    # TODO: are the group ids unique enough?
+    gss = GroupShuffleSplit(n_splits=1,
+                            test_size=fraction_test,
+                            random_state=random_state)
     groups = ['|'.join(sorted(x.identity for x in pair)) for pair in pairs]
     train_idx, test_idx = next(gss.split(pairs, groups=groups))
     return [pairs[idx] for idx in train_idx], [pairs[idx] for idx in test_idx]
