@@ -66,13 +66,14 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 SCORERS = {
-    'current_set_up': ['openface', 'facenet', 'vggface', 'fbdeepface', 'dummy'],
+    'current_set_up': ['arcface','openface', 'facenet', 'vggface', 'fbdeepface', 'dummy'],
     'all': {
         'dummy': DummyModel(),
         'openface': BaseModel.OPENFACE,
         'facenet': BaseModel.FACENET,
         'fbdeepface': BaseModel.FBDEEPFACE,
         'vggface': BaseModel.VGGFACE,
+        'arcface': BaseModel.ARCFACE,
     }
 }
 
