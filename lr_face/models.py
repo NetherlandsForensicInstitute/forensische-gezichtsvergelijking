@@ -5,6 +5,7 @@ import tensorflow as tf
 from scipy import spatial
 
 from deepface.basemodels import VGGFace, FbDeepFace, Facenet, OpenFace
+from arcface import ArcFace
 from lr_face.utils import resize_and_normalize
 
 
@@ -151,6 +152,7 @@ class BaseModel(Enum):
     FACENET = 'Facenet'
     FBDEEPFACE = 'FbDeepFace'
     OPENFACE = 'OpenFace'
+    ARCFACE = 'ArcFace'
 
     def __init__(self, model_name):
         self.cache = {}
@@ -162,6 +164,8 @@ class BaseModel(Enum):
             self.module = OpenFace
         elif model_name == 'Facenet':
             self.module = Facenet
+        elif model_name == 'ArcFace':
+            self.module = ArcFace    
         else:
             raise ValueError("Unknown model source.")
         self._model = None
@@ -183,8 +187,11 @@ class BaseModel(Enum):
                            self.FACENET,
                            self.FBDEEPFACE,
                            self.OPENFACE]
+        insightface_models = [self.ARCFACE]
         if self in deepface_models:
             return 'deepface'
+        elif self in insightface_models:
+            return 'insightface'
         raise ValueError("Unknown model source.")
 
     @property
@@ -193,6 +200,7 @@ class BaseModel(Enum):
         if not self._model:
             self._model = self.module.loadModel()
         return self._model
+    # ArcFaceModel
 
     def predict_proba(self, X, ids):
         assert len(X) == len(ids)
@@ -206,7 +214,7 @@ class BaseModel(Enum):
             scores.append([score, 1 - score])
         return np.asarray(scores)
 
-    def score_for_pair(self, pair):
+    def score_for_pair(self, pair):        
         # TODO assumes resizing is necessary
         img1 = resize_and_normalize(pair[0], self.model.input_shape[1:3])
         img2 = resize_and_normalize(pair[1], self.model.input_shape[1:3])
