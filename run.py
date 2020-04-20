@@ -8,7 +8,6 @@ from lir import CalibratedScorer
 from lir.util import to_odds
 from tqdm import tqdm
 
-from lr_face.data_providers import get_data, ImagePairs
 from lr_face.evaluators import evaluate
 from lr_face.experiment_settings import ExperimentSettings
 from lr_face.utils import write_output, parser_setup, process_dataframe

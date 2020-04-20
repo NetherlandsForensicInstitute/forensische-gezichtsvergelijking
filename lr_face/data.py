@@ -66,10 +66,15 @@ class FaceImage:
         Depending on the architecture, the dimensionality of the embedding may
         differ. Returns a 1D array of shape `(embedding_size)`.
 
-        TODO: implement.
-        TODO: implement hashing in `Architecture`, otherwise caching doesn't work.
+        :param architecture: Architecture
+        :return: np.ndarray
         """
-        raise NotImplementedError
+        image = self.get_image(architecture.resolution, normalize=True)
+        x = np.expand_dims(image, axis=0)
+        embedding_model = architecture.get_embedding_model()
+        embedding = embedding_model.predict(x)[0]
+        # TODO: store the embedding on the filesystem?
+        return embedding
 
     def __post_init__(self):
         if not self.meta:

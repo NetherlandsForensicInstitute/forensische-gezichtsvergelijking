@@ -194,7 +194,7 @@ class Architecture(Enum):
     ```
     """
     VGGFACE = 'VGGFace'
-    FACENET = 'FaceNet'
+    FACENET = 'Facenet'
     FBDEEPFACE = 'FbDeepFace'
     OPENFACE = 'OpenFace'
 
@@ -223,6 +223,15 @@ class Architecture(Enum):
         :return: Tuple[int, int]
         """
         return self.get_embedding_model().input_shape[1:3]
+
+    @property
+    def embedding_size(self) -> int:
+        """
+        Returns the dimensionality of the embeddings for this architecture.
+
+        :return: int
+        """
+        return self.get_embedding_model().output_shape[1]
 
     @property
     def source(self) -> str:
