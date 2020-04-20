@@ -195,7 +195,12 @@ class Architecture(Enum):
             module_name = f'deepface.basemodels.{self.value}'
             module = importlib.import_module(module_name)
             model = module.loadModel()
-            # TODO: once we start finetuning, load the finetuned weights.
+            # TODO:
+            # Once we start finetuning, add an option to load the finetuned
+            # weights. We still need the original weights for when we want to
+            # start finetuning, but for generating embeddings we most likely
+            # don't want to load the original weights, but the ones that have
+            # already been finetuned (if they exist).
             return model
         raise ValueError("Unable to load embedding model.")
 
