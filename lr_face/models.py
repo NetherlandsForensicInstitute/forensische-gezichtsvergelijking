@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 import importlib
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
 
-from lr_face.utils import resize_and_normalize, cache
+from lr_face.utils import cache
 
 
 class DummyScorerModel:
@@ -21,51 +23,40 @@ class DummyScorerModel:
         assert X.shape[1:3] == self.resolution
         pass
 
-    def predict_proba(self, X, ids=None):
-        # assert X.shape[2:4] == self.resolution
-        array = np.array(X)
-        if array.shape[1] != 2:
-            raise ValueError(
-                f'Should get n pairs, but 2nd dimension is {array.shape[1]}')
-        return np.random.random(array.shape)
+    def predict_proba(self, X: List['FacePair']):
+        return np.random.random(size=(len(X), 2))
 
     def __str__(self):
         return 'Dummy'
 
 
 class ScorerModel:
-    def __init__(self, embedding_model: tf.keras.Model, name: str):
-        self.embedding_model = embedding_model
-        self.name = name
-        self.cache = dict()
+    def __init__(self, architecture: Architecture):
+        self.architecture = architecture
 
-    def predict_proba(self, X, ids):
-        assert len(X) == len(ids)
+    def predict_proba(self, X: List['FacePair']) -> np.ndarray:
+        """
+        Takes a list of face pairs as an argument and computes similarity
+        scores between all pairs. To conform to the sklearn interface we
+        return a 2D array of shape `(num_pairs, 2)`, where the first column
+        is effectively ignored. The similarity scores are thus stored in the
+        second column.
+
+        :param X: List[FacePair]
+        :return np.ndarray
+        """
         scores = []
-        for id, pair in zip(ids, X):
-            if id in self.cache:
-                score = self.cache[id]
-            else:
-                score = self.score_for_pair(pair)
-                self.cache[id] = score
+        for pair in X:
+            embedding1 = pair.first.get_embedding(
+                self.architecture, store=True)
+            embedding2 = pair.second.get_embedding(
+                self.architecture, store=True)
+            score = spatial.distance.cosine(embedding1, embedding2)
             scores.append([score, 1 - score])
         return np.asarray(scores)
 
-    def score_for_pair(self, pair):
-        # TODO assumes resizing is necessary
-        img1 = resize_and_normalize(
-            pair[0], self.embedding_model.input_shape[1:3])
-        img2 = resize_and_normalize(
-            pair[1], self.embedding_model.input_shape[1:3])
-        # TODO assumes deepface like predict
-        img1_representation = self.embedding_model.predict(img1)[0, :]
-        img2_representation = self.embedding_model.predict(img2)[0, :]
-        score = spatial.distance.cosine(img1_representation,
-                                        img2_representation)
-        return score
-
-    def __str__(self):
-        return self.name
+    def __str__(self) -> str:
+        return self.architecture.name
 
 
 class TripletEmbeddingModel(tf.keras.Model):
@@ -212,7 +203,7 @@ class Architecture(Enum):
         return TripletEmbeddingModel(self.get_embedding_model())
 
     def get_scorer_model(self) -> ScorerModel:
-        return ScorerModel(self.get_embedding_model(), self.value)
+        return ScorerModel(self)
 
     @property
     def resolution(self) -> Tuple[int, int]:

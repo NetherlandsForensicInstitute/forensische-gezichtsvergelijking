@@ -1,5 +1,7 @@
 import csv
+import hashlib
 import os
+import pickle
 import random
 from abc import abstractmethod
 from collections import defaultdict
@@ -9,6 +11,7 @@ from typing import Dict, Any, Tuple, List, Optional, Union, Iterator
 
 import cv2
 import numpy as np
+from sklearn.model_selection import GroupShuffleSplit
 
 from lr_face.models import Architecture
 from lr_face.utils import cache
@@ -60,21 +63,60 @@ class FaceImage:
         return res
 
     @cache
-    def get_embedding(self, architecture: Architecture) -> np.ndarray:
+    def get_embedding(self,
+                      architecture: Architecture,
+                      store: bool = False) -> np.ndarray:
         """
         Uses the specified `architecture` to compute an embedding of the image.
         Depending on the architecture, the dimensionality of the embedding may
         differ. Returns a 1D array of shape `(embedding_size)`.
 
+        Optionally, a boolean `store` flag can be passed. If set to True, the
+        embedding is stored on the filesystem and reloaded when it is requested
+        again later in a different session.
+
         :param architecture: Architecture
+        :param store: bool
         :return: np.ndarray
         """
-        image = self.get_image(architecture.resolution, normalize=True)
-        x = np.expand_dims(image, axis=0)
-        embedding_model = architecture.get_embedding_model()
-        embedding = embedding_model.predict(x)[0]
-        # TODO: store the embedding on the filesystem?
+
+        # If we don't want to make use of the filesystem for on-disk caching,
+        # or the embedding has not been cached previously, we have to compute
+        # the embedding.
+        store_path = self._get_embedding_path(architecture)
+        if not store or not os.path.exists(store_path):
+            image = self.get_image(architecture.resolution, normalize=True)
+            x = np.expand_dims(image, axis=0)
+            embedding_model = architecture.get_embedding_model()
+            embedding = embedding_model.predict(x)[0]
+
+            # If we want to make use of on-disk caching, store the embedding.
+            if store:
+                os.makedirs(os.path.dirname(store_path), exist_ok=True)
+                with open(store_path, 'wb') as f:
+                    pickle.dump(embedding, f)
+
+        # If we previously cached the embedding, load it.
+        else:
+            with open(store_path, 'rb') as f:
+                embedding = pickle.load(f)
         return embedding
+
+    def _get_embedding_path(self, architecture: Architecture) -> str:
+        """
+        Returns the path to the embedding cache file on disk for the given
+        `architecture`.
+
+        TODO: think about versioning models corresponding to the architecture.
+
+        :param architecture: Architecture
+        :return: str
+        """
+        return os.path.join(
+            'embeddings',
+            architecture.name,
+            f'{hashlib.md5(self.path.encode()).hexdigest()}.obj'
+        )
 
     def __post_init__(self):
         if not self.meta:
@@ -236,6 +278,13 @@ class Dataset:
         :return: int
         """
         return len(self.images)
+
+    def __hash__(self) -> int:
+        return hash(str(self))
+
+    def __eq__(self, other) -> bool:
+        return isinstance(other, self.__class__) \
+               and set(self.images) == set(other.images)
 
     def __str__(self) -> str:
         return self.__class__.__name__
@@ -635,3 +684,30 @@ def to_array(data: Union[Dataset,
     # If we haven't returned something by now it means an invalid data type
     # was passed along, so we let the user know about that.
     raise ValueError(f'Invalid data type: {type(data)}')
+
+
+def split_pairs(
+        pairs: List[FacePair],
+        fraction_test: float,
+        random_state: Optional[int] = 42
+) -> Tuple[List[FacePair], List[FacePair]]:
+    """
+    Takes a single collection of pairs and splits them in two separate sets in
+    such a way that `(1 - fraction_test)` of the identities are put in the
+    first set and the remaining `fraction_test` of the identities in the
+    second. An optional `random_state` can be specified to make the resulting
+    split deterministic.
+
+    :param pairs: List[FacePair]
+    :param fraction_test: float
+    :param random_state: Optional[int]
+    :return: Tuple[List[FacePair], List[FacePair]]
+    """
+
+    gss = GroupShuffleSplit(
+        n_splits=1, test_size=fraction_test, random_state=random_state)
+
+    # TODO: are the group ids unique enough?
+    groups = ['|'.join(sorted(x.identity for x in pair)) for pair in pairs]
+    train_idx, test_idx = next(gss.split(pairs, groups=groups))
+    return [pairs[idx] for idx in train_idx], [pairs[idx] for idx in test_idx]
