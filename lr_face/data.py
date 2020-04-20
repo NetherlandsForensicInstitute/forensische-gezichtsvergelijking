@@ -65,58 +65,58 @@ class FaceImage:
     @cache
     def get_embedding(self,
                       architecture: Architecture,
-                      store: bool = False) -> np.ndarray:
+                      output_dir: Optional[str] = None) -> np.ndarray:
         """
-        Uses the specified `architecture` to compute an embedding of the image.
-        Depending on the architecture, the dimensionality of the embedding may
-        differ. Returns a 1D array of shape `(embedding_size)`.
+        Returns an embedding of the image that is computed using the specified
+        `architecture`. Depending on what type of `architecture` is used, the
+        dimensionality of the resulting embedding may differ. Returns a 1D
+        array of shape `(embedding_size)`.
 
-        Optionally, a boolean `store` flag can be passed. If set to True, the
-        embedding is stored on the filesystem and reloaded when it is requested
-        again later in a different session.
+        Optionally, an `output_dir` may be specified where the embedding should
+        be stored on disk. It can then be quickly loaded from disk later, which
+        is typically faster than recomputing the embedding.
 
         :param architecture: Architecture
-        :param store: bool
+        :param output_dir: Optional[str]
         :return: np.ndarray
         """
 
-        # If we don't want to make use of the filesystem for on-disk caching,
-        # or the embedding has not been cached previously, we have to compute
-        # the embedding.
-        store_path = self._get_embedding_path(architecture)
-        if not store or not os.path.exists(store_path):
-            image = self.get_image(architecture.resolution, normalize=True)
-            x = np.expand_dims(image, axis=0)
-            embedding_model = architecture.get_embedding_model()
-            embedding = embedding_model.predict(x)[0]
+        if output_dir:
+            output_path = os.path.join(
+                output_dir,
+                architecture.name,
+                f'{hashlib.md5(self.path.encode()).hexdigest()}.obj'
+            )
 
-            # If we want to make use of on-disk caching, store the embedding.
-            if store:
-                os.makedirs(os.path.dirname(store_path), exist_ok=True)
-                with open(store_path, 'wb') as f:
-                    pickle.dump(embedding, f)
+            # If the embedding has been cached before, load and return it.
+            if os.path.exists(output_path):
+                with open(output_path, 'rb') as f:
+                    return pickle.load(f)
 
-        # If we previously cached the embedding, load it.
-        else:
-            with open(store_path, 'rb') as f:
-                embedding = pickle.load(f)
-        return embedding
+            # If the embedding has not been cached to disk yet: compute the
+            # embedding, cache it afterwards and then return the result.
+            embedding = self._compute_embedding(architecture)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, 'wb') as f:
+                pickle.dump(embedding, f)
+            return embedding
 
-    def _get_embedding_path(self, architecture: Architecture) -> str:
+        # If no `output_dir` is specified, we simply compute the embedding.
+        return self._compute_embedding(architecture)
+
+    def _compute_embedding(self, architecture: Architecture) -> np.ndarray:
         """
-        Returns the path to the embedding cache file on disk for the given
-        `architecture`.
-
-        TODO: think about versioning models corresponding to the architecture.
+        Internal method that actually computes the embedding based on the
+        specified `architecture` without worrying about caching, etc. Returns a
+        1D array of shape `(embedding_size)`.
 
         :param architecture: Architecture
-        :return: str
+        :return: np.ndarray
         """
-        return os.path.join(
-            'embeddings',
-            architecture.name,
-            f'{hashlib.md5(self.path.encode()).hexdigest()}.obj'
-        )
+        image = self.get_image(architecture.resolution, normalize=True)
+        x = np.expand_dims(image, axis=0)
+        embedding_model = architecture.get_embedding_model()
+        return embedding_model.predict(x)[0]
 
     def __post_init__(self):
         if not self.meta:

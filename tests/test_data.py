@@ -1,3 +1,4 @@
+import hashlib
 import os
 import pickle
 from functools import wraps
@@ -137,14 +138,15 @@ def test_get_vggface_embedding_is_deterministic(dummy_images, scratch):
 def test_get_vggface_embedding_with_filesystem_caching(dummy_images, scratch):
     dummy_image = dummy_images[0]
     architecture = Architecture.VGGFACE
-
-    # Override the storage path.
-    dummy_image._get_embedding_path = lambda _: os.path.join(scratch, 'a.obj')
-    store_path = dummy_image._get_embedding_path(architecture)
-    assert not os.path.exists(store_path)
-    embedding = dummy_image.get_embedding(architecture, store=True)
-    assert os.path.exists(store_path)
-    with open(store_path, 'rb') as f:
+    output_path = os.path.join(
+        scratch,
+        architecture.name,
+        f'{hashlib.md5(dummy_image.path.encode()).hexdigest()}.obj'
+    )
+    assert not os.path.exists(output_path)
+    embedding = dummy_image.get_embedding(architecture, output_dir=scratch)
+    assert os.path.exists(output_path)
+    with open(output_path, 'rb') as f:
         cached_embedding = pickle.load(f)
     assert all(embedding == cached_embedding)
 

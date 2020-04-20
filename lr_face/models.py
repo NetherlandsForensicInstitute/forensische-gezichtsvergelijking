@@ -48,9 +48,9 @@ class ScorerModel:
         scores = []
         for pair in X:
             embedding1 = pair.first.get_embedding(
-                self.architecture, store=True)
+                self.architecture, output_dir='embeddings')
             embedding2 = pair.second.get_embedding(
-                self.architecture, store=True)
+                self.architecture, output_dir='embeddings')
             score = spatial.distance.cosine(embedding1, embedding2)
             scores.append([score, 1 - score])
         return np.asarray(scores)
