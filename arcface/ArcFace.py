@@ -14,15 +14,9 @@ from modules.utils import set_memory_growth, load_yaml, l2_norm
 from zipfile import ZipFile 
 import gdown
 
-# flags.DEFINE_string('cfg_path', '', 'config file path')
-# flags.DEFINE_string('gpu', '0', 'which gpu to use')
-# flags.DEFINE_string('img_path', '', 'path to input image')
-
 cfg_path = 'configs/arc_res50.yaml'
 
-def loadModel():
-
-    
+def loadModel():  
 
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -54,24 +48,15 @@ def loadModel():
 
 
 def download_model(model_dir):
-    #'https://drive.google.com/uc?id=1CPSeum3HpopfomUEK1gybeuIVoeJT_Eo'
-
-    url ='https://drive.google.com/uc?id=1HasWQb86s4xSYy36YbmhRELg9LBmvhvt'
-    # url = 'https://www.dropbox.com/s/tj96fsm6t6rq8ye/model-r100-arcface-ms1m-refine-v2.zip?dl=1'
-
-# importing required model
-
-    print('Trained model will be downloaded...' + model_dir)
-    #output = models_dir + '/downloaded_model.zip'
-    zip_file = model_dir +'.zip'
     
-    # u = urllib.request.urlopen(url)
-    # data = u.read()
-    # u.close()
- 
-    # with open(zip_file, "wb") as f :
-    #     f.write(data)
-    #     f.close()
+    url ='https://drive.google.com/uc?id=1HasWQb86s4xSYy36YbmhRELg9LBmvhvt'
+    
+    # importing required model
+
+    print('Pre-trained model will be downloaded...' + model_dir)
+    #output = models_dir + '/downloaded_model.zip'
+    zip_file = model_dir +'.zip' 
+
     
     gdown.download(url, zip_file , quiet=False)
         
