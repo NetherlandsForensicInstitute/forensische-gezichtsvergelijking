@@ -5,7 +5,7 @@ import importlib
 import os
 import pickle
 from enum import Enum
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Union
 
 import numpy as np
 import tensorflow as tf
@@ -271,11 +271,13 @@ class Architecture(Enum):
         raise ValueError("Unable to load base model")
 
     def get_embedding_model(self,
-                            version: Optional[Version] = None,
+                            version: Optional[Union[str, Version]] = None,
                             use_triplets: bool = False) -> EmbeddingModel:
         base_model = self.get_base_model()
         os.makedirs(self.model_dir, exist_ok=True)
         cls = TripletEmbeddingModel if use_triplets else EmbeddingModel
+        if isinstance(version, str):
+            version = Version.from_string(version)
         embedding_model = cls(
             base_model,
             version,
@@ -287,7 +289,7 @@ class Architecture(Enum):
 
     def get_triplet_embedding_model(
             self,
-            version: Optional[Version] = None
+            version: Optional[Union[str, Version]] = None
     ) -> TripletEmbeddingModel:
         embedding_model = self.get_embedding_model(version, use_triplets=True)
         if not isinstance(embedding_model, TripletEmbeddingModel):
@@ -296,7 +298,7 @@ class Architecture(Enum):
 
     def get_scorer_model(
             self,
-            version: Optional[Version] = None
+            version: Optional[Union[str, Version]] = None
     ) -> ScorerModel:
         embedding_model = self.get_embedding_model(version, use_triplets=False)
         return ScorerModel(embedding_model)
