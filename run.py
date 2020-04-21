@@ -10,11 +10,8 @@ from tqdm import tqdm
 from lr_face.data import split_pairs, FacePair
 from lr_face.evaluators import evaluate
 from lr_face.experiment_settings import ExperimentSettings
-from lr_face.utils import write_output, parser_setup, process_dataframe, \
-    fix_tensorflow_rtx
+from lr_face.utils import write_output, parser_setup, process_dataframe
 from params import TIMES
-
-fix_tensorflow_rtx()
 
 
 def run(args):

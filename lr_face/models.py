@@ -51,15 +51,10 @@ class ScorerModel:
         :return np.ndarray
         """
         scores = []
+        cache_dir = 'embeddings'  # TODO: make dynamic?
         for pair in X:
-            embedding1 = pair.first.get_embedding(
-                self.embedding_model,
-                output_dir='embeddings'  # TODO: make dynamic?
-            )
-            embedding2 = pair.second.get_embedding(
-                self.embedding_model,
-                output_dir='embeddings'  # TODO: make dynamic?
-            )
+            embedding1 = self.embedding_model.embed(pair.first, cache_dir)
+            embedding2 = self.embedding_model.embed(pair.second, cache_dir)
             score = spatial.distance.cosine(embedding1, embedding2)
             scores.append([score, 1 - score])
         return np.asarray(scores)
@@ -105,7 +100,7 @@ class EmbeddingModel:
             output_path = os.path.join(
                 cache_dir,
                 str(self),
-                # TODO: add dataset source to the directory structure.
+                image.source if image.source else '_',
                 f'{hashlib.md5(image.path.encode()).hexdigest()}.obj'
             )
 
@@ -152,7 +147,9 @@ class EmbeddingModel:
                and self.current_version == other.current_version
 
     def __str__(self):
-        return f'{self.name}_{self.current_version}'
+        if self.current_version:
+            return f'{self.name}_{self.current_version}'
+        return self.name
 
 
 class TripletEmbeddingModel(EmbeddingModel):
@@ -273,7 +270,6 @@ class Architecture(Enum):
             return module.loadModel()
         raise ValueError("Unable to load base model")
 
-    @cache
     def get_embedding_model(self,
                             version: Optional[Version] = None,
                             use_triplets: bool = False) -> EmbeddingModel:
