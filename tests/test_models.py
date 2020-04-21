@@ -52,11 +52,13 @@ def test_get_vggface_embedding_is_deterministic(dummy_images, scratch):
 
 def test_get_vggface_embedding_with_filesystem_caching(dummy_images, scratch):
     dummy_image = dummy_images[0]
+    dummy_image.source = 'test'
     architecture = Architecture.VGGFACE
     embedding_model = architecture.get_embedding_model()
     cache_path = os.path.join(
         scratch,
         str(embedding_model),
+        dummy_image.source,
         f'{hashlib.md5(dummy_image.path.encode()).hexdigest()}.obj'
     )
     assert not os.path.exists(cache_path)

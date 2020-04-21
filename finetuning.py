@@ -67,7 +67,7 @@ if __name__ == '__main__':
         required=False,
         default=None,
         type=str,
-        help='A new version number. Defaults to the latest version + 1'
+        help='A new version number. Defaults to an increment of latest version'
     )
     args = parser.parse_args()
     main(**vars(args))

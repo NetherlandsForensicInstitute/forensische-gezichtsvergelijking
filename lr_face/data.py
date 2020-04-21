@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import csv
 import os
 import random
@@ -28,6 +30,9 @@ class FaceImage:
     # A globally unique identifier for the person depicted on the image, only
     # shared with other images that depict the same person.
     identity: str
+
+    # A textual description of where the image came from (optional).
+    source: Optional[str] = None
 
     # An optional miscellaneous dictionary where any potentially relevant
     # metadata about the image can be stored.
@@ -255,9 +260,7 @@ class ForenFaceDataset(Dataset):
         for file in files:
             path = os.path.join(self.RESOURCE_FOLDER, file)
             identity = f'FORENFACE-{file[:3]}'
-            data.append(FaceImage(path, identity, {
-                'source': str(self)
-            }))
+            data.append(FaceImage(path, identity, source=str(self)))
         return data
 
 
@@ -274,9 +277,11 @@ class LfwDataset(Dataset):
                 person_dir = os.path.join(self.RESOURCE_FOLDER, person)
                 for image_file in os.listdir(person_dir):
                     image_path = os.path.join(person_dir, image_file)
-                    data.append(FaceImage(image_path, identity, {
-                        'source': str(self)
-                    }))
+                    data.append(FaceImage(
+                        image_path,
+                        identity,
+                        source=str(self)
+                    ))
         return data
 
     @property
@@ -317,9 +322,7 @@ class LfwDataset(Dataset):
         return FaceImage(
             path=self._get_path(person, idx),
             identity=self._create_identity(person),
-            meta={
-                'source': str(self)
-            }
+            source=str(self)
         )
 
     @staticmethod
@@ -363,19 +366,27 @@ class EnfsiDataset(Dataset):
 
                     # Create a record for the reference image.
                     path = os.path.join(folder, reference)
-                    data.append(FaceImage(path, reference_id, {
-                        'source': str(self),
-                        'year': year,
-                        'idx': idx
-                    }))
+                    data.append(FaceImage(
+                        path,
+                        reference_id,
+                        source=str(self),
+                        meta={
+                            'year': year,
+                            'idx': idx
+                        }
+                    ))
 
                     # Create a record for the query image.
                     path = os.path.join(folder, query)
-                    data.append(FaceImage(path, query_id, {
-                        'source': str(self),
-                        'year': year,
-                        'idx': idx
-                    }))
+                    data.append(FaceImage(
+                        path,
+                        query_id,
+                        source=str(self),
+                        meta={
+                            'year': year,
+                            'idx': idx
+                        }
+                    ))
         return data
 
     @property
