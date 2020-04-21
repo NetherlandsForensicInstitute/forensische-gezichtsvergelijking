@@ -20,7 +20,7 @@ def determine_version(version: Optional[str],
         try:
             return architecture.get_latest_version().increment()
         except ValueError:
-            return Version(0, 0, 1)
+            return Version.from_string("0.0.1")
 
 
 def main(model_name: str, version: Optional[str] = None):
