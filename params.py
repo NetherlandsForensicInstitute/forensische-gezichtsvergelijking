@@ -79,10 +79,10 @@ SCORERS = {
                        'fbdeepface'],
     'all': {
         'dummy': DummyScorerModel(),
-        'openface': Architecture.OPENFACE.get_scorer_model(),
-        'facenet': Architecture.FACENET.get_scorer_model(),
-        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(),
-        'vggface': Architecture.VGGFACE.get_scorer_model(),
+        'openface': Architecture.OPENFACE.get_scorer_model(version=None),
+        'facenet': Architecture.FACENET.get_scorer_model(version=None),
+        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(version=None),
+        'vggface': Architecture.VGGFACE.get_scorer_model(version=None),
     }
 }
 

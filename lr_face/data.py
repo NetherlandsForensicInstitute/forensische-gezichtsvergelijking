@@ -1,7 +1,5 @@
 import csv
-import hashlib
 import os
-import pickle
 import random
 from abc import abstractmethod
 from collections import defaultdict
@@ -13,7 +11,6 @@ import cv2
 import numpy as np
 from sklearn.model_selection import GroupShuffleSplit
 
-from lr_face.models import Architecture
 from lr_face.utils import cache
 
 
@@ -61,62 +58,6 @@ class FaceImage:
         if normalize:
             res = res / 255
         return res
-
-    @cache
-    def get_embedding(self,
-                      architecture: Architecture,
-                      output_dir: Optional[str] = None) -> np.ndarray:
-        """
-        Returns an embedding of the image that is computed using the specified
-        `architecture`. Depending on what type of `architecture` is used, the
-        dimensionality of the resulting embedding may differ. Returns a 1D
-        array of shape `(embedding_size)`.
-
-        Optionally, an `output_dir` may be specified where the embedding should
-        be stored on disk. It can then be quickly loaded from disk later, which
-        is typically faster than recomputing the embedding.
-
-        :param architecture: Architecture
-        :param output_dir: Optional[str]
-        :return: np.ndarray
-        """
-
-        if output_dir:
-            output_path = os.path.join(
-                output_dir,
-                architecture.name,
-                f'{hashlib.md5(self.path.encode()).hexdigest()}.obj'
-            )
-
-            # If the embedding has been cached before, load and return it.
-            if os.path.exists(output_path):
-                with open(output_path, 'rb') as f:
-                    return pickle.load(f)
-
-            # If the embedding has not been cached to disk yet: compute the
-            # embedding, cache it afterwards and then return the result.
-            embedding = self._compute_embedding(architecture)
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            with open(output_path, 'wb') as f:
-                pickle.dump(embedding, f)
-            return embedding
-
-        # If no `output_dir` is specified, we simply compute the embedding.
-        return self._compute_embedding(architecture)
-
-    def _compute_embedding(self, architecture: Architecture) -> np.ndarray:
-        """
-        Internal method that actually computes the embedding based on the
-        specified `architecture` without worrying about caching, etc. Returns a
-        1D array of shape `(embedding_size)`.
-
-        :param architecture: Architecture
-        :return: np.ndarray
-        """
-        image = self.get_image(architecture.resolution, normalize=True)
-        x = np.expand_dims(image, axis=0)
-        embedding_model = architecture.get_embedding_model()
-        return embedding_model.predict(x)[0]
 
     def __post_init__(self):
         if not self.meta:

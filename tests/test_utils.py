@@ -65,6 +65,7 @@ def test_cache_with_class_methods():
         should initially be 0 and then be increased to 1 the first time it is
         called. Subsequent calls should not increment the counter any further.
         """
+
         def __init__(self, bias):
             self.counter: Dict[Tuple[float, float], int] = defaultdict(int)
             self.bias = bias
