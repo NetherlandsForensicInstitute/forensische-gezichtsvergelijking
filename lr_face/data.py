@@ -709,8 +709,7 @@ def split_pairs(
     """
 
     gss = GroupShuffleSplit(n_splits=1,
-                            test_size=fraction_test,
-                            random_state=random_state)
+                            test_size=fraction_test)
     groups = ['|'.join(sorted(x.identity for x in pair)) for pair in pairs]
     train_idx, test_idx = next(gss.split(pairs, groups=groups))
     return [pairs[idx] for idx in train_idx], [pairs[idx] for idx in test_idx]
