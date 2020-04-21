@@ -688,7 +688,7 @@ def to_array(data: Union[Dataset,
 def split_pairs(
         pairs: List[FacePair],
         fraction_test: float,
-        random_state: Optional[int] = 42
+        random_state: Optional[int] = None
 ) -> Tuple[List[FacePair], List[FacePair]]:
     """
     Takes a single collection of pairs and splits them in two separate sets in
