@@ -1,11 +1,14 @@
 import numpy as np
-from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrator, FractionCalibrator, \
-    IsotonicCalibrator, DummyCalibrator
+from lir import (LogitCalibrator,
+                 NormalizedCalibrator,
+                 ELUBbounder,
+                 KDECalibrator,
+                 FractionCalibrator,
+                 IsotonicCalibrator,
+                 DummyCalibrator)
 
-
-from lr_face.data_providers import TestData, DataFunctions, EnfsiData
-from lr_face.models import DummyModel, BaseModel
-
+from lr_face.data import TestDataset, EnfsiDataset
+from lr_face.models import DummyScorerModel, Architecture
 
 """How often to repeat all experiments"""
 
@@ -50,12 +53,11 @@ DATA = {
     'current_set_up': ['enfsi'],
     'all': {
         'test': {
-            'datasets': [DataFunctions(image_provider=TestData(), pair_provider=None)],
+            'datasets': [TestDataset()],
             'fraction_test': .5,
         },
         'enfsi': {
-            'datasets': [DataFunctions(image_provider=None,
-                                       pair_provider=EnfsiData())],
+            'datasets': [EnfsiDataset(years=[2011, 2012, 2013, 2017])],
             'fraction_test': .2,
         }
     }
@@ -66,14 +68,20 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 SCORERS = {
-    'current_set_up': ['arcface','openface', 'facenet', 'vggface', 'fbdeepface', 'dummy'],
+    'current_set_up': ['dummy',
+                       'openface',
+                       'facenet',
+                       'vggface',
+                       'fbdeepface',
+                       'arcface'
+                       ],
     'all': {
-        'dummy': DummyModel(),
-        'openface': BaseModel.OPENFACE,
-        'facenet': BaseModel.FACENET,
-        'fbdeepface': BaseModel.FBDEEPFACE,
-        'vggface': BaseModel.VGGFACE,
-        'arcface': BaseModel.ARCFACE,
+        'dummy': DummyScorerModel(),
+        'openface': Architecture.OPENFACE.get_scorer_model(),
+        'facenet': Architecture.FACENET.get_scorer_model(),
+        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(),
+        'vggface': Architecture.VGGFACE.get_scorer_model(),
+        'arcface':Architecture.ARCFACE.get_scorer_model(),
     }
 }
 
