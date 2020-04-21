@@ -395,7 +395,8 @@ class LfwDataset(Dataset):
         :param idx: int
         :return: str
         """
-        return os.path.join(cls.RESOURCE_FOLDER, f'{person}_{idx:04}.jpg')
+        return os.path.join(cls.RESOURCE_FOLDER, f'{person}',
+                            f'{person}_{idx:04}.jpg')
 
 
 class EnfsiDataset(Dataset):
