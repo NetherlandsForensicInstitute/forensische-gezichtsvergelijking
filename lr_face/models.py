@@ -11,7 +11,8 @@ import numpy as np
 import tensorflow as tf
 from scipy import spatial
 
-from lr_face.data import FaceImage, FaceTriplet, to_array
+from lr_face.data import FaceImage, FaceTriplet, to_array, FacePair
+from lr_face.losses import TripletLoss
 from lr_face.utils import cache
 from lr_face.versioning import Version
 
@@ -28,7 +29,7 @@ class DummyScorerModel:
         assert X.shape[1:3] == self.resolution
         pass
 
-    def predict_proba(self, X: List['FacePair']):
+    def predict_proba(self, X: List[FacePair]):
         return np.random.random(size=(len(X), 2))
 
     def __str__(self):
@@ -36,10 +37,15 @@ class DummyScorerModel:
 
 
 class ScorerModel:
+    """
+    A wrapper around an `EmbeddingModel` that converts the embeddings of image
+    pairs into (dis)similarity scores.
+    """
+
     def __init__(self, embedding_model: EmbeddingModel):
         self.embedding_model = embedding_model
 
-    def predict_proba(self, X: List['FacePair']) -> np.ndarray:
+    def predict_proba(self, X: List[FacePair]) -> np.ndarray:
         """
         Takes a list of face pairs as an argument and computes similarity
         scores between all pairs. To conform to the sklearn interface we
@@ -156,30 +162,6 @@ class TripletEmbeddingModel(EmbeddingModel):
     """
     A subclass of EmbeddingModel that can be used to finetune an existing,
     pre-trained embedding model using a triplet loss.
-
-    ```python
-    triplet_embedding_model = TripletEmbeddingModel(...)
-    triplet_embedding_model.keras().compile(loss=TripletLoss(...))
-    triplet_embedding_model.keras().fit(...)
-    triplet_embedding_model.save()
-    ```
-
-    When called, the `TripletEmbeddingModel` takes 3 inputs, namely:
-
-        anchor: A 4D tensor containing a batch of anchor images with shape
-            `(batch_size, height, width, num_channels)`.
-        positive: A 4D tensor containing a batch of images of the same identity
-            as the anchor image with shape `(batch_size, height, width,
-            num_channels)`.
-        negative: A 4D tensor containing a batch of images of a different
-            identity than the anchor image with shape `(batch_size, height,
-            width, num_channels)`.
-
-    It outputs embeddings for each of the images and returns them as a single
-    3D tensor of shape `(batch_size, 3, embedding_size)`, where the second
-    axis represents the anchor, positive and negative images, respectively.
-    The reason for returning the results as a single tensor instead of 3
-    separate outputs is because all 3 are required for computing a single loss.
     """
 
     def train(self,
@@ -187,22 +169,20 @@ class TripletEmbeddingModel(EmbeddingModel):
               batch_size: int,
               num_epochs: int,
               optimizer: tf.keras.optimizers.Optimizer,
-              loss: tf.keras.losses.Loss):
+              loss: TripletLoss):
         trainable_model = self._build_trainable_model()
         trainable_model.compile(optimizer, loss)
-
         anchors, positives, negatives = to_array(
             triplets,
             resolution=self.resolution,
             normalize=True
         )
 
-        # The triplet loss that is used to train the model actually does not need
-        # any ground truth labels, since it simply aims to maximize the difference
-        # in distances to the anchor embedding between positive and negative query
-        # images. However, Keras' Loss interface still needs a `y_true` that has
-        # the same first dimension as the `y_pred` output by the model. That's why
-        # we create a dummy "ground truth" of the same length.
+        # The triplet loss that is used to train the model actually does not
+        # need any ground truth labels, since it simply aims to maximize the
+        # difference in distances to the anchor embedding between positive and
+        # negative query images. We create a dummy ground truth variable
+        # because Keras loss functions still expect one.
         inputs = [anchors, positives, negatives]
         y = np.zeros(shape=(anchors.shape[0], 1))
         trainable_model.fit(
@@ -241,20 +221,20 @@ class Architecture(Enum):
     To load the embedding model for VGGFace for example, you would use:
 
     ```python
-    embedding_model = Architecture.VGGFACE.get_embedding_model(version)`
+    embedding_model = Architecture.VGGFACE.get_embedding_model("0.0.1")`
     ```
 
     Similarly, to load a triplet embedder model, you would use:
 
     ```python
     triplet_embedding_model = \
-        Architecture.VGGFACE.get_triplet_embedding_model(version)`
+        Architecture.VGGFACE.get_triplet_embedding_model("0.0.1")`
     ```
 
     Finally, to load a scorer model, you would use:
 
     ```python
-    scorer_model = Architecture.VGGFACE.get_scorer_model(version)
+    scorer_model = Architecture.VGGFACE.get_scorer_model("0.0.1")
     ```
     """
     VGGFACE = 'VGGFace'

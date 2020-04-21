@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass
-from typing import Union
+from typing import Union, Iterator
 
 
-@dataclass(frozen=True)
 class Version:
-    major: int = 0
-    minor: int = 0
-    micro: int = 0
+    def __init__(self, major: Union[str, int], minor: int = 0, micro: int = 0):
+        # If `major` is a `str`, assume it actually holds the full version
+        # number, e.g. "0.1.4", and create a `Version` instance from that.
+        if isinstance(major, str):
+            self.major, self.minor, self.micro = self.from_string(major)
+        else:
+            self.major = major
+            self.minor = minor
+            self.micro = micro
 
     @classmethod
     def from_filename(cls, filename: str) -> Version:
@@ -36,6 +40,23 @@ class Version:
         return f'{basename}{self.suffix}{ext}'
 
     def increment(self, major: bool = False, minor: bool = False) -> Version:
+        """
+        Returns a new `Version` instance with its micro version bumped by 1. If
+        `major` or `minor` is True, the major or minor version is bumped,
+        respectively, instead.
+
+        Examples:
+
+        ```python
+         Version("0.0.1").increment()  # Version("0.0.2")
+         Version("0.1.4").increment()  # Version("0.1.5")
+         Version("1.3.6").increment()  # Version("1.3.7")
+         Version("0.0.1").increment(minor=True)  # Version("0.1.0")
+         Version("0.1.4").increment(minor=True)  # Version("0.2.0")
+         Version("1.3.6").increment(minor=True)  # Version("1.4.0")
+         Version("1.3.6").increment(major=True)  # Version("2.0.0")
+         ```
+        """
         if major and minor:
             raise ValueError(
                 'Cannot increment major and minor version simultaneously')
@@ -76,3 +97,6 @@ class Version:
 
     def __str__(self) -> str:
         return f'{self.major}.{self.minor}.{self.micro}'
+
+    def __iter__(self) -> Iterator[int]:
+        return iter([self.major, self.minor, self.micro])
