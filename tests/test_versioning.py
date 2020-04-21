@@ -10,6 +10,13 @@ def test_version_from_filename():
     assert version.micro == 1
 
 
+def test_version_from_string_constructor():
+    version = Version("7.5.1")
+    assert version.major == 7
+    assert version.minor == 5
+    assert version.micro == 1
+
+
 def test_version_from_string():
     version = Version.from_string("7.5.1")
     assert version.major == 7
