@@ -16,6 +16,9 @@ from lr_face.losses import TripletLoss
 from lr_face.utils import cache
 from lr_face.versioning import Version
 
+EMBEDDINGS_DIR = 'embeddings'
+MODELS_DIR = 'models'
+
 
 class DummyScorerModel:
     """
@@ -57,7 +60,7 @@ class ScorerModel:
         :return np.ndarray
         """
         scores = []
-        cache_dir = 'embeddings'  # TODO: make dynamic?
+        cache_dir = EMBEDDINGS_DIR
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
             embedding2 = self.embedding_model.embed(pair.second, cache_dir)
@@ -106,7 +109,7 @@ class EmbeddingModel:
             output_path = os.path.join(
                 cache_dir,
                 str(self),
-                image.source if image.source else '_',
+                image.source or '_',
                 f'{hashlib.md5(image.path.encode()).hexdigest()}.obj'
             )
 
@@ -123,7 +126,7 @@ class EmbeddingModel:
                 pickle.dump(embedding, f)
             return embedding
 
-        # If no `output_dir` is specified, we simply compute the embedding.
+        # If no `cache_dir` is specified, we simply compute the embedding.
         return self.base_model.predict(x)[0]
 
     def load_weights(self, version: Version):
@@ -253,19 +256,18 @@ class Architecture(Enum):
     def get_embedding_model(self,
                             version: Optional[Union[str, Version]] = None,
                             use_triplets: bool = False) -> EmbeddingModel:
+        if isinstance(version, str):
+            version = Version.from_string(version)
         base_model = self.get_base_model()
         os.makedirs(self.model_dir, exist_ok=True)
         cls = TripletEmbeddingModel if use_triplets else EmbeddingModel
-        if isinstance(version, str):
-            version = Version.from_string(version)
-        embedding_model = cls(
+        return cls(
             base_model,
             version,
             self.resolution,
             self.model_dir,
             name=self.value
         )
-        return embedding_model
 
     def get_triplet_embedding_model(
             self,
@@ -273,7 +275,8 @@ class Architecture(Enum):
     ) -> TripletEmbeddingModel:
         embedding_model = self.get_embedding_model(version, use_triplets=True)
         if not isinstance(embedding_model, TripletEmbeddingModel):
-            raise ValueError('')
+            raise ValueError(f'Expected `TripletEmbeddingModel`, '
+                             f'but got {type(embedding_model)}')
         return embedding_model
 
     def get_scorer_model(
@@ -289,8 +292,7 @@ class Architecture(Enum):
         except FileNotFoundError:
             model_files = []
         if not model_files:
-            raise ValueError(
-                f'No {self.value} models have been saved yet')
+            raise ValueError(f'No {self.value} models have been saved yet')
         return max(map(Version.from_filename, model_files))
 
     @property
@@ -298,11 +300,9 @@ class Architecture(Enum):
         """
         Returns the directory where models for this architecture are stored.
 
-        TODO: make dynamic? (optional)
-
         :return: str
         """
-        return os.path.join('models', self.value)
+        return os.path.join(MODELS_DIR, self.value)
 
     @property
     def resolution(self) -> Tuple[int, int]:

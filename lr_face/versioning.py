@@ -7,8 +7,17 @@ from typing import Union, Iterator
 
 class Version:
     def __init__(self, major: Union[str, int], minor: int = 0, micro: int = 0):
-        # If `major` is a `str`, assume it actually holds the full version
-        # number, e.g. "0.1.4", and create a `Version` instance from that.
+        """
+        Instantiate a `Version` instance in one of two ways:
+            (1) pass along a full version string as the only argument, e.g.
+                `Version('0.2.6')`, the other two arguments are then ignored;
+            (2) pass along three separate integers for the major, minor and
+                micro versions, e.g. `Version(0, 2, 6)`.
+
+        :param major: Union[str, int]
+        :param minor: int
+        :param micro: int
+        """
         if isinstance(major, str):
             self.major, self.minor, self.micro = self.from_string(major)
         else:
@@ -18,6 +27,19 @@ class Version:
 
     @classmethod
     def from_filename(cls, filename: str) -> Version:
+        """
+        Takes a filename and extracts the version from it. It assumes the
+        version is at the end of the filename, just before the extension, and
+        separated from the rest of the filename by an underscore.
+
+        Example:
+        ```python
+        Version.from_filename('test_0.2.6.txt')  # Version('0.2.6')
+        ```
+
+        :param filename: str
+        :return: Version
+        """
         matches = re.search(r'_(\d(?:\.\d+)+)\.\w+$', filename)
         if matches:
             return cls.from_string(matches.group(1))
@@ -25,19 +47,33 @@ class Version:
 
     @classmethod
     def from_string(cls, string: str) -> Version:
+        """
+        Takes a version (e.g. "0.2.6") and turns it into a `Version` instance.
+
+        :param string: str
+        :return: Version
+        """
         matches = re.search(r'^(\d+)(?:\.(\d+))?(?:\.(\d+))?$', string)
         if matches:
             major, minor, micro = (int(d or 0) for d in matches.groups())
             return cls(major, minor, micro)
         raise ValueError(f'Could not deduce version from string {string}')
 
-    @property
-    def suffix(self) -> str:
-        return f'_{str(self)}'
-
     def append_to_filename(self, filename: str) -> str:
+        """
+        Takes a filename and adds the version number to it.
+
+        Example:
+
+        ```python
+        Version('0.0.1').append_to_filename('test.txt')  # 'test_0.0.1.txt'
+        ```
+
+        :param filename: str
+        :return: str
+        """
         basename, ext = os.path.splitext(filename)
-        return f'{basename}{self.suffix}{ext}'
+        return f'{basename}_{str(self)}{ext}'
 
     def increment(self, major: bool = False, minor: bool = False) -> Version:
         """
@@ -58,8 +94,7 @@ class Version:
          ```
         """
         if major and minor:
-            raise ValueError(
-                'Cannot increment major and minor version simultaneously')
+            raise ValueError('Cannot increment both major and minor version')
         if major:
             return Version(self.major + 1, 0, 0)
         if minor:
