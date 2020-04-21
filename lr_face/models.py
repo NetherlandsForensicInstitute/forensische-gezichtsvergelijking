@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import hashlib
 import importlib
+import os
+import pickle
 from enum import Enum
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
 
+from lr_face.data import FaceImage, FaceTriplet, to_array
 from lr_face.utils import cache
+from lr_face.versioning import Version
 
 
 class DummyScorerModel:
@@ -31,8 +36,8 @@ class DummyScorerModel:
 
 
 class ScorerModel:
-    def __init__(self, architecture: Architecture):
-        self.architecture = architecture
+    def __init__(self, embedding_model: EmbeddingModel):
+        self.embedding_model = embedding_model
 
     def predict_proba(self, X: List['FacePair']) -> np.ndarray:
         """
@@ -48,27 +53,118 @@ class ScorerModel:
         scores = []
         for pair in X:
             embedding1 = pair.first.get_embedding(
-                self.architecture, output_dir='embeddings')
+                self.embedding_model,
+                output_dir='embeddings'  # TODO: make dynamic?
+            )
             embedding2 = pair.second.get_embedding(
-                self.architecture, output_dir='embeddings')
+                self.embedding_model,
+                output_dir='embeddings'  # TODO: make dynamic?
+            )
             score = spatial.distance.cosine(embedding1, embedding2)
             scores.append([score, 1 - score])
         return np.asarray(scores)
 
     def __str__(self) -> str:
-        return self.architecture.name
+        return f'{self.embedding_model.name}Scorer'
 
 
-class TripletEmbeddingModel(tf.keras.Model):
+class EmbeddingModel:
+    def __init__(self,
+                 base_model: tf.keras.Model,
+                 version: Optional[Version],
+                 resolution: Tuple[int, int],
+                 model_dir: str,
+                 name: str):
+        self.base_model = base_model
+        self.current_version = version
+        self.resolution = resolution
+        self.model_dir = model_dir
+        self.name = name
+        if version:
+            self.load_weights(version)
+
+    @cache
+    def embed(self,
+              image: FaceImage,
+              cache_dir: Optional[str] = None) -> np.ndarray:
+        """
+        Computes an embedding of the `image`. Returns a 1D array of shape
+        `(embedding_size)`.
+
+        Optionally, a `cache_dir` may be specified where the embedding should
+        be stored on disk. It can then be quickly loaded from disk later, which
+        is typically faster than recomputing the embedding.
+
+        :param image: FaceImage
+        :param cache_dir: Optional[str]
+        :return: np.ndarray
+        """
+        x = image.get_image(self.resolution, normalize=True)
+        x = np.expand_dims(x, axis=0)
+        if cache_dir:
+            output_path = os.path.join(
+                cache_dir,
+                str(self),
+                # TODO: add dataset source to the directory structure.
+                f'{hashlib.md5(image.path.encode()).hexdigest()}.obj'
+            )
+
+            # If the embedding has been cached before, load and return it.
+            if os.path.exists(output_path):
+                with open(output_path, 'rb') as f:
+                    return pickle.load(f)
+
+            # If the embedding has not been cached to disk yet: compute the
+            # embedding, cache it afterwards and then return the result.
+            embedding = self.base_model.predict(x)[0]
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, 'wb') as f:
+                pickle.dump(embedding, f)
+            return embedding
+
+        # If no `output_dir` is specified, we simply compute the embedding.
+        return self.base_model.predict(x)[0]
+
+    def load_weights(self, version: Version):
+        weights_path = self.get_weights_path(version)
+        if not os.path.exists(weights_path):
+            raise ValueError(f"Unable to load weights for version {version}: "
+                             f"Could not find weights at {weights_path}")
+        self.base_model.load_weights(weights_path)
+        self.current_version = version
+
+    def save_weights(self, version: Version):
+        weights_path = self.get_weights_path(version)
+        self.base_model.save_weights(weights_path, overwrite=False)
+        self.current_version = version
+        print(f"Saved weights for version {version} to {weights_path}")
+
+    def get_weights_path(self, version: Version):
+        filename = version.append_to_filename('weights.h5')
+        return os.path.join(self.model_dir, filename)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) \
+               and self.name == other.name \
+               and self.current_version == other.current_version
+
+    def __str__(self):
+        return f'{self.name}_{self.current_version}'
+
+
+class TripletEmbeddingModel(EmbeddingModel):
     """
-    A subclass of tf.keras.Model that can be used to finetune an existing, pre-
-    trained embedding model using a triplet loss.
+    A subclass of EmbeddingModel that can be used to finetune an existing,
+    pre-trained embedding model using a triplet loss.
 
     ```python
-    embedding_model = ...
-    triplet_embedding_model = TripletEmbeddingModel(embedding_model)
-    triplet_embedding_model.compile(loss=TripletLoss(...))
-    triplet_embedding_model.fit(...)
+    triplet_embedding_model = TripletEmbeddingModel(...)
+    triplet_embedding_model.keras().compile(loss=TripletLoss(...))
+    triplet_embedding_model.keras().fit(...)
+    triplet_embedding_model.save()
     ```
 
     When called, the `TripletEmbeddingModel` takes 3 inputs, namely:
@@ -89,73 +185,53 @@ class TripletEmbeddingModel(tf.keras.Model):
     separate outputs is because all 3 are required for computing a single loss.
     """
 
-    def __init__(self, embedding_model: tf.keras.Model, *args, **kwargs):
-        """
-        Arguments:
-            embedding_model: A tf.keras.Model instance that given a batch of
-                images computes their embeddings. It should accept 4D tensors
-                with shape `(batch_size, height, width, num_channels)` as input
-                and output 2D tensors of shape `(batch_size, embedding_size)`.
-        """
-        super().__init__(*args, **kwargs)
-        self.embedding_model = embedding_model
+    def train(self,
+              triplets: List[FaceTriplet],
+              batch_size: int,
+              num_epochs: int,
+              optimizer: tf.keras.optimizers.Optimizer,
+              loss: tf.keras.losses.Loss):
+        trainable_model = self._build_trainable_model()
+        trainable_model.compile(optimizer, loss)
 
-    def call(self, inputs, training=None, **kwargs):
-        """
-        Arguments:
-            inputs: A tuple of 3 tensors, representing a batch of anchor,
-                positive and negative images, respectively. Each of these 3
-                tensors has shape `(batch_size, height, width, num_channels)`.
-            training: An optional boolean flag whether the model is currently
-                being trained. For a `TripletEmbeddingModel` instance this will
-                almost always be True, except for maybe some test cases.
+        anchors, positives, negatives = to_array(
+            triplets,
+            resolution=self.resolution,
+            normalize=True
+        )
 
-        Returns:
-            A 3D tensor with the embeddings of all anchor, positive and
-            negative images, with shape `(batch_size, 3, embedding_size)`.
-        """
-        anchor_input, positive_input, negative_input = inputs
+        # The triplet loss that is used to train the model actually does not need
+        # any ground truth labels, since it simply aims to maximize the difference
+        # in distances to the anchor embedding between positive and negative query
+        # images. However, Keras' Loss interface still needs a `y_true` that has
+        # the same first dimension as the `y_pred` output by the model. That's why
+        # we create a dummy "ground truth" of the same length.
+        inputs = [anchors, positives, negatives]
+        y = np.zeros(shape=(anchors.shape[0], 1))
+        trainable_model.fit(
+            x=inputs,
+            y=y,
+            batch_size=batch_size,
+            epochs=num_epochs
+        )
 
-        anchor_output = self.embedding_model(anchor_input, training)
-        positive_output = self.embedding_model(positive_input, training)
-        negative_output = self.embedding_model(negative_input, training)
+    def _build_trainable_model(self) -> tf.keras.Model:
+        input_shape = (*self.resolution, 3)
+        anchors = tf.keras.layers.Input(input_shape)
+        positives = tf.keras.layers.Input(input_shape)
+        negatives = tf.keras.layers.Input(input_shape)
 
-        return tf.stack([
-            anchor_output,
-            positive_output,
-            negative_output
+        anchor_embeddings = self.base_model(anchors)
+        positive_embeddings = self.base_model(positives)
+        negative_embeddings = self.base_model(negatives)
+
+        output = tf.stack([
+            anchor_embeddings,
+            positive_embeddings,
+            negative_embeddings
         ], axis=1)
 
-    def save_weights(self, filepath, overwrite=True, save_format=None):
-        """
-        We override the `save_weights()` method of the parent class because
-        whenever we want to save the weights of this finetune model we really
-        only want to save the newly updated weights of the `embedding_model`.
-        This allows us to load back the saved weights directly into the
-        original embedding/embedding model.
-
-        Example:
-
-        ```python
-        embedding_model = ...  # Load the embedding model here.
-        triplet_embedding_model = TripletEmbeddingModel(embedding_model)
-        triplet_embedding_model.compile(...)
-        triplet_embedding_model.fit(...)
-        triplet_embedding_model.save_weights('weights.h5')
-        embedding_model.load_weights('weights.h5')
-        ```
-
-        For a practical dummy example of how this works, check out the unit
-        tests located at `tests/test_finetuning.py`.
-        """
-        self.embedding_model.save_weights(filepath, overwrite, save_format)
-
-    def load_weights(self, filepath, by_name=False):
-        """
-        Since we override `save_weights()` we also have to override
-        `load_weights()` to make the two compatible again.
-        """
-        return self.embedding_model.load_weights(filepath, by_name)
+        return tf.keras.Model([anchors, positives, negatives], output)
 
 
 class Architecture(Enum):
@@ -168,20 +244,20 @@ class Architecture(Enum):
     To load the embedding model for VGGFace for example, you would use:
 
     ```python
-    embedding_model = Architecture.VGGFACE.get_embedding_model()`
+    embedding_model = Architecture.VGGFACE.get_embedding_model(version)`
     ```
 
     Similarly, to load a triplet embedder model, you would use:
 
     ```python
     triplet_embedding_model = \
-        Architecture.VGGFACE.get_triplet_embedding_model()`
+        Architecture.VGGFACE.get_triplet_embedding_model(version)`
     ```
 
     Finally, to load a scorer model, you would use:
 
     ```python
-    scorer_model = Architecture.VGGFACE.get_scorer_model()
+    scorer_model = Architecture.VGGFACE.get_scorer_model(version)
     ```
     """
     VGGFACE = 'VGGFace'
@@ -190,25 +266,65 @@ class Architecture(Enum):
     OPENFACE = 'OpenFace'
 
     @cache
-    def get_embedding_model(self) -> tf.keras.Model:
+    def get_base_model(self):
         if self.source == 'deepface':
             module_name = f'deepface.basemodels.{self.value}'
             module = importlib.import_module(module_name)
-            model = module.loadModel()
-            # TODO:
-            # Once we start finetuning, add an option to load the finetuned
-            # weights. We still need the original weights for when we want to
-            # start finetuning, but for generating embeddings we most likely
-            # don't want to load the original weights, but the ones that have
-            # already been finetuned (if they exist).
-            return model
-        raise ValueError("Unable to load embedding model.")
+            return module.loadModel()
+        raise ValueError("Unable to load base model")
 
-    def get_triplet_embedding_model(self) -> TripletEmbeddingModel:
-        return TripletEmbeddingModel(self.get_embedding_model())
+    @cache
+    def get_embedding_model(self,
+                            version: Optional[Version] = None,
+                            use_triplets: bool = False) -> EmbeddingModel:
+        base_model = self.get_base_model()
+        os.makedirs(self.model_dir, exist_ok=True)
+        cls = TripletEmbeddingModel if use_triplets else EmbeddingModel
+        embedding_model = cls(
+            base_model,
+            version,
+            self.resolution,
+            self.model_dir,
+            name=self.value
+        )
+        return embedding_model
 
-    def get_scorer_model(self) -> ScorerModel:
-        return ScorerModel(self)
+    def get_triplet_embedding_model(
+            self,
+            version: Optional[Version] = None
+    ) -> TripletEmbeddingModel:
+        embedding_model = self.get_embedding_model(version, use_triplets=True)
+        if not isinstance(embedding_model, TripletEmbeddingModel):
+            raise ValueError('')
+        return embedding_model
+
+    def get_scorer_model(
+            self,
+            version: Optional[Version] = None
+    ) -> ScorerModel:
+        embedding_model = self.get_embedding_model(version, use_triplets=False)
+        return ScorerModel(embedding_model)
+
+    def get_latest_version(self) -> Version:
+        try:
+            model_files = os.listdir(self.model_dir)
+        except FileNotFoundError:
+            model_files = []
+        if not model_files:
+            raise ValueError(
+                f'No {self.value} models have been saved yet')
+        return max(map(Version.from_filename, model_files))
+
+    @property
+    def model_dir(self):
+        """
+        Returns the directory where models for this architecture are stored.
+
+        TODO: make dynamic? (optional)
+
+        :return: str
+        """
+        return os.path.join('models', self.value)
 
     @property
     def resolution(self) -> Tuple[int, int]:
@@ -218,7 +334,7 @@ class Architecture(Enum):
 
         :return: Tuple[int, int]
         """
-        return self.get_embedding_model().input_shape[1:3]
+        return self.get_base_model().input_shape[1:3]
 
     @property
     def embedding_size(self) -> int:
@@ -227,7 +343,7 @@ class Architecture(Enum):
 
         :return: int
         """
-        return self.get_embedding_model().output_shape[1]
+        return self.get_base_model().output_shape[1]
 
     @property
     def source(self) -> str:
