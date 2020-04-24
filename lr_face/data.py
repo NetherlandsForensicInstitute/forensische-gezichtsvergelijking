@@ -395,7 +395,8 @@ class LfwDataset(Dataset):
         :param idx: int
         :return: str
         """
-        return os.path.join(cls.RESOURCE_FOLDER, f'{person}_{idx:04}.jpg')
+        return os.path.join(cls.RESOURCE_FOLDER, f'{person}',
+                            f'{person}_{idx:04}.jpg')
 
 
 class EnfsiDataset(Dataset):
@@ -708,8 +709,7 @@ def split_pairs(
     """
 
     gss = GroupShuffleSplit(n_splits=1,
-                            test_size=fraction_test,
-                            random_state=random_state)
+                            test_size=fraction_test)
     groups = ['|'.join(sorted(x.identity for x in pair)) for pair in pairs]
     train_idx, test_idx = next(gss.split(pairs, groups=groups))
     return [pairs[idx] for idx in train_idx], [pairs[idx] for idx in test_idx]
