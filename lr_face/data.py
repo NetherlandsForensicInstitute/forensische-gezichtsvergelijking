@@ -1,7 +1,7 @@
+from __future__ import annotations
+
 import csv
-import hashlib
 import os
-import pickle
 import random
 from abc import abstractmethod
 from collections import defaultdict
@@ -13,7 +13,6 @@ import cv2
 import numpy as np
 from sklearn.model_selection import GroupShuffleSplit
 
-from lr_face.models import Architecture
 from lr_face.utils import cache
 
 
@@ -31,6 +30,9 @@ class FaceImage:
     # A globally unique identifier for the person depicted on the image, only
     # shared with other images that depict the same person.
     identity: str
+
+    # A textual description of where the image came from (optional).
+    source: Optional[str] = None
 
     # An optional miscellaneous dictionary where any potentially relevant
     # metadata about the image can be stored.
@@ -61,62 +63,6 @@ class FaceImage:
         if normalize:
             res = res / 255
         return res
-
-    @cache
-    def get_embedding(self,
-                      architecture: Architecture,
-                      output_dir: Optional[str] = None) -> np.ndarray:
-        """
-        Returns an embedding of the image that is computed using the specified
-        `architecture`. Depending on what type of `architecture` is used, the
-        dimensionality of the resulting embedding may differ. Returns a 1D
-        array of shape `(embedding_size)`.
-
-        Optionally, an `output_dir` may be specified where the embedding should
-        be stored on disk. It can then be quickly loaded from disk later, which
-        is typically faster than recomputing the embedding.
-
-        :param architecture: Architecture
-        :param output_dir: Optional[str]
-        :return: np.ndarray
-        """
-
-        if output_dir:
-            output_path = os.path.join(
-                output_dir,
-                architecture.name,
-                f'{hashlib.md5(self.path.encode()).hexdigest()}.obj'
-            )
-
-            # If the embedding has been cached before, load and return it.
-            if os.path.exists(output_path):
-                with open(output_path, 'rb') as f:
-                    return pickle.load(f)
-
-            # If the embedding has not been cached to disk yet: compute the
-            # embedding, cache it afterwards and then return the result.
-            embedding = self._compute_embedding(architecture)
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            with open(output_path, 'wb') as f:
-                pickle.dump(embedding, f)
-            return embedding
-
-        # If no `output_dir` is specified, we simply compute the embedding.
-        return self._compute_embedding(architecture)
-
-    def _compute_embedding(self, architecture: Architecture) -> np.ndarray:
-        """
-        Internal method that actually computes the embedding based on the
-        specified `architecture` without worrying about caching, etc. Returns a
-        1D array of shape `(embedding_size)`.
-
-        :param architecture: Architecture
-        :return: np.ndarray
-        """
-        image = self.get_image(architecture.resolution, normalize=True)
-        x = np.expand_dims(image, axis=0)
-        embedding_model = architecture.get_embedding_model()
-        return embedding_model.predict(x)[0]
 
     def __post_init__(self):
         if not self.meta:
@@ -314,9 +260,7 @@ class ForenFaceDataset(Dataset):
         for file in files:
             path = os.path.join(self.RESOURCE_FOLDER, file)
             identity = f'FORENFACE-{file[:3]}'
-            data.append(FaceImage(path, identity, {
-                'source': str(self)
-            }))
+            data.append(FaceImage(path, identity, source=str(self)))
         return data
 
 
@@ -333,9 +277,11 @@ class LfwDataset(Dataset):
                 person_dir = os.path.join(self.RESOURCE_FOLDER, person)
                 for image_file in os.listdir(person_dir):
                     image_path = os.path.join(person_dir, image_file)
-                    data.append(FaceImage(image_path, identity, {
-                        'source': str(self)
-                    }))
+                    data.append(FaceImage(
+                        image_path,
+                        identity,
+                        source=str(self)
+                    ))
         return data
 
     @property
@@ -376,9 +322,7 @@ class LfwDataset(Dataset):
         return FaceImage(
             path=self._get_path(person, idx),
             identity=self._create_identity(person),
-            meta={
-                'source': str(self)
-            }
+            source=str(self)
         )
 
     @staticmethod
@@ -422,19 +366,27 @@ class EnfsiDataset(Dataset):
 
                     # Create a record for the reference image.
                     path = os.path.join(folder, reference)
-                    data.append(FaceImage(path, reference_id, {
-                        'source': str(self),
-                        'year': year,
-                        'idx': idx
-                    }))
+                    data.append(FaceImage(
+                        path,
+                        reference_id,
+                        source=str(self),
+                        meta={
+                            'year': year,
+                            'idx': idx
+                        }
+                    ))
 
                     # Create a record for the query image.
                     path = os.path.join(folder, query)
-                    data.append(FaceImage(path, query_id, {
-                        'source': str(self),
-                        'year': year,
-                        'idx': idx
-                    }))
+                    data.append(FaceImage(
+                        path,
+                        query_id,
+                        source=str(self),
+                        meta={
+                            'year': year,
+                            'idx': idx
+                        }
+                    ))
         return data
 
     @property
@@ -694,7 +646,7 @@ def split_by_identity(
     Takes a `Dataset` or `List[FaceImage]` and splits it into two sub-lists of
     sizes `(1 - test_size)` and `test_size`, respectively, where `test_size`
     is a float representing a fraction of the total size of `data`. The two
-    returned sub-lists are guaranteed to disjoint in terms of the identities
+    returned sub-lists are guaranteed to be disjoint in terms of the identities
     of their images.
 
     :param data: Union[Dataset, List[FaceImage]]

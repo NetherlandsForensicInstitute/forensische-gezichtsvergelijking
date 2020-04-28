@@ -1,6 +1,4 @@
-import hashlib
 import os
-import pickle
 from functools import wraps
 from typing import List
 
@@ -17,12 +15,11 @@ from lr_face.data import (FaceImage,
                           LfwDataset,
                           make_pairs,
                           make_triplets,
-                          to_array, split_by_identity)
+                          to_array,
+                          split_by_identity)
 from lr_face.models import Architecture
 from lr_face.utils import fix_tensorflow_rtx
 from tests.src.util import get_project_path, scratch_dir
-
-fix_tensorflow_rtx()
 
 
 def dataset_testable(func):
@@ -110,45 +107,6 @@ def test_get_image(dummy_images, scratch):
     face_image = FaceImage(image_path, dummy_images[0].identity)
     reloaded_image = face_image.get_image(resolution)
     assert reloaded_image.shape == (*resolution, 3)
-
-
-def test_get_vggface_embedding(dummy_images):
-    architecture = Architecture.VGGFACE
-    embedding = dummy_images[0].get_embedding(architecture)
-    assert embedding.shape == (architecture.embedding_size,)
-
-
-def test_get_vggface_embedding_is_deterministic(dummy_images, scratch):
-    architecture = Architecture.VGGFACE
-    image = dummy_images[0].get_image()
-    embeddings = []
-
-    # By saving and reloading the FaceImage 3 times with a different file name
-    # we make sure to bypass any caching mechanisms.
-    for i in range(3):
-        image_path = os.path.join(scratch, f'tmp_{i}.jpg')
-        cv2.imwrite(image_path, image)
-        face_image = FaceImage(image_path, dummy_images[0].identity)
-        embeddings.append(face_image.get_embedding(architecture))
-
-    assert all(embeddings[0] == embeddings[1])
-    assert all(embeddings[0] == embeddings[2])
-
-
-def test_get_vggface_embedding_with_filesystem_caching(dummy_images, scratch):
-    dummy_image = dummy_images[0]
-    architecture = Architecture.VGGFACE
-    output_path = os.path.join(
-        scratch,
-        architecture.name,
-        f'{hashlib.md5(dummy_image.path.encode()).hexdigest()}.obj'
-    )
-    assert not os.path.exists(output_path)
-    embedding = dummy_image.get_embedding(architecture, output_dir=scratch)
-    assert os.path.exists(output_path)
-    with open(output_path, 'rb') as f:
-        cached_embedding = pickle.load(f)
-    assert all(embedding == cached_embedding)
 
 
 #################

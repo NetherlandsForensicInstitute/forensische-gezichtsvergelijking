@@ -9,6 +9,9 @@ from lir import (LogitCalibrator,
 
 from lr_face.data import TestDataset, EnfsiDataset, LfwDataset
 from lr_face.models import DummyScorerModel, Architecture
+from lr_face.utils import fix_tensorflow_rtx
+
+fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 
@@ -79,10 +82,11 @@ SCORERS = {
                        'fbdeepface'],
     'all': {
         'dummy': DummyScorerModel(),
-        'openface': Architecture.OPENFACE.get_scorer_model(),
-        'facenet': Architecture.FACENET.get_scorer_model(),
-        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(),
-        'vggface': Architecture.VGGFACE.get_scorer_model(),
+        # TODO: specify tags to use below.
+        'openface': Architecture.OPENFACE.get_scorer_model(tag=None),
+        'facenet': Architecture.FACENET.get_scorer_model(tag=None),
+        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
+        'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
     }
 }
 
