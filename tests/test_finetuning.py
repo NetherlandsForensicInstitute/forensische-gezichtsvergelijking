@@ -32,11 +32,7 @@ def get_dummy_embedding_model(
     cls = TripletEmbeddingModel if use_triplets else EmbeddingModel
     return cls(
         base_model,
-<<<<<<< HEAD
-        version=None,
-=======
         tag=None,
->>>>>>> origin/feature/versioning
         resolution=base_model.input_shape[1:3],
         model_dir=SCRATCH_DIR,
         name='DUMMY-TRIPLET-EMBEDDING-MODEL'
@@ -103,21 +99,12 @@ def test_can_load_weights_from_training_model_into_embedding_model(
         loss
     )
 
-<<<<<<< HEAD
-    version = Version(0, 0, 1)
-    triplet_embedding_model.save_weights(version)
-    y_trained = triplet_embedding_model.embed(dummy_image)
-
-    embedding_model = get_dummy_embedding_model(base_model)
-    embedding_model.load_weights(version)
-=======
     tag = Tag('tag:1')
     triplet_embedding_model.save_weights(tag)
     y_trained = triplet_embedding_model.embed(dummy_image)
 
     embedding_model = get_dummy_embedding_model(base_model)
     embedding_model.load_weights(tag)
->>>>>>> origin/feature/versioning
     y_restored = embedding_model.embed(dummy_image)
     assert not np.all(y_original == y_trained)
     assert np.all(y_trained == y_restored)

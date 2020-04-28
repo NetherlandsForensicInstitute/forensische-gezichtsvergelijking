@@ -6,6 +6,7 @@ from lr_face.data import EnfsiDataset
 from lr_face.losses import TripletLoss
 from lr_face.models import Architecture
 from lr_face.utils import fix_tensorflow_rtx
+from lr_face.versioning import Tag
 
 fix_tensorflow_rtx()
 
@@ -33,11 +34,7 @@ def main(architecture: str, tag: str):
     except KeyboardInterrupt:
         # Allow user to manually interrupt training while still saving weights.
         pass
-<<<<<<< HEAD
-    triplet_embedding_model.save_weights(version)
-=======
     triplet_embedding_model.save_weights(tag)
->>>>>>> origin/feature/versioning
 
 
 if __name__ == '__main__':
@@ -61,20 +58,11 @@ if __name__ == '__main__':
         help='Should match one of the constants in the `Architecture` Enum'
     )
     parser.add_argument(
-<<<<<<< HEAD
-        '--version',
-        '-v',
-        required=False,
-        default=None,
-        type=str,
-        help='A new version number. Defaults to an increment of latest version'
-=======
         '--tag',
         '-t',
         required=True,
         type=str,
         help='The name used for saving the finetuned weights'
->>>>>>> origin/feature/versioning
     )
     args = parser.parse_args()
     main(**vars(args))

@@ -4,10 +4,7 @@ import hashlib
 import importlib
 import os
 import pickle
-<<<<<<< HEAD
-=======
 import re
->>>>>>> origin/feature/versioning
 from enum import Enum
 from typing import Tuple, List, Optional, Union
 
@@ -18,17 +15,10 @@ from scipy import spatial
 from lr_face.data import FaceImage, FaceTriplet, to_array, FacePair
 from lr_face.losses import TripletLoss
 from lr_face.utils import cache
-<<<<<<< HEAD
-from lr_face.versioning import Version
-
-EMBEDDINGS_DIR = 'embeddings'
-MODELS_DIR = 'models'
-=======
 from lr_face.versioning import Tag
 
 EMBEDDINGS_DIR = 'embeddings'
 WEIGHTS_DIR = 'weights'
->>>>>>> origin/feature/versioning
 
 
 class DummyScorerModel:
@@ -85,20 +75,6 @@ class ScorerModel:
 
 class EmbeddingModel:
     def __init__(self,
-<<<<<<< HEAD
-                 base_model: tf.keras.Model,
-                 version: Optional[Version],
-                 resolution: Tuple[int, int],
-                 model_dir: str,
-                 name: str):
-        self.base_model = base_model
-        self.current_version = version
-        self.resolution = resolution
-        self.model_dir = model_dir
-        self.name = name
-        if version:
-            self.load_weights(version)
-=======
                  model: tf.keras.Model,
                  tag: Optional[Tag],
                  resolution: Tuple[int, int],
@@ -111,7 +87,6 @@ class EmbeddingModel:
         self.name = name
         if tag:
             self.load_weights(tag)
->>>>>>> origin/feature/versioning
 
     @cache
     def embed(self,
@@ -134,11 +109,7 @@ class EmbeddingModel:
         if cache_dir:
             output_path = os.path.join(
                 cache_dir,
-<<<<<<< HEAD
-                str(self),
-=======
                 str(self).replace(':', '-'),  # Windows compatibility
->>>>>>> origin/feature/versioning
                 image.source or '_',
                 f'{hashlib.md5(image.path.encode()).hexdigest()}.obj'
             )
@@ -150,37 +121,13 @@ class EmbeddingModel:
 
             # If the embedding has not been cached to disk yet: compute the
             # embedding, cache it afterwards and then return the result.
-<<<<<<< HEAD
-            embedding = self.base_model.predict(x)[0]
-=======
             embedding = self.model.predict(x)[0]
->>>>>>> origin/feature/versioning
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, 'wb') as f:
                 pickle.dump(embedding, f)
             return embedding
 
         # If no `cache_dir` is specified, we simply compute the embedding.
-<<<<<<< HEAD
-        return self.base_model.predict(x)[0]
-
-    def load_weights(self, version: Version):
-        weights_path = self.get_weights_path(version)
-        if not os.path.exists(weights_path):
-            raise ValueError(f"Unable to load weights for version {version}: "
-                             f"Could not find weights at {weights_path}")
-        self.base_model.load_weights(weights_path)
-        self.current_version = version
-
-    def save_weights(self, version: Version):
-        weights_path = self.get_weights_path(version)
-        self.base_model.save_weights(weights_path, overwrite=False)
-        self.current_version = version
-        print(f"Saved weights for version {version} to {weights_path}")
-
-    def get_weights_path(self, version: Version):
-        filename = version.append_to_filename('weights.h5')
-=======
         return self.model.predict(x)[0]
 
     def load_weights(self, tag: Tag):
@@ -199,7 +146,6 @@ class EmbeddingModel:
 
     def get_weights_path(self, tag: Tag):
         filename = tag.append_to_filename('weights.h5')
->>>>>>> origin/feature/versioning
         return os.path.join(self.model_dir, filename)
 
     def __hash__(self):
@@ -208,19 +154,11 @@ class EmbeddingModel:
     def __eq__(self, other):
         return isinstance(other, self.__class__) \
                and self.name == other.name \
-<<<<<<< HEAD
-               and self.current_version == other.current_version
-
-    def __str__(self):
-        if self.current_version:
-            return f'{self.name}_{self.current_version}'
-=======
                and self.tag == other.tag
 
     def __str__(self):
         if self.tag:
             return f'{self.name}_{self.tag}'
->>>>>>> origin/feature/versioning
         return self.name
 
 
@@ -236,11 +174,7 @@ class TripletEmbeddingModel(EmbeddingModel):
               num_epochs: int,
               optimizer: tf.keras.optimizers.Optimizer,
               loss: TripletLoss):
-<<<<<<< HEAD
-        trainable_model = self._build_trainable_model()
-=======
         trainable_model = self.build_trainable_model()
->>>>>>> origin/feature/versioning
         trainable_model.compile(optimizer, loss)
         anchors, positives, negatives = to_array(
             triplets,
@@ -262,25 +196,15 @@ class TripletEmbeddingModel(EmbeddingModel):
             epochs=num_epochs
         )
 
-<<<<<<< HEAD
-    def _build_trainable_model(self) -> tf.keras.Model:
-=======
     def build_trainable_model(self) -> tf.keras.Model:
->>>>>>> origin/feature/versioning
         input_shape = (*self.resolution, 3)
         anchors = tf.keras.layers.Input(input_shape)
         positives = tf.keras.layers.Input(input_shape)
         negatives = tf.keras.layers.Input(input_shape)
 
-<<<<<<< HEAD
-        anchor_embeddings = self.base_model(anchors)
-        positive_embeddings = self.base_model(positives)
-        negative_embeddings = self.base_model(negatives)
-=======
         anchor_embeddings = self.model(anchors)
         positive_embeddings = self.model(positives)
         negative_embeddings = self.model(negatives)
->>>>>>> origin/feature/versioning
 
         output = tf.stack([
             anchor_embeddings,
@@ -323,11 +247,7 @@ class Architecture(Enum):
     OPENFACE = 'OpenFace'
 
     @cache
-<<<<<<< HEAD
-    def get_base_model(self):
-=======
     def get_model(self):
->>>>>>> origin/feature/versioning
         if self.source == 'deepface':
             module_name = f'deepface.basemodels.{self.value}'
             module = importlib.import_module(module_name)
@@ -335,28 +255,16 @@ class Architecture(Enum):
         raise ValueError("Unable to load base model")
 
     def get_embedding_model(self,
-<<<<<<< HEAD
-                            version: Optional[Union[str, Version]] = None,
-                            use_triplets: bool = False) -> EmbeddingModel:
-        if isinstance(version, str):
-            version = Version.from_string(version)
-        base_model = self.get_base_model()
-=======
                             tag: Optional[Union[str, Tag]] = None,
                             use_triplets: bool = False) -> EmbeddingModel:
         if isinstance(tag, str):
             tag = Tag(tag)
         base_model = self.get_model()
->>>>>>> origin/feature/versioning
         os.makedirs(self.model_dir, exist_ok=True)
         cls = TripletEmbeddingModel if use_triplets else EmbeddingModel
         return cls(
             base_model,
-<<<<<<< HEAD
-            version,
-=======
             tag,
->>>>>>> origin/feature/versioning
             self.resolution,
             self.model_dir,
             name=self.value
@@ -364,15 +272,9 @@ class Architecture(Enum):
 
     def get_triplet_embedding_model(
             self,
-<<<<<<< HEAD
-            version: Optional[Union[str, Version]] = None
-    ) -> TripletEmbeddingModel:
-        embedding_model = self.get_embedding_model(version, use_triplets=True)
-=======
             tag: Optional[Union[str, Tag]] = None
     ) -> TripletEmbeddingModel:
         embedding_model = self.get_embedding_model(tag, use_triplets=True)
->>>>>>> origin/feature/versioning
         if not isinstance(embedding_model, TripletEmbeddingModel):
             raise ValueError(f'Expected `TripletEmbeddingModel`, '
                              f'but got {type(embedding_model)}')
@@ -380,21 +282,6 @@ class Architecture(Enum):
 
     def get_scorer_model(
             self,
-<<<<<<< HEAD
-            version: Optional[Union[str, Version]] = None
-    ) -> ScorerModel:
-        embedding_model = self.get_embedding_model(version, use_triplets=False)
-        return ScorerModel(embedding_model)
-
-    def get_latest_version(self) -> Version:
-        try:
-            model_files = os.listdir(self.model_dir)
-        except FileNotFoundError:
-            model_files = []
-        if not model_files:
-            raise ValueError(f'No {self.value} models have been saved yet')
-        return max(map(Version.from_filename, model_files))
-=======
             tag: Optional[Union[str, Tag]] = None
     ) -> ScorerModel:
         embedding_model = self.get_embedding_model(tag, use_triplets=False)
@@ -413,7 +300,6 @@ class Architecture(Enum):
         if not model_files:
             raise ValueError(f'No {self.value} weights have been saved yet')
         return max(map(Tag.get_version_from_filename, model_files))
->>>>>>> origin/feature/versioning
 
     @property
     def model_dir(self):
@@ -422,11 +308,7 @@ class Architecture(Enum):
 
         :return: str
         """
-<<<<<<< HEAD
-        return os.path.join(MODELS_DIR, self.value)
-=======
         return os.path.join(WEIGHTS_DIR, self.value)
->>>>>>> origin/feature/versioning
 
     @property
     def resolution(self) -> Tuple[int, int]:
@@ -436,11 +318,7 @@ class Architecture(Enum):
 
         :return: Tuple[int, int]
         """
-<<<<<<< HEAD
-        return self.get_base_model().input_shape[1:3]
-=======
         return self.get_model().input_shape[1:3]
->>>>>>> origin/feature/versioning
 
     @property
     def embedding_size(self) -> int:
@@ -449,11 +327,7 @@ class Architecture(Enum):
 
         :return: int
         """
-<<<<<<< HEAD
-        return self.get_base_model().output_shape[1]
-=======
         return self.get_model().output_shape[1]
->>>>>>> origin/feature/versioning
 
     @property
     def source(self) -> str:
