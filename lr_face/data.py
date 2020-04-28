@@ -646,7 +646,7 @@ def split_by_identity(
     Takes a `Dataset` or `List[FaceImage]` and splits it into two sub-lists of
     sizes `(1 - test_size)` and `test_size`, respectively, where `test_size`
     is a float representing a fraction of the total size of `data`. The two
-    returned sub-lists are guaranteed to disjoint in terms of the identities
+    returned sub-lists are guaranteed to be disjoint in terms of the identities
     of their images.
 
     :param data: Union[Dataset, List[FaceImage]]
