@@ -96,7 +96,6 @@ def lr_test(model: TripletEmbeddingModel, triplets: List[FaceTriplet]):
     plt.ylabel('Loss')
     plt.savefig(plot_path)
     print(f'Saved plot to {plot_path}')
-    plt.show()
 
 
 def main():
