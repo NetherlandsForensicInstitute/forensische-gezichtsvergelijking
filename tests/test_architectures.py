@@ -39,3 +39,35 @@ def test_get_triplet_embedding_models():
     """
     for architecture in Architecture:
         architecture.get_triplet_embedding_model()
+
+
+def test_resolution_vggface():
+    assert Architecture.VGGFACE.resolution == (224, 224)
+
+
+def test_embedding_size_vggface():
+    assert Architecture.VGGFACE.embedding_size == 4096
+
+
+def test_resolution_openface():
+    assert Architecture.OPENFACE.resolution == (96, 96)
+
+
+def test_embedding_size_openface():
+    assert Architecture.OPENFACE.embedding_size == 128
+
+
+def test_resolution_fbdeepface():
+    assert Architecture.FBDEEPFACE.resolution == (152, 152)
+
+
+def test_embedding_size_fbdeepface():
+    assert Architecture.FBDEEPFACE.embedding_size == 4096
+
+
+def test_resolution_facenet():
+    assert Architecture.FACENET.resolution == (160, 160)
+
+
+def test_embedding_size_facenet():
+    assert Architecture.FACENET.embedding_size == 128

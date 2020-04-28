@@ -7,8 +7,11 @@ from lir import (LogitCalibrator,
                  IsotonicCalibrator,
                  DummyCalibrator)
 
-from lr_face.data import TestDataset, EnfsiDataset
+from lr_face.data import TestDataset, EnfsiDataset, LfwDataset
 from lr_face.models import DummyScorerModel, Architecture
+from lr_face.utils import fix_tensorflow_rtx
+
+fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 
@@ -50,7 +53,7 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['lfw'],
     'all': {
         'test': {
             'datasets': [TestDataset()],
@@ -59,6 +62,10 @@ DATA = {
         'enfsi': {
             'datasets': [EnfsiDataset(years=[2011, 2012, 2013, 2017])],
             'fraction_test': .2,
+        },
+        'lfw': {
+            'datasets': [LfwDataset()],
+            'fraction_test': .9,
         }
     }
 }
@@ -68,14 +75,18 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 SCORERS = {
-    'current_set_up': ['openface', 'facenet', 'vggface', 'fbdeepface',
-                       'dummy'],
+    'current_set_up': ['dummy',
+                       'openface',
+                       'facenet',
+                       'vggface',
+                       'fbdeepface'],
     'all': {
         'dummy': DummyScorerModel(),
-        'openface': Architecture.OPENFACE.get_scorer_model(),
-        'facenet': Architecture.FACENET.get_scorer_model(),
-        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(),
-        'vggface': Architecture.VGGFACE.get_scorer_model(),
+        # TODO: specify tags to use below.
+        'openface': Architecture.OPENFACE.get_scorer_model(tag=None),
+        'facenet': Architecture.FACENET.get_scorer_model(tag=None),
+        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
+        'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
     }
 }
 
@@ -84,7 +95,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['KDE'],
+    'current_set_up': ['logit'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import csv
 import os
 import random
@@ -9,8 +11,8 @@ from typing import Dict, Any, Tuple, List, Optional, Union, Iterator
 
 import cv2
 import numpy as np
+from sklearn.model_selection import GroupShuffleSplit
 
-from lr_face.models import Architecture
 from lr_face.utils import cache
 
 
@@ -28,6 +30,9 @@ class FaceImage:
     # A globally unique identifier for the person depicted on the image, only
     # shared with other images that depict the same person.
     identity: str
+
+    # A textual description of where the image came from (optional).
+    source: Optional[str] = None
 
     # An optional miscellaneous dictionary where any potentially relevant
     # metadata about the image can be stored.
@@ -58,18 +63,6 @@ class FaceImage:
         if normalize:
             res = res / 255
         return res
-
-    @cache
-    def get_embedding(self, architecture: Architecture) -> np.ndarray:
-        """
-        Uses the specified `architecture` to compute an embedding of the image.
-        Depending on the architecture, the dimensionality of the embedding may
-        differ. Returns a 1D array of shape `(embedding_size)`.
-
-        TODO: implement.
-        TODO: implement hashing in `Architecture`, otherwise caching doesn't work.
-        """
-        raise NotImplementedError
 
     def __post_init__(self):
         if not self.meta:
@@ -232,6 +225,12 @@ class Dataset:
         """
         return len(self.images)
 
+    def __hash__(self) -> int:
+        return hash(str(self))
+
+    def __eq__(self, other) -> bool:
+        return isinstance(other, self.__class__) and str(self) == str(other)
+
     def __str__(self) -> str:
         return self.__class__.__name__
 
@@ -261,9 +260,7 @@ class ForenFaceDataset(Dataset):
         for file in files:
             path = os.path.join(self.RESOURCE_FOLDER, file)
             identity = f'FORENFACE-{file[:3]}'
-            data.append(FaceImage(path, identity, {
-                'source': str(self)
-            }))
+            data.append(FaceImage(path, identity, source=str(self)))
         return data
 
 
@@ -280,9 +277,11 @@ class LfwDataset(Dataset):
                 person_dir = os.path.join(self.RESOURCE_FOLDER, person)
                 for image_file in os.listdir(person_dir):
                     image_path = os.path.join(person_dir, image_file)
-                    data.append(FaceImage(image_path, identity, {
-                        'source': str(self)
-                    }))
+                    data.append(FaceImage(
+                        image_path,
+                        identity,
+                        source=str(self)
+                    ))
         return data
 
     @property
@@ -323,9 +322,7 @@ class LfwDataset(Dataset):
         return FaceImage(
             path=self._get_path(person, idx),
             identity=self._create_identity(person),
-            meta={
-                'source': str(self)
-            }
+            source=str(self)
         )
 
     @staticmethod
@@ -342,7 +339,8 @@ class LfwDataset(Dataset):
         :param idx: int
         :return: str
         """
-        return os.path.join(cls.RESOURCE_FOLDER, f'{person}_{idx:04}.jpg')
+        return os.path.join(cls.RESOURCE_FOLDER, f'{person}',
+                            f'{person}_{idx:04}.jpg')
 
 
 class EnfsiDataset(Dataset):
@@ -368,19 +366,27 @@ class EnfsiDataset(Dataset):
 
                     # Create a record for the reference image.
                     path = os.path.join(folder, reference)
-                    data.append(FaceImage(path, reference_id, {
-                        'source': str(self),
-                        'year': year,
-                        'idx': idx
-                    }))
+                    data.append(FaceImage(
+                        path,
+                        reference_id,
+                        source=str(self),
+                        meta={
+                            'year': year,
+                            'idx': idx
+                        }
+                    ))
 
                     # Create a record for the query image.
                     path = os.path.join(folder, query)
-                    data.append(FaceImage(path, query_id, {
-                        'source': str(self),
-                        'year': year,
-                        'idx': idx
-                    }))
+                    data.append(FaceImage(
+                        path,
+                        query_id,
+                        source=str(self),
+                        meta={
+                            'year': year,
+                            'idx': idx
+                        }
+                    ))
         return data
 
     @property
@@ -630,3 +636,26 @@ def to_array(data: Union[Dataset,
     # If we haven't returned something by now it means an invalid data type
     # was passed along, so we let the user know about that.
     raise ValueError(f'Invalid data type: {type(data)}')
+
+
+def split_by_identity(
+        data: Union[Dataset, List[FaceImage]],
+        test_size: float
+) -> Tuple[List[FaceImage], List[FaceImage]]:
+    """
+    Takes a `Dataset` or `List[FaceImage]` and splits it into two sub-lists of
+    sizes `(1 - test_size)` and `test_size`, respectively, where `test_size`
+    is a float representing a fraction of the total size of `data`. The two
+    returned sub-lists are guaranteed to be disjoint in terms of the identities
+    of their images.
+
+    :param data: Union[Dataset, List[FaceImage]]
+    :param test_size: float
+    :return: Tuple[List[FaceImage], List[FaceImage]]
+    """
+    identities = [x.identity for x in data]
+    gss = GroupShuffleSplit(n_splits=1, test_size=test_size)
+    if isinstance(data, Dataset):
+        data = data.images
+    train_idx, test_idx = next(gss.split(data, groups=identities))
+    return [data[idx] for idx in train_idx], [data[idx] for idx in test_idx]

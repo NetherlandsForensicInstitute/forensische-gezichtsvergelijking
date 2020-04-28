@@ -15,7 +15,10 @@ from lr_face.data import (FaceImage,
                           LfwDataset,
                           make_pairs,
                           make_triplets,
-                          to_array)
+                          to_array,
+                          split_by_identity)
+from lr_face.models import Architecture
+from lr_face.utils import fix_tensorflow_rtx
 from tests.src.util import get_project_path, scratch_dir
 
 
@@ -30,7 +33,7 @@ def dataset_testable(func):
     return wrapper
 
 
-def skip_if_missing(dataset: Dataset):
+def skip_if_missing_dataset(dataset: Dataset):
     if hasattr(dataset, 'RESOURCE_FOLDER'):
         root = get_project_path(dataset.RESOURCE_FOLDER)
         return pytest.mark.skipif(
@@ -94,7 +97,7 @@ def scratch():
 # `FaceImage` #
 ###############
 
-def test_face_image_get_image(dummy_images, scratch):
+def test_get_image(dummy_images, scratch):
     width = 100
     height = 50
     resolution = (height, width)
@@ -128,12 +131,12 @@ def test_face_triplet_raises_exception_on_wrong_identities():
 # `LfwDataset` #
 ################
 
-@skip_if_missing(LfwDataset)
+@skip_if_missing_dataset(LfwDataset)
 def test_lfw_dataset_has_correct_num_images(lfw):
     assert len(lfw.images) == 13233
 
 
-@skip_if_missing(LfwDataset)
+@skip_if_missing_dataset(LfwDataset)
 def test_lfw_dataset_has_correct_num_pairs(lfw):
     assert len(lfw.pairs) == 6000
 
@@ -142,12 +145,12 @@ def test_lfw_dataset_has_correct_num_pairs(lfw):
 # `EnfsiDataset` #
 ##################
 
-@skip_if_missing(EnfsiDataset)
+@skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_images(enfsi_all):
     assert len(enfsi_all.images) == 270
 
 
-@skip_if_missing(EnfsiDataset)
+@skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
     assert len(enfsi_all.pairs) == 135
     assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.pairs])
@@ -157,12 +160,12 @@ def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
 # `ForenFace` #
 ###############
 
-@skip_if_missing(ForenFaceDataset)
+@skip_if_missing_dataset(ForenFaceDataset)
 def test_forenface_dataset_has_correct_num_images(forenface):
     assert len(forenface.images) == 2476
 
 
-@skip_if_missing(ForenFaceDataset)
+@skip_if_missing_dataset(ForenFaceDataset)
 def test_forenface_dataset_has_correct_num_pairs(forenface):
     assert len(forenface.pairs) == 60798
 
@@ -275,12 +278,12 @@ def test_make_pairs_negative_only_large_n(dummy_images):
 # `EnfsiDataset` #
 ##################
 
-@skip_if_missing(EnfsiDataset)
+@skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_images(enfsi_all):
     assert len(enfsi_all.images) == 270
 
 
-@skip_if_missing(EnfsiDataset)
+@skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
     assert len(enfsi_all.pairs) == 135
     assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.pairs])
@@ -290,7 +293,7 @@ def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
 # `ForenFace` #
 ###############
 
-@skip_if_missing(ForenFaceDataset)
+@skip_if_missing_dataset(ForenFaceDataset)
 def test_forenface_dataset_has_correct_num_images(forenface):
     assert len(forenface.images) == 2476
 
@@ -365,3 +368,25 @@ def test_face_triplets_to_array(dummy_triplets):
     assert anchors.shape == expected_shape
     assert positives.shape == expected_shape
     assert negatives.shape == expected_shape
+
+
+#########################
+# `split_by_identity()` #
+#########################
+
+def test_split_by_identity(dummy_images):
+    """
+    Tests that `split_by_identity` results in two disjoint sets of images in
+    terms of their identity.
+    """
+
+    # Since the results are random we run the test 10 times.
+    for _ in range(10):
+        train, test = split_by_identity(
+            dummy_images,
+            test_size=0.2
+        )
+
+        unique_train_identities = set(x.identity for x in train)
+        unique_test_identities = set(x.identity for x in test)
+        assert not unique_train_identities.intersection(unique_test_identities)

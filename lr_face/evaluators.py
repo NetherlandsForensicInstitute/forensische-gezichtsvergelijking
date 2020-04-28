@@ -1,11 +1,12 @@
-from typing import Dict
+from typing import Dict, Optional, List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, plot_score_distribution_and_calibrator_fit
+from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, \
+    plot_score_distribution_and_calibrator_fit
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-from lr_face.data_providers import ImagePairs
+from lr_face.data import FacePair
 
 
 def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):
@@ -28,14 +29,18 @@ def plot_tippett(predicted_log_lrs, y, savefig=None, show=None):
     """
     Plots the 10log LRs in a Tippett plot.
     """
-    xplot = np.linspace(np.min(predicted_log_lrs), np.max(predicted_log_lrs), 100)
+    xplot = np.linspace(
+        start=np.min(predicted_log_lrs),
+        stop=np.max(predicted_log_lrs),
+        num=100
+    )
     lr_0, lr_1 = Xy_to_Xn(predicted_log_lrs, y)
     perc0 = (sum(i > xplot for i in lr_0) / len(lr_0)) * 100
     perc1 = (sum(i > xplot for i in lr_1) / len(lr_1)) * 100
 
     plt.figure(figsize=(10, 10), dpi=100)
-    plt.plot(xplot, perc1, color='b', label='LRs given $\mathregular{H_1}$')
-    plt.plot(xplot, perc0, color='r', label='LRs given $\mathregular{H_2}$')
+    plt.plot(xplot, perc1, color='b', label=r'LRs given $\mathregular{H_1}$')
+    plt.plot(xplot, perc0, color='r', label=r'LRs given $\mathregular{H_2}$')
     plt.axvline(x=0, color='k', linestyle='--')
     plt.xlabel('Log likelihood ratio')
     plt.ylabel('Cumulative proportion')
@@ -56,27 +61,47 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
 
     return {'cllr' + label: round(calculate_cllr(X1, X2).cllr, 4),
             'auc' + label: roc_auc_score(y, scores),
-            'accuracy' + label: accuracy_score(y, scores > .5)
-            }
+            'accuracy' + label: accuracy_score(y, scores > .5)}
 
 
-def evaluate(lr_system: CalibratedScorer, data_provider: ImagePairs, make_plots_and_save_as=None) -> Dict[str, float]:
+def evaluate(lr_system: CalibratedScorer,
+             test_pairs: List[FacePair],
+             make_plots_and_save_as: Optional[str] = None) -> Dict[str, float]:
     """
-    Calculates a variety of evaluation metrics and plots data if make_plots_and_save_as is not None.
+    Calculates a variety of evaluation metrics and plots data if
+    `make_plots_and_save_as` is not None.
     """
-    scores = lr_system.scorer.predict_proba(data_provider.X_test, data_provider.ids_test)[:, 1]
-    LR_predicted = lr_system.calibrator.transform(scores)
+    scores = lr_system.scorer.predict_proba(test_pairs)[:, 1]
+    lr_predicted = lr_system.calibrator.transform(scores)
+    y_test = [int(pair.same_identity) for pair in test_pairs]
 
     if make_plots_and_save_as:
         calibrator = lr_system.calibrator
         if type(calibrator) == ELUBbounder:
             calibrator = calibrator.first_step_calibrator
-        plot_score_distribution_and_calibrator_fit(calibrator, scores, data_provider.y_test,
-                                                   savefig=f'{make_plots_and_save_as} calibration.png')
-        plot_lr_distributions(np.log10(LR_predicted), data_provider.y_test,
-                              savefig=f'{make_plots_and_save_as} lr distribution.png')
-        plot_tippett(np.log10(LR_predicted), data_provider.y_test, savefig=f'{make_plots_and_save_as} tippett.png')
 
-    metric_dict = calculate_metrics_dict(scores, data_provider.y_test, LR_predicted, '')
+        plot_score_distribution_and_calibrator_fit(
+            calibrator,
+            scores,
+            y_test,
+            savefig=f'{make_plots_and_save_as} calibration.png'
+        )
 
-    return metric_dict
+        plot_lr_distributions(
+            np.log10(lr_predicted),
+            y_test,
+            savefig=f'{make_plots_and_save_as} lr distribution.png'
+        )
+
+        plot_tippett(
+            np.log10(lr_predicted),
+            y_test,
+            savefig=f'{make_plots_and_save_as} tippett.png'
+        )
+
+    return calculate_metrics_dict(
+        scores,
+        y_test,
+        lr_predicted,
+        label=''
+    )

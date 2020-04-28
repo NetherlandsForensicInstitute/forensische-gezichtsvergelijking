@@ -1,8 +1,7 @@
 import argparse
 import os
 import re
-from functools import wraps, lru_cache
-from typing import Callable
+from functools import lru_cache
 
 import cv2
 import numpy as np
@@ -12,7 +11,8 @@ from keras.preprocessing import image
 
 def write_output(df, experiment_name):
     # %H:%M:%S -> : (colon) werkt niet in windows
-    output_file = os.path.join('.', 'output', f'{experiment_name}_experiments_results.csv')
+    output_file = os.path.join('.', 'output',
+                               f'{experiment_name}_experiments_results.csv')
     with open(output_file, 'w+') as f:
         df.to_csv(f, header=True)
 
@@ -23,7 +23,8 @@ def parser_setup():
 
     :return: parser (ArgumentParser object)
     """
-    parser = argparse.ArgumentParser(description='Run one or more calibration experiments')
+    parser = argparse.ArgumentParser(
+        description='Run one or more calibration experiments')
 
     parser.add_argument('--data', '-d',
                         help='Select the type or set of data to be used. Codes can be found in' +
@@ -35,10 +36,12 @@ def parser_setup():
                         nargs='+')
     parser.add_argument('--calibrator', '-c',
                         help='Select the calibrator to be used. Codes can be found in \'params.py\',' +
-                             'e.g.: KDE. Defaults to settings in \'current_set_up\'', nargs='+')
+                             'e.g.: KDE. Defaults to settings in \'current_set_up\'',
+                        nargs='+')
     parser.add_argument('--params', '-p',
                         help='Select the parameter set(s) to be used. Codes can be found in \'params.py\',' +
-                             'e.g.: SET1. Defaults to settings in \'current_set_up\'', nargs='+')
+                             'e.g.: SET1. Defaults to settings in \'current_set_up\'',
+                        nargs='+')
     return parser
 
 
@@ -72,7 +75,8 @@ def parse_object_string(obj_string, name_only=False):
                 for par in body_arr:
                     key_val = par.split('=')
                     if len(key_val) == 2:
-                        obj_dict['body'][key_val[0].strip()] = key_val[1].strip()
+                        obj_dict['body'][key_val[0].strip()] = key_val[
+                            1].strip()
                     else:
                         obj_dict['body'][key_val[0].strip()] = None
     return obj_dict
@@ -94,13 +98,15 @@ def process_dataframe(df):
     }
     for new_column, old_column in make_name_columns.items():
         try:
-            df[new_column] = df.apply(lambda row: get_function_names(row[old_column]), axis=1)
+            df[new_column] = df.apply(
+                lambda row: get_function_names(row[old_column]), axis=1)
         except (KeyError, AttributeError):
             df[new_column] = None
 
     # Cast to string columns:
     df['fraction_training'] = round(df['fraction_training'], 1).astype(str)
-    df['train_calibration_same_data'] = df['train_calibration_same_data'].astype(str)
+    df['train_calibration_same_data'] = df[
+        'train_calibration_same_data'].astype(str)
 
     make_parameter_columns = [
         # old column name: parameter name (new column is [old column name]_[parameter name])
@@ -110,7 +116,9 @@ def process_dataframe(df):
     for column, parameter in make_parameter_columns:
         new_column = column + "_" + parameter
         try:
-            df[new_column] = df.apply(lambda row: get_parameter_value(row[column], parameter), axis=1)
+            df[new_column] = df.apply(
+                lambda row: get_parameter_value(row[column], parameter),
+                axis=1)
         except (KeyError, AttributeError):
             df[new_column] = None
 
@@ -120,7 +128,8 @@ def process_dataframe(df):
         'distr': ['h1_name', 'h2_name'],
         'samedata_scorer': ['scorer_name', 'train_calibration_same_data'],
         'weighted_scorer_label': ['scorer_name', 'scorers_class_weight'],
-        'weighted_calibrator_label': ['calibrator_name', 'calibrators_class_weight'],
+        'weighted_calibrator_label': ['calibrator_name',
+                                      'calibrators_class_weight'],
         'weighted': ['scorers_class_weight', 'calibrators_class_weight']
     }
     for new_column, column_list in make_concatenated_columns.items():
@@ -178,15 +187,15 @@ def concat_columns(df, column_names, output_column_name, separator='-'):
 
 
 def resize_and_normalize(img, target_size):
-        right_size_img = cv2.resize(img, target_size)
+    right_size_img = cv2.resize(img, target_size)
 
-        img_pixels = image.img_to_array(right_size_img)
-        img_pixels = np.expand_dims(img_pixels, axis=0)
+    img_pixels = image.img_to_array(right_size_img)
+    img_pixels = np.expand_dims(img_pixels, axis=0)
 
-        # normalize input in [0, 1]
-        img_pixels /= 255
+    # normalize input in [0, 1]
+    img_pixels /= 255
 
-        return img_pixels
+    return img_pixels
 
 
 def fix_tensorflow_rtx():
