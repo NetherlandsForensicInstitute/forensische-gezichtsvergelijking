@@ -42,11 +42,7 @@ if __name__ == '__main__':
     Example usage: 
     
     ```
-<<<<<<< HEAD
-    python finetuning.py -m vggface -v 0.0.1
-=======
     python finetuning.py -a vggface -t no_augmentation
->>>>>>> origin/feature/versioning
     ``` 
     """
     parser = argparse.ArgumentParser()
