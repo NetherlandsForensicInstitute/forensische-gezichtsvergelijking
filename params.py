@@ -53,7 +53,7 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['lfw'],
     'all': {
         'test': {
             'datasets': [TestDataset()],
@@ -95,7 +95,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['KDE'],
+    'current_set_up': ['logit'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),
