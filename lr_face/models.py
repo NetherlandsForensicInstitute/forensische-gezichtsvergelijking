@@ -4,6 +4,7 @@ import hashlib
 import importlib
 import os
 import pickle
+import random
 import re
 from enum import Enum
 from typing import Tuple, List, Optional, Union
@@ -189,11 +190,25 @@ class TripletEmbeddingModel(EmbeddingModel):
         # because Keras loss functions still expect one.
         inputs = [anchors, positives, negatives]
         y = np.zeros(shape=(anchors.shape[0], 1))
-        trainable_model.fit(
-            x=inputs,
-            y=y,
-            batch_size=batch_size,
-            epochs=num_epochs
+
+        def generator():
+            while True:
+                random.shuffle(triplets)
+                for i in range(0, len(triplets), batch_size):
+                    t = triplets[i:i + batch_size]
+                    x = to_array(
+                        t,
+                        resolution=self.resolution,
+                        normalize=True
+                    )
+                    y = np.zeros(shape=(len(t), 1))
+                    yield x, y
+
+        trainable_model.fit_generator(
+            generator=generator(),
+            steps_per_epoch=len(triplets) // batch_size,
+            epochs=num_epochs,
+            workers=0
         )
 
     def build_trainable_model(self) -> tf.keras.Model:
