@@ -266,6 +266,7 @@ class ForenFaceDataset(Dataset):
 
 class LfwDataset(Dataset):
     RESOURCE_FOLDER = os.path.join('resources', 'lfw')
+    PAIRS_FILE = 'pairs.txt'
 
     @property
     @cache
@@ -288,7 +289,8 @@ class LfwDataset(Dataset):
     @cache
     def pairs(self) -> List[FacePair]:
         pairs = []
-        with open(os.path.join(self.RESOURCE_FOLDER, 'pairs.txt'), 'r') as f:
+        with open(os.path.join(self.RESOURCE_FOLDER, self.PAIRS_FILE),
+                  'r') as f:
             # The first line tells us how many splits in the data there are,
             # and how many positive and negative pairs there are per split.
             # This second number is therefore half the split size, since each
@@ -341,6 +343,72 @@ class LfwDataset(Dataset):
         """
         return os.path.join(cls.RESOURCE_FOLDER, f'{person}',
                             f'{person}_{idx:04}.jpg')
+
+
+class DevLfwDataset(LfwDataset):
+    @property
+    @cache
+    def images(self) -> List[FaceImage]:
+        images = []
+        with open(os.path.join(self.RESOURCE_FOLDER, self.PAIRS_FILE),
+                  'r') as f:
+            num_lines = int(f.readline())
+            lines = iter(line.strip() for line in f.readlines())
+
+            # The first half of the lines in each split consists of
+            # positive pairs (images with the same identity).
+            positive_lines = islice(lines, num_lines)
+            for line in positive_lines:
+                person, idx1, idx2 = line.split('\t')
+                images.append(self._create_face_image(person, int(idx1)))
+                images.append(self._create_face_image(person, int(idx2)))
+
+            # The second half consists of negative pairs (images with
+            # different identities).
+            negative_lines = islice(lines, num_lines)
+            for line in negative_lines:
+                person1, idx1, person2, idx2 = line.split('\t')
+                images.append(self._create_face_image(person1, int(idx1)))
+                images.append(self._create_face_image(person2, int(idx2)))
+        return list(set(images))
+
+    @property
+    @cache
+    def pairs(self) -> List[FacePair]:
+        pairs = []
+        with open(os.path.join(self.RESOURCE_FOLDER, self.PAIRS_FILE),
+                  'r') as f:
+            num_lines = int(f.readline())
+            lines = iter(line.strip() for line in f.readlines())
+
+            # The first half of the lines in each split consists of
+            # positive pairs (images with the same identity).
+            positive_lines = islice(lines, num_lines)
+            for line in positive_lines:
+                person, idx1, idx2 = line.split('\t')
+                pairs.append(FacePair(
+                    self._create_face_image(person, int(idx1)),
+                    self._create_face_image(person, int(idx2))
+                ))
+
+            # The second half consists of negative pairs (images with
+            # different identities).
+            negative_lines = islice(lines, num_lines)
+            for line in negative_lines:
+                person1, idx1, person2, idx2 = line.split('\t')
+                pairs.append(FacePair(
+                    self._create_face_image(person1, int(idx1)),
+                    self._create_face_image(person2, int(idx2))
+                ))
+        return pairs
+
+
+class TrainLfwDataset(DevLfwDataset):
+    PAIRS_FILE = 'lfw_pairs_train.txt'
+
+
+class TestLfwDataset(DevLfwDataset):
+    PAIRS_FILE = 'lfw_pairs_test.txt'
 
 
 class EnfsiDataset(Dataset):

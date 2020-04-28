@@ -2,7 +2,7 @@ import argparse
 
 from tensorflow.keras.optimizers import Adam
 
-from lr_face.data import EnfsiDataset
+from lr_face.data import TrainLfwDataset, EnfsiDataset
 from lr_face.losses import TripletLoss
 from lr_face.models import Architecture
 from lr_face.utils import fix_tensorflow_rtx
@@ -19,6 +19,7 @@ def main(architecture: str, tag: str):
         version = 1
     tag = Tag(tag, version)
     triplet_embedding_model = architecture.get_triplet_embedding_model()
+    # dataset = TrainLfwDataset()
     dataset = EnfsiDataset(years=[2011, 2012, 2013, 2017])
     optimizer = Adam(learning_rate=3e-5)
     loss = TripletLoss(alpha=.2)  # TODO: better value for alpha?

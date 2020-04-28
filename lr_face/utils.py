@@ -202,8 +202,8 @@ def fix_tensorflow_rtx():
     """
     A fix to make tensorflow-gpu work with RTX cards (or at least the 2700).
     """
-    gpu_devices = tf.config.experimental.list_physical_devices('GPU')
-    for device in gpu_devices:
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    for device in gpus:
         tf.config.experimental.set_memory_growth(device, True)
 
 
@@ -211,4 +211,5 @@ def cache(func):
     """
     A thin wrapper around `lru_cache` so we don't have to specify a `maxsize`.
     """
-    return lru_cache(maxsize=None)(func)
+    # return lru_cache(maxsize=None)(func)
+    return func
