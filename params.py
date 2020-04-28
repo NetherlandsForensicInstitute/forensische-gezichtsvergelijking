@@ -62,6 +62,14 @@ DATA = {
         'enfsi': {
             'datasets': [EnfsiDataset(years=[2011, 2012, 2013, 2017])],
             'fraction_test': .2,
+        },
+        'enfsi-separate': {
+            'datasets': [
+                EnfsiDataset(years=[2011]),
+                EnfsiDataset(years=[2012]),
+                EnfsiDataset(years=[2013]),
+                EnfsiDataset(years=[2017])],
+            'fraction_test': .9,
         }
     }
 }
@@ -91,7 +99,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['KDE'],
+    'current_set_up': ['logit'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

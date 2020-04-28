@@ -25,6 +25,26 @@ def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):
         plt.show()
 
 
+def plot_performance_as_function_of_resolution(scores, test_pairs, y_test,
+                                               savefig=None, show=None):
+    """
+    plots the scores as a function of the minimum resolution found on the
+    two images of the pair, coloured by ground truth
+    """
+    plt.figure(figsize=(10, 10), dpi=100)
+    min_resolutions = [min(min(pair.first.get_image().shape[:2]),
+                       min(pair.second.get_image().shape[:2])) for pair in
+                       test_pairs]
+    colors = list(map(lambda x: 'blue' if x else 'red', y_test))
+    plt.scatter(min_resolutions, scores, c=colors)
+    plt.xlabel('10log LR')
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
+
 def plot_tippett(predicted_log_lrs, y, savefig=None, show=None):
     """
     Plots the 10log LRs in a Tippett plot.
@@ -79,6 +99,9 @@ def evaluate(lr_system: CalibratedScorer,
         calibrator = lr_system.calibrator
         if type(calibrator) == ELUBbounder:
             calibrator = calibrator.first_step_calibrator
+
+        plot_performance_as_function_of_resolution(scores, test_pairs, y_test,
+            savefig=f'{make_plots_and_save_as} scores against resolution.png')
 
         plot_score_distribution_and_calibrator_fit(
             calibrator,
