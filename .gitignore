@@ -11,7 +11,7 @@ __pycache__
 /dist
 /.idea
 /embeddings
-/models
+/weights
 /results
 /output
 /scratch

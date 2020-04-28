@@ -339,7 +339,8 @@ class LfwDataset(Dataset):
         :param idx: int
         :return: str
         """
-        return os.path.join(cls.RESOURCE_FOLDER, f'{person}_{idx:04}.jpg')
+        return os.path.join(cls.RESOURCE_FOLDER, f'{person}',
+                            f'{person}_{idx:04}.jpg')
 
 
 class EnfsiDataset(Dataset):
@@ -637,31 +638,24 @@ def to_array(data: Union[Dataset,
     raise ValueError(f'Invalid data type: {type(data)}')
 
 
-def split_pairs(
-        pairs: List[FacePair],
-        fraction_test: float,
-        random_state: Optional[int] = 42
-) -> Tuple[List[FacePair], List[FacePair]]:
+def split_by_identity(
+        data: Union[Dataset, List[FaceImage]],
+        test_size: float
+) -> Tuple[List[FaceImage], List[FaceImage]]:
     """
-    Takes a single collection of pairs and splits them in two separate sets in
-    such a way that `(1 - fraction_test)` of the unique paired identities end
-    up in the first set and the remaining `fraction_test` of the unique pair
-    identities end up in the second. A pair identity is defined as the
-    combination of the two individual identities contained in a pair. When
-    determining uniqueness, their ordering inside the pair does not matter.
+    Takes a `Dataset` or `List[FaceImage]` and splits it into two sub-lists of
+    sizes `(1 - test_size)` and `test_size`, respectively, where `test_size`
+    is a float representing a fraction of the total size of `data`. The two
+    returned sub-lists are guaranteed to disjoint in terms of the identities
+    of their images.
 
-    An optional `random_state` can be specified to make the resulting
-    split deterministic.
-
-    :param pairs: List[FacePair]
-    :param fraction_test: float
-    :param random_state: Optional[int]
-    :return: Tuple[List[FacePair], List[FacePair]]
+    :param data: Union[Dataset, List[FaceImage]]
+    :param test_size: float
+    :return: Tuple[List[FaceImage], List[FaceImage]]
     """
-
-    gss = GroupShuffleSplit(n_splits=1,
-                            test_size=fraction_test,
-                            random_state=random_state)
-    groups = ['|'.join(sorted(x.identity for x in pair)) for pair in pairs]
-    train_idx, test_idx = next(gss.split(pairs, groups=groups))
-    return [pairs[idx] for idx in train_idx], [pairs[idx] for idx in test_idx]
+    identities = [x.identity for x in data]
+    gss = GroupShuffleSplit(n_splits=1, test_size=test_size)
+    if isinstance(data, Dataset):
+        data = data.images
+    train_idx, test_idx = next(gss.split(data, groups=identities))
+    return [data[idx] for idx in train_idx], [data[idx] for idx in test_idx]

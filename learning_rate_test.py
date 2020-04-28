@@ -68,7 +68,8 @@ def lr_test(model: TripletEmbeddingModel, triplets: List[FaceTriplet]):
     # Compile the model.
     optimizer = OPTIMIZER(learning_rate=INITIAL_LEARNING_RATE)
     loss = TripletLoss(alpha=FOCAL_LOSS_ALPHA)
-    model.compile(optimizer, loss)
+    trainable_model = model.build_trainable_model()
+    trainable_model.compile(optimizer, loss)
 
     # Create the learning rate scheduler.
     schedule = partial(get_learning_rate,
@@ -83,10 +84,10 @@ def lr_test(model: TripletEmbeddingModel, triplets: List[FaceTriplet]):
         math.log(MAX_LEARNING_RATE / INITIAL_LEARNING_RATE, STEP_SIZE))
 
     # Start training, saving the loss after each "epoch".
-    history = model.fit_generator(generator(),
-                                  steps_per_epoch=1,
-                                  epochs=epochs,
-                                  callbacks=[callback])
+    history = trainable_model.fit_generator(generator(),
+                                            steps_per_epoch=1,
+                                            epochs=epochs,
+                                            callbacks=[callback])
 
     plot_path = f'scratch/learning_rate_test-{DATASET}.jpg'
     plt.plot(list(map(schedule, range(epochs))), history.history['loss'])
@@ -95,7 +96,6 @@ def lr_test(model: TripletEmbeddingModel, triplets: List[FaceTriplet]):
     plt.ylabel('Loss')
     plt.savefig(plot_path)
     print(f'Saved plot to {plot_path}')
-    plt.show()
 
 
 def main():

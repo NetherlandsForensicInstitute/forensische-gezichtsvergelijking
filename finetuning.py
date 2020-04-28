@@ -1,5 +1,4 @@
 import argparse
-from typing import Optional
 
 from tensorflow.keras.optimizers import Adam
 
@@ -7,25 +6,17 @@ from lr_face.data import EnfsiDataset
 from lr_face.losses import TripletLoss
 from lr_face.models import Architecture
 from lr_face.utils import fix_tensorflow_rtx
-from lr_face.versioning import Version
 
 fix_tensorflow_rtx()
 
 
-def determine_version(version: Optional[str],
-                      architecture: Architecture) -> Version:
-    if version:
-        return Version.from_string(version)
-    else:
-        try:
-            return architecture.get_latest_version().increment()
-        except ValueError:
-            return Version.from_string("0.0.1")
-
-
-def main(model_name: str, version: Optional[str] = None):
-    architecture: Architecture = Architecture[model_name.upper()]
-    version = determine_version(version, architecture)
+def main(architecture: str, tag: str):
+    architecture: Architecture = Architecture[architecture.upper()]
+    try:
+        version = architecture.get_latest_version(tag) + 1
+    except ValueError:
+        version = 1
+    tag = Tag(tag, version)
     triplet_embedding_model = architecture.get_triplet_embedding_model()
     dataset = EnfsiDataset(years=[2011, 2012, 2013, 2017])
     optimizer = Adam(learning_rate=3e-5)
@@ -42,7 +33,11 @@ def main(model_name: str, version: Optional[str] = None):
     except KeyboardInterrupt:
         # Allow user to manually interrupt training while still saving weights.
         pass
+<<<<<<< HEAD
     triplet_embedding_model.save_weights(version)
+=======
+    triplet_embedding_model.save_weights(tag)
+>>>>>>> origin/feature/versioning
 
 
 if __name__ == '__main__':
@@ -50,24 +45,36 @@ if __name__ == '__main__':
     Example usage: 
     
     ```
+<<<<<<< HEAD
     python finetuning.py -m vggface -v 0.0.1
+=======
+    python finetuning.py -a vggface -t no_augmentation
+>>>>>>> origin/feature/versioning
     ``` 
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--model-name',
-        '-m',
+        '--architecture',
+        '-a',
         required=True,
         type=str,
         help='Should match one of the constants in the `Architecture` Enum'
     )
     parser.add_argument(
+<<<<<<< HEAD
         '--version',
         '-v',
         required=False,
         default=None,
         type=str,
         help='A new version number. Defaults to an increment of latest version'
+=======
+        '--tag',
+        '-t',
+        required=True,
+        type=str,
+        help='The name used for saving the finetuned weights'
+>>>>>>> origin/feature/versioning
     )
     args = parser.parse_args()
     main(**vars(args))

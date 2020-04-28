@@ -35,8 +35,11 @@ def plot_performance_as_function_of_resolution(scores, test_pairs, y_test,
     min_resolutions = [min(min(pair.first.get_image().shape[:2]),
                        min(pair.second.get_image().shape[:2])) for pair in
                        test_pairs]
+    diff_resolutions = [min(pair.first.get_image().shape[:2])/
+                       min(pair.second.get_image().shape[:2]) for pair in
+                       test_pairs]
     colors = list(map(lambda x: 'blue' if x else 'red', y_test))
-    plt.scatter(min_resolutions, scores, c=colors)
+    plt.scatter(diff_resolutions, scores, c=colors)
     plt.xlabel('10log LR')
     if savefig is not None:
         plt.savefig(savefig)
