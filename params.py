@@ -83,18 +83,16 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 SCORERS = {
-    'current_set_up': ['dummy',
-                       'openface',
-                       'facenet',
-                       'vggface',
-                       'fbdeepface'],
+    'current_set_up': ['vggface_sanity_check'],
     'all': {
         'dummy': DummyScorerModel(),
         # TODO: specify tags to use below.
         'openface': Architecture.OPENFACE.get_scorer_model(tag=None),
         'facenet': Architecture.FACENET.get_scorer_model(tag=None),
         'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
-        'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
+        # 'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
+        'vggface_sanity_check': Architecture.VGGFACE.get_scorer_model(tag='lfw_sanity_check:2'),
+        # 'enfsi_sanity_check': Architecture.VGGFACE.get_scorer_model(tag='lfw_sanity_check:3')
     }
 }
 
