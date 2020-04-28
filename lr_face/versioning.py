@@ -5,13 +5,18 @@ import re
 
 
 class Tag:
-    def __init__(self, name: str, version: int = 0):
-        if ':' in name and not version:
-            name, version = name.split(':')
-            version = int(version)
-
+    def __init__(self, name: str, version: int = None):
         # Convert '-' to '_' for unambiguous filename formats.
-        self.name = name.replace('-', '_')
+        name = name.replace('-', '_')
+
+        if not version:
+            if ':' in name:
+                name, version = name.split(':')
+                version = int(version)
+            else:
+                version = 1
+
+        self.name = name
         self.version = version
 
     @classmethod

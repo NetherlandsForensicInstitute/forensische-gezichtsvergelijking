@@ -109,7 +109,7 @@ class EmbeddingModel:
         if cache_dir:
             output_path = os.path.join(
                 cache_dir,
-                str(self),
+                str(self).replace(':', '-'),  # Windows compatibility
                 image.source or '_',
                 f'{hashlib.md5(image.path.encode()).hexdigest()}.obj'
             )
@@ -174,7 +174,7 @@ class TripletEmbeddingModel(EmbeddingModel):
               num_epochs: int,
               optimizer: tf.keras.optimizers.Optimizer,
               loss: TripletLoss):
-        trainable_model = self._build_trainable_model()
+        trainable_model = self.build_trainable_model()
         trainable_model.compile(optimizer, loss)
         anchors, positives, negatives = to_array(
             triplets,
@@ -196,7 +196,7 @@ class TripletEmbeddingModel(EmbeddingModel):
             epochs=num_epochs
         )
 
-    def _build_trainable_model(self) -> tf.keras.Model:
+    def build_trainable_model(self) -> tf.keras.Model:
         input_shape = (*self.resolution, 3)
         anchors = tf.keras.layers.Input(input_shape)
         positives = tf.keras.layers.Input(input_shape)
