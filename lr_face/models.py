@@ -4,6 +4,7 @@ import hashlib
 import importlib
 import os
 import pickle
+import re
 from enum import Enum
 from typing import Tuple, List, Optional, Union
 
@@ -14,10 +15,10 @@ from scipy import spatial
 from lr_face.data import FaceImage, FaceTriplet, to_array, FacePair
 from lr_face.losses import TripletLoss
 from lr_face.utils import cache
-from lr_face.versioning import Version
+from lr_face.versioning import Tag
 
 EMBEDDINGS_DIR = 'embeddings'
-MODELS_DIR = 'models'
+WEIGHTS_DIR = 'weights'
 
 
 class DummyScorerModel:
@@ -74,18 +75,18 @@ class ScorerModel:
 
 class EmbeddingModel:
     def __init__(self,
-                 base_model: tf.keras.Model,
-                 version: Optional[Version],
+                 model: tf.keras.Model,
+                 tag: Optional[Tag],
                  resolution: Tuple[int, int],
                  model_dir: str,
                  name: str):
-        self.base_model = base_model
-        self.current_version = version
+        self.model = model
+        self.tag = tag
         self.resolution = resolution
         self.model_dir = model_dir
         self.name = name
-        if version:
-            self.load_weights(version)
+        if tag:
+            self.load_weights(tag)
 
     @cache
     def embed(self,
@@ -120,31 +121,31 @@ class EmbeddingModel:
 
             # If the embedding has not been cached to disk yet: compute the
             # embedding, cache it afterwards and then return the result.
-            embedding = self.base_model.predict(x)[0]
+            embedding = self.model.predict(x)[0]
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, 'wb') as f:
                 pickle.dump(embedding, f)
             return embedding
 
         # If no `cache_dir` is specified, we simply compute the embedding.
-        return self.base_model.predict(x)[0]
+        return self.model.predict(x)[0]
 
-    def load_weights(self, version: Version):
-        weights_path = self.get_weights_path(version)
+    def load_weights(self, tag: Tag):
+        weights_path = self.get_weights_path(tag)
         if not os.path.exists(weights_path):
-            raise ValueError(f"Unable to load weights for version {version}: "
+            raise ValueError(f"Unable to load weights for {tag}: "
                              f"Could not find weights at {weights_path}")
-        self.base_model.load_weights(weights_path)
-        self.current_version = version
+        self.model.load_weights(weights_path)
+        self.tag = tag
 
-    def save_weights(self, version: Version):
-        weights_path = self.get_weights_path(version)
-        self.base_model.save_weights(weights_path, overwrite=False)
-        self.current_version = version
-        print(f"Saved weights for version {version} to {weights_path}")
+    def save_weights(self, tag: Tag):
+        weights_path = self.get_weights_path(tag)
+        self.model.save_weights(weights_path, overwrite=False)
+        self.tag = tag
+        print(f"Saved weights for {tag} to {weights_path}")
 
-    def get_weights_path(self, version: Version):
-        filename = version.append_to_filename('weights.h5')
+    def get_weights_path(self, tag: Tag):
+        filename = tag.append_to_filename('weights.h5')
         return os.path.join(self.model_dir, filename)
 
     def __hash__(self):
@@ -153,11 +154,11 @@ class EmbeddingModel:
     def __eq__(self, other):
         return isinstance(other, self.__class__) \
                and self.name == other.name \
-               and self.current_version == other.current_version
+               and self.tag == other.tag
 
     def __str__(self):
-        if self.current_version:
-            return f'{self.name}_{self.current_version}'
+        if self.tag:
+            return f'{self.name}_{self.tag}'
         return self.name
 
 
@@ -201,9 +202,9 @@ class TripletEmbeddingModel(EmbeddingModel):
         positives = tf.keras.layers.Input(input_shape)
         negatives = tf.keras.layers.Input(input_shape)
 
-        anchor_embeddings = self.base_model(anchors)
-        positive_embeddings = self.base_model(positives)
-        negative_embeddings = self.base_model(negatives)
+        anchor_embeddings = self.model(anchors)
+        positive_embeddings = self.model(positives)
+        negative_embeddings = self.model(negatives)
 
         output = tf.stack([
             anchor_embeddings,
@@ -246,7 +247,7 @@ class Architecture(Enum):
     OPENFACE = 'OpenFace'
 
     @cache
-    def get_base_model(self):
+    def get_model(self):
         if self.source == 'deepface':
             module_name = f'deepface.basemodels.{self.value}'
             module = importlib.import_module(module_name)
@@ -254,16 +255,16 @@ class Architecture(Enum):
         raise ValueError("Unable to load base model")
 
     def get_embedding_model(self,
-                            version: Optional[Union[str, Version]] = None,
+                            tag: Optional[Union[str, Tag]] = None,
                             use_triplets: bool = False) -> EmbeddingModel:
-        if isinstance(version, str):
-            version = Version.from_string(version)
-        base_model = self.get_base_model()
+        if isinstance(tag, str):
+            tag = Tag(tag)
+        base_model = self.get_model()
         os.makedirs(self.model_dir, exist_ok=True)
         cls = TripletEmbeddingModel if use_triplets else EmbeddingModel
         return cls(
             base_model,
-            version,
+            tag,
             self.resolution,
             self.model_dir,
             name=self.value
@@ -271,9 +272,9 @@ class Architecture(Enum):
 
     def get_triplet_embedding_model(
             self,
-            version: Optional[Union[str, Version]] = None
+            tag: Optional[Union[str, Tag]] = None
     ) -> TripletEmbeddingModel:
-        embedding_model = self.get_embedding_model(version, use_triplets=True)
+        embedding_model = self.get_embedding_model(tag, use_triplets=True)
         if not isinstance(embedding_model, TripletEmbeddingModel):
             raise ValueError(f'Expected `TripletEmbeddingModel`, '
                              f'but got {type(embedding_model)}')
@@ -281,19 +282,24 @@ class Architecture(Enum):
 
     def get_scorer_model(
             self,
-            version: Optional[Union[str, Version]] = None
+            tag: Optional[Union[str, Tag]] = None
     ) -> ScorerModel:
-        embedding_model = self.get_embedding_model(version, use_triplets=False)
+        embedding_model = self.get_embedding_model(tag, use_triplets=False)
         return ScorerModel(embedding_model)
 
-    def get_latest_version(self) -> Version:
+    def get_latest_version(self, tag: Union[str, Tag]) -> int:
+        if isinstance(tag, str):
+            tag = Tag(tag)
         try:
-            model_files = os.listdir(self.model_dir)
+            def filter_func(filename):
+                return bool(re.search(rf'{tag.name}-\d+\.\w+$', filename))
+
+            model_files = list(filter(filter_func, os.listdir(self.model_dir)))
         except FileNotFoundError:
             model_files = []
         if not model_files:
-            raise ValueError(f'No {self.value} models have been saved yet')
-        return max(map(Version.from_filename, model_files))
+            raise ValueError(f'No {self.value} weights have been saved yet')
+        return max(map(Tag.get_version_from_filename, model_files))
 
     @property
     def model_dir(self):
@@ -302,7 +308,7 @@ class Architecture(Enum):
 
         :return: str
         """
-        return os.path.join(MODELS_DIR, self.value)
+        return os.path.join(WEIGHTS_DIR, self.value)
 
     @property
     def resolution(self) -> Tuple[int, int]:
@@ -312,7 +318,7 @@ class Architecture(Enum):
 
         :return: Tuple[int, int]
         """
-        return self.get_base_model().input_shape[1:3]
+        return self.get_model().input_shape[1:3]
 
     @property
     def embedding_size(self) -> int:
@@ -321,7 +327,7 @@ class Architecture(Enum):
 
         :return: int
         """
-        return self.get_base_model().output_shape[1]
+        return self.get_model().output_shape[1]
 
     @property
     def source(self) -> str:

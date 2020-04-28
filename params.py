@@ -53,7 +53,7 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['lfw'],
+    'current_set_up': ['enfsi'],
     'all': {
         'test': {
             'datasets': [TestDataset()],
@@ -82,11 +82,11 @@ SCORERS = {
                        'fbdeepface'],
     'all': {
         'dummy': DummyScorerModel(),
-        # TODO: specify version to use below.
-        'openface': Architecture.OPENFACE.get_scorer_model(version=None),
-        'facenet': Architecture.FACENET.get_scorer_model(version=None),
-        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(version=None),
-        'vggface': Architecture.VGGFACE.get_scorer_model(version=None),
+        # TODO: specify tags to use below.
+        'openface': Architecture.OPENFACE.get_scorer_model(tag=None),
+        'facenet': Architecture.FACENET.get_scorer_model(tag=None),
+        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
+        'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
     }
 }
 
@@ -95,7 +95,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['logit'],
+    'current_set_up': ['KDE'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

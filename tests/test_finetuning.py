@@ -9,7 +9,7 @@ from lr_face.data import FaceImage, DummyFaceImage, FacePair, make_pairs, \
     FaceTriplet, make_triplets
 from lr_face.losses import TripletLoss
 from lr_face.models import TripletEmbeddingModel, EmbeddingModel
-from lr_face.versioning import Version
+from lr_face.versioning import Tag
 from tests.src.util import scratch_dir, get_tests_path
 
 SCRATCH_DIR = get_tests_path('scratch/finetuning')
@@ -32,7 +32,7 @@ def get_dummy_embedding_model(
     cls = TripletEmbeddingModel if use_triplets else EmbeddingModel
     return cls(
         base_model,
-        version=None,
+        tag=None,
         resolution=base_model.input_shape[1:3],
         model_dir=SCRATCH_DIR,
         name='DUMMY-TRIPLET-EMBEDDING-MODEL'
@@ -99,12 +99,12 @@ def test_can_load_weights_from_training_model_into_embedding_model(
         loss
     )
 
-    version = Version(0, 0, 1)
-    triplet_embedding_model.save_weights(version)
+    tag = Tag('tag:1')
+    triplet_embedding_model.save_weights(tag)
     y_trained = triplet_embedding_model.embed(dummy_image)
 
     embedding_model = get_dummy_embedding_model(base_model)
-    embedding_model.load_weights(version)
+    embedding_model.load_weights(tag)
     y_restored = embedding_model.embed(dummy_image)
     assert not np.all(y_original == y_trained)
     assert np.all(y_trained == y_restored)
