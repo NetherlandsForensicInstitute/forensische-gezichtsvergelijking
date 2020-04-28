@@ -7,7 +7,7 @@ import confidence
 from lir import CalibratedScorer
 from tqdm import tqdm
 
-from lr_face.data import split_pairs, FacePair
+from lr_face.data import FacePair, split_by_identity, make_pairs
 from lr_face.evaluators import evaluate
 from lr_face.experiment_settings import ExperimentSettings
 from lr_face.utils import write_output, parser_setup, process_dataframe, \
@@ -24,25 +24,20 @@ def run(args):
     parameter combinations called in the command line or in params.py.
     """
     experiments_setup = ExperimentSettings(args)
-    parameters_used = experiments_setup.input_parameters  # exclude output columns
+    parameters_used = experiments_setup.input_parameters
     experiment_name = datetime.now().strftime("%Y-%m-%d %H %M %S")
     plots_dir = os.path.join('output', experiment_name)
     if not os.path.exists(plots_dir):
         os.makedirs(plots_dir)
 
-    data_splits = dict()
     n_experiments = experiments_setup.data_frame.shape[0]
     for row in tqdm(range(n_experiments)):
         params_dict = \
             experiments_setup.data_frame[parameters_used].iloc[row].to_dict()
-        dataset = params_dict['datasets']
-        pairs = [pair for pair in dataset.pairs]
-        fraction_test = params_dict['fraction_test']
-
-        data_params = (dataset, fraction_test)
-        if data_params not in data_splits:
-            data_splits[data_params] = split_pairs(pairs, fraction_test)
-        calibration_pairs, test_pairs = data_splits[data_params]
+        calibration_pairs, test_pairs = map(make_pairs, split_by_identity(
+            data=params_dict['datasets'],
+            test_size=params_dict['fraction_test']
+        ))
 
         make_plots_and_save_as = None
         # For the first round, make plots
