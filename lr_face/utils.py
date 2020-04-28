@@ -1,6 +1,7 @@
 import argparse
 import os
 import re
+from csv import writer
 
 import cv2
 import numpy as np
@@ -194,3 +195,28 @@ def fix_tensorflow_rtx():
     gpu_devices = tf.config.experimental.list_physical_devices('GPU')
     for device in gpu_devices:
         tf.config.experimental.set_memory_growth(device, True)
+
+
+def save_predicted_lrs(params_dict, data_provider, lr_predicted,
+                       experiment_name):
+
+    output_file = os.path.join('.', 'output',
+                               f'{experiment_name}_lr_results.csv')
+
+    # TODO: dataset toevoegen als dit leesbaar is
+    field_names = ['scorers', 'calibrators', 'pair_id', 'LR']
+
+    if not os.path.exists(output_file):
+        with open(output_file, 'w', newline='') as f:
+            csv_writer = writer(f, delimiter=',')
+            csv_writer.writerow(field_names)
+
+    with open(output_file, 'a+', newline='') as f:
+        csv_writer = writer(f, delimiter=',')
+        for i in range(len(lr_predicted)):
+            csv_writer.writerow([params_dict['scorers'],
+                                 params_dict['calibrators'],
+                                 data_provider.ids_test[i],
+                                 lr_predicted[i],
+                                 ])
+    # TODO: evt alleen van enfsi-data de gegevens opslaan

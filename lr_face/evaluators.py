@@ -1,13 +1,13 @@
-import os
-from csv import writer
 from typing import Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
-from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, plot_score_distribution_and_calibrator_fit
+from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, \
+    plot_score_distribution_and_calibrator_fit
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 from lr_face.data_providers import ImagePairs
+from lr_face.utils import save_predicted_lrs
 
 
 def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):
@@ -62,39 +62,15 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
             }
 
 
-def save_lr_results(params_dict, data_provider, LR_predicted, experiment_name):
-
-    output_file = os.path.join('.', 'output',
-                               f'{experiment_name}_lr_results.csv')
-
-    # TODO: dataset toevoegen als dit leesbaar is
-    field_names = ['scorers', 'calibrators', 'pair_id', 'LR']
-
-    if not os.path.exists(output_file):
-        with open(output_file, 'w', newline='') as f:
-            csv_writer = writer(f, delimiter=',')
-            csv_writer.writerow(field_names)
-
-    with open(output_file, 'a+', newline='') as f:
-        csv_writer = writer(f, delimiter=',')
-        for i in range(len(LR_predicted)):
-            csv_writer.writerow([params_dict['scorers'],
-                                 params_dict['calibrators'],
-                                 data_provider.ids_test[i],
-                                 LR_predicted[i],
-                                 ])
-    # TODO: evt alleen van enfsi-data de gegevens opslaan
-
-
 def evaluate(lr_system: CalibratedScorer, data_provider: ImagePairs,
              params_dict: dict, make_plots_and_save_as=None,
              experiment_name=None) -> Dict[str, float]:
     """
-    Calculates a variety of evaluation metrics, saves the LR results  and
+    Calculates a variety of evaluation metrics, saves the LR results and
     plots data if make_plots_and_save_as is not None.
     """
     scores = lr_system.scorer.predict_proba(data_provider.X_test, data_provider.ids_test)[:, 1]
-    LR_predicted = lr_system.calibrator.transform(scores)
+    lr_predicted = lr_system.calibrator.transform(scores)
 
     if make_plots_and_save_as:
         calibrator = lr_system.calibrator
@@ -102,15 +78,15 @@ def evaluate(lr_system: CalibratedScorer, data_provider: ImagePairs,
             calibrator = calibrator.first_step_calibrator
         plot_score_distribution_and_calibrator_fit(calibrator, scores, data_provider.y_test,
                                                    savefig=f'{make_plots_and_save_as} calibration.png')
-        plot_lr_distributions(np.log10(LR_predicted), data_provider.y_test,
+        plot_lr_distributions(np.log10(lr_predicted), data_provider.y_test,
                               savefig=f'{make_plots_and_save_as} lr distribution.png')
-        plot_tippett(np.log10(LR_predicted), data_provider.y_test, savefig=f'{make_plots_and_save_as} tippett.png')
+        plot_tippett(np.log10(lr_predicted), data_provider.y_test, savefig=f'{make_plots_and_save_as} tippett.png')
 
-        save_lr_results(params_dict=params_dict,
-                        data_provider=data_provider,
-                        LR_predicted=LR_predicted,
-                        experiment_name=experiment_name)
+        save_predicted_lrs(params_dict=params_dict,
+                           data_provider=data_provider,
+                           lr_predicted=lr_predicted,
+                           experiment_name=experiment_name)
 
-    metric_dict = calculate_metrics_dict(scores, data_provider.y_test, LR_predicted, '')
+    metric_dict = calculate_metrics_dict(scores, data_provider.y_test, lr_predicted, '')
 
     return metric_dict

@@ -6,6 +6,7 @@ streamlit run run_data_exploration.py
 
 import os
 import re
+from copy import deepcopy
 
 import altair as alt
 import numpy as np
@@ -33,12 +34,12 @@ def _max_width_():
     )
 
 
-# @st.cache
+@st.cache
 def get_csv(csv):
     return pd.read_csv(os.path.join('output', csv))
 
 
-# @st.cache
+@st.cache
 def get_enfsi_lrs():
     enfsi_data = {
         '2011': {
@@ -93,7 +94,7 @@ st.title('Data exploration for face comparison models')
 _max_width_()
 latest_exp_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
     'experiments_results.csv')])[-1]
-df_exp = get_csv(latest_exp_csv)
+df_exp = deepcopy(get_csv(latest_exp_csv))
 set_calibrators = list(set(df_exp['calibrators']))
 set_scorers = list(set(df_exp['scorers']))
 set_data = list(set(df_exp['datasets']))
@@ -180,14 +181,14 @@ latest_lr_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
 if len(latest_lr_csv) == 0 or latest_exp_csv[:19] != latest_lr_csv[:19]:
     st.markdown('No LR results available.')
 else:
-    df_models = get_csv(latest_lr_csv)
+    df_models = deepcopy(get_csv(latest_lr_csv))
     df_models['pair_id'] = df_models.apply(lambda row: f'{row.pair_id[:-2]}',
                                            axis=1)
     df_models['model'] = df_models.apply(lambda row: f'{row.scorers}_{row.calibrators}',
                                            axis=1)
     set_models = list(set(df_models['model']))
 
-    df_enfsi = get_enfsi_lrs()
+    df_enfsi = deepcopy(get_enfsi_lrs())
     df_lrs = df_enfsi
 
     for model in set_models:
@@ -198,8 +199,11 @@ else:
             np.log10(row['LR'])
 
     df_lrs = df_lrs[df_lrs[set_models[0]].notnull()]
-    df_lrs_long = pd.melt(df_lrs, id_vars='pair_id', value_vars=list(df_lrs)[
-                                                               3:],
+    df_lrs['res_pair_id'] = df_lrs.apply(lambda row: f'{row.Groundtruth}_{row.pair_id}',
+                                         axis=1)
+    df_lrs_long = pd.melt(df_lrs, id_vars='res_pair_id', value_vars=list(
+        df_lrs)[
+                                                               3:-1],
                           var_name='model', value_name='LR')
 
     df_lrs_long.loc[df_lrs_long['model'].isin(range(0, 100)), 'model'] = \
@@ -213,7 +217,7 @@ else:
     st.markdown(f'scorers: {set_scorers}')
     st.markdown(f'calibrators: {set_calibrators}')
 
-    st.altair_chart(alt.Chart(df_lrs_long, width=40).mark_circle(
+    st.altair_chart(alt.Chart(df_lrs_long, width=60).mark_circle(
         size=20).encode(
         x=alt.X(
             'jitter:Q',
@@ -224,7 +228,7 @@ else:
         y=alt.Y('LR:Q'),
         color=alt.Color('model:N'),
         column=alt.Column(
-            'pair_id:N',
+            'res_pair_id:N',
             header=alt.Header(
                 labelAngle=-90,
                 titleOrient='top',
