@@ -90,9 +90,7 @@ SCORERS = {
                        'facenet',
                        'vggface',
                        'fbdeepface',
-                       'arcface'
-                       ],
-
+                       'arcface'],
     'all': {
         'dummy': DummyScorerModel(),
         # TODO: specify tags to use below.
@@ -100,7 +98,10 @@ SCORERS = {
         'facenet': Architecture.FACENET.get_scorer_model(tag=None),
         'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
         'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
-        'arcface':Architecture.ARCFACE.get_scorer_model(tag=None)
+        'arcface':Architecture.ARCFACE.get_scorer_model(tag=None),
+        # 'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
+        'vggface_sanity_check': Architecture.VGGFACE.get_scorer_model(tag='lfw_sanity_check:2'),
+        # 'enfsi_sanity_check': Architecture.VGGFACE.get_scorer_model(tag='lfw_sanity_check:3')
     }
 }
 
