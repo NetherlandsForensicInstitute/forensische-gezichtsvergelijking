@@ -71,7 +71,7 @@ DATA = {
                 EnfsiDataset(years=[2017])],
             'fraction_test': .9,
         },
-            'lfw': {
+        'lfw': {
             'datasets': [LfwDataset()],
             'fraction_test': .9,
         }
