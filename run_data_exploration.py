@@ -198,18 +198,20 @@ else:
     y = df_lrs['Groundtruth']
     cllrs = []
     all_lrs_per_year = defaultdict(list)
-    for expert in df_lrs.columns:
-        if expert not in ['Groundtruth', 'pictures', 'pair_id', 'res_pair_id']:
-            df_lr_y = df_lrs[False == pd.isna(df_lrs[expert])][[expert,
+    for rater in df_lrs.columns:
+        if rater not in ['Groundtruth', 'pictures', 'pair_id', 'res_pair_id']:
+            df_lr_y = df_lrs[False == pd.isna(df_lrs[rater])][[rater,
                                                                 'Groundtruth']]
             if len(df_lr_y) > 0:
-                X1, X2 = Xy_to_Xn(10 ** df_lr_y[expert],
+                X1, X2 = Xy_to_Xn(10 ** df_lr_y[rater],
                                   df_lr_y['Groundtruth'])
-                group = expert[:4]
-                cllrs.append([expert, group, round(calculate_cllr(list(
-                    X1), list(X2)).cllr, 4)])
-                if group in ['2011', '2012','2013', '2017']:
+                if rater[:4] in ['2011', '2012', '2013', '2017']:
+                    group = rater[:4]
                     all_lrs_per_year[group] += zip(X1, X2)
+                else:
+                    group = rater
+                cllrs.append([rater, group, round(calculate_cllr(list(
+                    X1), list(X2)).cllr, 4)])
     for group, values in all_lrs_per_year.items():
         lrs1, lrs2 = zip(*values)
         cllrs.append([group, group + '-all', round(calculate_cllr(list(
