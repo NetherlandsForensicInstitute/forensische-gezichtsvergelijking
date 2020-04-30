@@ -12,6 +12,7 @@ from typing import Tuple, List, Optional, Union
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
+import cv2
 
 from lr_face.data import FaceImage, FaceTriplet, to_array, FacePair
 from lr_face.losses import TripletLoss
@@ -196,11 +197,18 @@ class TripletEmbeddingModel(EmbeddingModel):
                 random.shuffle(triplets)
                 for i in range(0, len(triplets), batch_size):
                     t = triplets[i:i + batch_size]
-                    x = to_array(
+                    RESOLUTION = (100,100)
+                    x_anchors, x_positives, x_negatives = to_array(
                         t,
                         resolution=self.resolution,
                         normalize=True
                     )
+                    x_anchors_resized = []
+                    for anchor in x_anchors:
+                        anchor = cv2.resize(anchor, RESOLUTION)
+                        anchor = cv2.resize(anchor, self.resolution)
+                        x_anchors_resized.append(anchor)
+                    x = [np.asarray(x_anchors_resized), x_positives, x_negatives]
                     y = np.zeros(shape=(len(t), 1))
                     yield x, y
 
