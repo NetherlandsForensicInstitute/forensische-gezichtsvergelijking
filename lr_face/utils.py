@@ -204,7 +204,7 @@ def save_predicted_lrs(params_dict, data_provider, lr_predicted,
                                f'{experiment_name}_lr_results.csv')
 
     # TODO: dataset toevoegen als dit leesbaar is
-    field_names = ['scorers', 'calibrators', 'pair_id', 'LR']
+    field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id', 'LR']
 
     if not os.path.exists(output_file):
         with open(output_file, 'w', newline='') as f:
@@ -216,6 +216,7 @@ def save_predicted_lrs(params_dict, data_provider, lr_predicted,
         for i in range(len(lr_predicted)):
             csv_writer.writerow([params_dict['scorers'],
                                  params_dict['calibrators'],
+                                 params_dict['experiment_id'],
                                  data_provider.ids_test[i],
                                  lr_predicted[i],
                                  ])
