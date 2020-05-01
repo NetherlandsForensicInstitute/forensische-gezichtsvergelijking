@@ -245,7 +245,6 @@ def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
                                      f"enfsi_{test_pair.first.meta['year']}_{test_pair.first.meta['idx']}",
                                      lr_predicted[i],
                                      ])
-    # TODO: evt alleen van enfsi-data de gegevens opslaan
 
 
 def get_enfsi_lrs():
