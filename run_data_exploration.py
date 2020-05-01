@@ -16,6 +16,8 @@ import streamlit as st
 # -train_calibrate_same_data
 from lir import Xy_to_Xn, calculate_cllr
 
+from lr_face.utils import get_facevacs_log_lrs
+
 research_question = 'train_calibrate_same_data'
 
 
@@ -176,32 +178,14 @@ st.header('LR results')
 latest_lr_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
     'lr_results.csv')])[-1]
 
-if len(latest_lr_csv) == 0 or latest_exp_csv[:19] != latest_lr_csv[:19]:
-    st.markdown('No LR results available.')
-else:
-    df_models = deepcopy(get_csv(latest_lr_csv))
-    df_models['pair_id'] = df_models.apply(lambda row: f'{row.pair_id[:-2]}',
-                                           axis=1)
-    df_models['model'] = df_models.apply(
-        lambda row: f'{row.scorers}_{row.calibrators}_{row.experiment_id}',
-        axis=1)
-    df_enfsi = deepcopy(get_enfsi_lrs())
 
-    model_lrs_per_pair_df = df_models.pivot(index='pair_id', columns='model',
-                                            values='LR')
-    df_lrs = df_enfsi.merge(model_lrs_per_pair_df, left_on='pair_id',
-                            right_on='pair_id')
-
-    # hacky way to make sure sorting alphabetically order on ground truth
-    df_lrs['res_pair_id'] = df_lrs.apply(
-        lambda row: f'{row.Groundtruth}_{row.pair_id}', axis=1)
-    y = df_lrs['Groundtruth']
+def get_cllr_df(df_lrs):
     cllrs = []
     all_lrs_per_year = defaultdict(list)
     for rater in df_lrs.columns:
         if rater not in ['Groundtruth', 'pictures', 'pair_id', 'res_pair_id']:
             df_lr_y = df_lrs[False == pd.isna(df_lrs[rater])][[rater,
-                                                                'Groundtruth']]
+                                                               'Groundtruth']]
             if len(df_lr_y) > 0:
                 X1, X2 = Xy_to_Xn(10 ** df_lr_y[rater],
                                   df_lr_y['Groundtruth'])
@@ -210,22 +194,70 @@ else:
                     all_lrs_per_year[group] += zip(X1, X2)
                 else:
                     group = rater
-                cllrs.append([rater, group, round(calculate_cllr(list(
-                    X1), list(X2)).cllr, 4)])
+                cllr_results = calculate_cllr(list(
+                    X1), list(X2))
+                cllrs.append([rater, group, round(cllr_results.cllr, 4),
+                              round(cllr_results.cllr_min, 4)])
     for group, values in all_lrs_per_year.items():
         lrs1, lrs2 = zip(*values)
-        cllrs.append([group, group + '-all', round(calculate_cllr(list(
-            lrs1), list(lrs2)).cllr, 4)])
+        cllr_results = calculate_cllr(list(lrs1), list(lrs2))
+        cllrs.append([group, group + '-all', round(cllr_results.cllr, 4),
+                      round(cllr_results.cllr_min, 4)])
+    return pd.DataFrame(cllrs, columns=['rater', 'group', 'cllr', 'cllr_min'])
 
-    df_cllr = pd.DataFrame(cllrs,
-                           columns=['rater', 'group', 'cllr'])
-    st.altair_chart(alt.Chart(df_cllr, width=400).mark_circle(
-        size=20).encode(x='group', y='cllr'))
+
+if len(latest_lr_csv) == 0 or latest_exp_csv[:19] != latest_lr_csv[:19]:
+    st.markdown('No LR results available.')
+else:
+    df_models = deepcopy(get_csv(latest_lr_csv))
+    df_models['model'] = df_models.apply(
+        lambda row: f'{row.scorers}_{row.calibrators}_{row.experiment_id}',
+        axis=1)
+    df_enfsi = deepcopy(get_enfsi_lrs())
+    df_facevacs = get_facevacs_log_lrs()
+
+    model_lrs_per_pair_df = df_models.pivot(index='pair_id', columns='model',
+                                            values='logLR').reset_index()
+
+    df_lrs = df_enfsi.merge(model_lrs_per_pair_df, how='outer',
+                            left_on='pair_id',
+                            right_on='pair_id')
+    df_lrs = df_lrs.merge(df_facevacs, how='outer', left_on='pair_id',
+                          right_on='pair_id')
+    # hacky way to make sure sorting alphabetically order on ground truth
+    df_lrs['res_pair_id'] = df_lrs.apply(
+        lambda row: f'{row.Groundtruth}_{row.pair_id}', axis=1)
+    df_cllr = get_cllr_df(df_lrs)
+
+    st.markdown(f'These are Cllr results on {len(df_lrs)} pairs, but not all '
+                'systems provide a score always, '
+                'so only partially comparable')
+    st.markdown('cllr_min (red) gives cllr after perfect (on test data) '
+                'calibration, and thus the best cllr achievable for that '
+                'scorer')
+    st.altair_chart(alt.Chart(df_cllr, height=400).mark_circle(
+        size=20).encode(x='group', y='cllr') +
+                    alt.Chart(df_cllr).mark_circle(
+                        size=10, color='red').encode(x='group', y='cllr_min'
+                                                     ).interactive())
+    df_lrs_inner = df_enfsi.merge(model_lrs_per_pair_df, how='inner',
+                       left_on='pair_id',
+                       right_on='pair_id').merge(df_facevacs,
+                                                 how='inner',
+                                                 left_on='pair_id',
+                                                 right_on='pair_id')
+    df_cllr = get_cllr_df(df_lrs_inner)
+    st.markdown(f'The same plot, but based on {len(df_lrs_inner)} pairs scored '
+                f'by all (so more comparable - including unrateds by experts)')
+    st.altair_chart(alt.Chart(df_cllr, height=400).mark_circle(size=20
+                    ).encode(x='group', y='cllr') +
+                    alt.Chart(df_cllr).mark_circle(size=10, color='red'
+                    ).encode(x='group',y='cllr_min').interactive())
 
     df_lrs_long = pd.melt(df_lrs, id_vars='res_pair_id', value_vars=list(
-        df_lrs)[3:-1], var_name='model', value_name='LR')
+        df_lrs)[3:-1], var_name='model', value_name='logLR')
 
-    df_lrs_long.loc[df_lrs_long['model'].str.len() < 9, 'model'] = 'expert'
+    df_lrs_long.loc[df_lrs_long['model'].str.len() < 8, 'model'] = 'expert'
 
     set_calibrators = list(set(df_models['calibrators']))
     set_scorers = list(set(df_models['scorers']))
@@ -243,7 +275,7 @@ else:
             axis=alt.Axis(values=[0], ticks=True, grid=False, labels=False),
             scale=alt.Scale(),
         ),
-        y=alt.Y('LR:Q'),
+        y=alt.Y('logLR:Q'),
         color=alt.Color('model:N'),
         column=alt.Column(
             'res_pair_id:N',

@@ -9,6 +9,7 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from keras.preprocessing import image
+from pandas import DataFrame
 
 
 def write_output(df, experiment_name):
@@ -188,7 +189,7 @@ def concat_columns(df, column_names, output_column_name, separator='-'):
     return df
 
 
-def get_facevacs_lrs():
+def get_facevacs_log_lrs() -> DataFrame:
     """
     reads the facevacs scores from disk and does an ad hoc calibration
     (could cause overfitting). better option would be to get the API working
@@ -198,17 +199,17 @@ def get_facevacs_lrs():
     df = pd.read_excel(os.path.join('resources', 'enfsi',
                                     'results_ENFSI_FaceVacs.xlsx'))
     df.columns = ['year', 'query', 'score', 'remarks']
-    del df['remark']
+    del df['remarks']
     # drop those without scores
     df.dropna(inplace=True)
 
     # do ad hoc calibration
     # TODO
-
+    df['facevacs'] = np.log10(df['score']/(1-df['score']))
     # add pair id
     df['pair_id'] = df.apply(
             lambda row: f'enfsi_{int(row.year)}_{int(row.query)}', axis=1)
-    return df[['pair_id', 'score']]
+    return df[['pair_id', 'facevacs']]
 
 
 def resize_and_normalize(img, target_size):
@@ -246,7 +247,8 @@ def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
                                f'{experiment_name}_lr_results.csv')
 
     # TODO: dataset toevoegen als dit leesbaar is
-    field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id', 'LR']
+    field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id',
+                   'logLR']
 
     if not os.path.exists(output_file):
         with open(output_file, 'w', newline='') as f:
@@ -256,16 +258,15 @@ def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
     with open(output_file, 'a+', newline='') as f:
         csv_writer = writer(f, delimiter=',')
         for lr, pair in zip(lr_predicted, test_pairs):
-             # only save for enfsi pairs
-             if 'idx' in pair.first.meta \
+            # only save for enfsi pairs
+            if 'idx' in pair.first.meta \
                     and pair.first.meta['year'] == pair.second.meta['year'] \
                     and pair.first.meta['idx'] == pair.second.meta['idx']:
-                pair_id='enfsi_'+pair.first.meta['year']+'_'+pair.first.meta[
-                    'idx'],
+                pair_id=f"enfsi_{pair.first.meta['year']}_" \
+                        f"{pair.first.meta['idx']}"
                 csv_writer.writerow([params_dict['scorers'],
-                                 params_dict['calibrators'],
-                                 params_dict['experiment_id'],
-                                 pair_id,
-                                 lr,
-                                 ])
-    # TODO: evt alleen van enfsi-data de gegevens opslaan
+                                     params_dict['calibrators'],
+                                     params_dict['experiment_id'],
+                                     pair_id,
+                                     np.log10(lr),
+                                     ])
