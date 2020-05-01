@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import hashlib
 import importlib
 import os
@@ -39,39 +37,6 @@ class DummyScorerModel:
 
     def __str__(self):
         return 'Dummy'
-
-
-class ScorerModel:
-    """
-    A wrapper around an `EmbeddingModel` that converts the embeddings of image
-    pairs into (dis)similarity scores.
-    """
-
-    def __init__(self, embedding_model: EmbeddingModel):
-        self.embedding_model = embedding_model
-
-    def predict_proba(self, X: List[FacePair]) -> np.ndarray:
-        """
-        Takes a list of face pairs as an argument and computes similarity
-        scores between all pairs. To conform to the sklearn interface we
-        return a 2D array of shape `(num_pairs, 2)`, where the first column
-        is effectively ignored. The similarity scores are thus stored in the
-        second column.
-
-        :param X: List[FacePair]
-        :return np.ndarray
-        """
-        scores = []
-        cache_dir = EMBEDDINGS_DIR
-        for pair in X:
-            embedding1 = self.embedding_model.embed(pair.first, cache_dir)
-            embedding2 = self.embedding_model.embed(pair.second, cache_dir)
-            score = spatial.distance.cosine(embedding1, embedding2)
-            scores.append([score, 1 - score])
-        return np.asarray(scores)
-
-    def __str__(self) -> str:
-        return f'{self.embedding_model.name}Scorer'
 
 
 class EmbeddingModel:
@@ -161,6 +126,39 @@ class EmbeddingModel:
         if self.tag:
             return f'{self.name}_{self.tag}'
         return self.name
+
+
+class ScorerModel:
+    """
+    A wrapper around an `EmbeddingModel` that converts the embeddings of image
+    pairs into (dis)similarity scores.
+    """
+
+    def __init__(self, embedding_model: EmbeddingModel):
+        self.embedding_model = embedding_model
+
+    def predict_proba(self, X: List[FacePair]) -> np.ndarray:
+        """
+        Takes a list of face pairs as an argument and computes similarity
+        scores between all pairs. To conform to the sklearn interface we
+        return a 2D array of shape `(num_pairs, 2)`, where the first column
+        is effectively ignored. The similarity scores are thus stored in the
+        second column.
+
+        :param X: List[FacePair]
+        :return np.ndarray
+        """
+        scores = []
+        cache_dir = EMBEDDINGS_DIR
+        for pair in X:
+            embedding1 = self.embedding_model.embed(pair.first, cache_dir)
+            embedding2 = self.embedding_model.embed(pair.second, cache_dir)
+            score = spatial.distance.cosine(embedding1, embedding2)
+            scores.append([score, 1 - score])
+        return np.asarray(scores)
+
+    def __str__(self) -> str:
+        return f'{self.embedding_model.name}Scorer'
 
 
 class TripletEmbeddingModel(EmbeddingModel):

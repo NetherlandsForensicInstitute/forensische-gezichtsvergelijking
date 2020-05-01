@@ -20,7 +20,7 @@ class Tag:
         self.version = version
 
     @classmethod
-    def from_filename(cls, filename: str) -> Tag:
+    def from_filename(cls, filename: str):
         basename, _ = os.path.splitext(filename)
         matches = re.search(r'-([^-]+)-(\d+)$', basename)
         if matches:

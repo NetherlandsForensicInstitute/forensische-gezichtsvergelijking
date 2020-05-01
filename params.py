@@ -7,7 +7,7 @@ from lir import (LogitCalibrator,
                  IsotonicCalibrator,
                  DummyCalibrator)
 
-from lr_face.data import TestDataset, EnfsiDataset, LfwDataset
+from lr_face.data import TestDataset, EnfsiDataset, LfwDataset, TestLfwDataset
 from lr_face.models import DummyScorerModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
@@ -15,7 +15,7 @@ fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 
-TIMES = 10
+TIMES = 2
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
@@ -29,7 +29,7 @@ PARAMS = {
             'fraction_training': 0.6,
             'n_datapoints_test': 20,
             'transform_scorer_output': False,
-            'train_calibration_same_data': False,
+            'train_calibration_same_data': True,
         },
         'SET2': {
             'fraction_training': 0.6,
@@ -53,18 +53,22 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['lfw'],
+    'current_set_up': ['lfw_test'],
     'all': {
-        'test': {
-            'datasets': [TestDataset()],
-            'fraction_test': .5,
-        },
-        'enfsi': {
-            'datasets': [EnfsiDataset(years=[2011, 2012, 2013, 2017])],
-            'fraction_test': .2,
-        },
-        'lfw': {
-            'datasets': [LfwDataset()],
+        # 'test': {
+        #     'datasets': [TestDataset()],
+        #     'fraction_test': .5,
+        # },
+        # 'enfsi': {
+        #     'datasets': [EnfsiDataset(years=[2011, 2012, 2013, 2017])],
+        #     'fraction_test': .2,
+        # },
+        # 'lfw': {
+        #     'datasets': [LfwDataset()],
+        #     'fraction_test': .9,
+        # },
+        'lfw_test': {
+            'datasets': [TestLfwDataset()],
             'fraction_test': .9,
         }
     }
@@ -75,15 +79,16 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 SCORERS = {
-    'current_set_up': ['vggface_sanity_check'],
+    'current_set_up': ['vggface', 'vggface_sanity_check_10', 'vggface_sanity_check_40'],
     'all': {
-        'dummy': DummyScorerModel(),
+        # 'dummy': DummyScorerModel(),
         # TODO: specify tags to use below.
-        'openface': Architecture.OPENFACE.get_scorer_model(tag=None),
-        'facenet': Architecture.FACENET.get_scorer_model(tag=None),
-        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
-        # 'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
-        'vggface_sanity_check': Architecture.VGGFACE.get_scorer_model(tag='lfw_sanity_check:2'),
+        # 'openface': Architecture.OPENFACE.get_scorer_model(tag=None),
+        # 'facenet': Architecture.FACENET.get_scorer_model(tag=None),
+        # 'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
+        'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
+        'vggface_sanity_check_10': Architecture.VGGFACE.get_scorer_model(tag='lfw_doortrain:3'),
+        'vggface_sanity_check_40': Architecture.VGGFACE.get_scorer_model(tag='lfw_doortrain:4'),
         # 'enfsi_sanity_check': Architecture.VGGFACE.get_scorer_model(tag='lfw_sanity_check:3')
     }
 }

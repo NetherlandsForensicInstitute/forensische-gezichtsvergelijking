@@ -81,6 +81,7 @@ class ExperimentSettings:
         df = pd.concat([df] * repeat_n_times, ignore_index=True)
         if df is not None:
             df = df.reset_index()
+            df['scorers_name'] = [row.embedding_model for row in df['scorers']]
         return df
 
     def all_combinations(self, dictionary):

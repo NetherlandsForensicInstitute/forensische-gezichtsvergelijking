@@ -37,8 +37,8 @@ def run(args):
         #     test_size=params_dict['fraction_test']
         # ))
 
-        calibration_pairs = random.sample(TrainLfwDataset().pairs, 20)
-        test_pairs = random.sample(TestLfwDataset().pairs, 20)
+        calibration_pairs = TrainLfwDataset().pairs
+        test_pairs = TestLfwDataset().pairs
 
         make_plots_and_save_as = None
         # For the first round, make plots

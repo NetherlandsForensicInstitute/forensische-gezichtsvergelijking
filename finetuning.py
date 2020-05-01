@@ -19,12 +19,12 @@ def main(architecture: str, tag: str):
         version = 1
     tag = Tag(tag, version)
     triplet_embedding_model = architecture.get_triplet_embedding_model()
-    # dataset = TrainLfwDataset()
-    dataset = EnfsiDataset(years=[2011, 2012, 2013, 2017])
+    dataset = TrainLfwDataset()
+    # dataset = EnfsiDataset(years=[2011, 2012, 2013, 2017])
     optimizer = Adam(learning_rate=3e-5)
     loss = TripletLoss(alpha=.2)  # TODO: better value for alpha?
-    batch_size = 2  # TODO: make dynamic
-    num_epochs = 100  # TODO: make dynamic
+    batch_size = 8  # TODO: make dynamic
+    num_epochs = 10  # TODO: make dynamic
 
     try:
         triplet_embedding_model.train(dataset.triplets,
@@ -32,6 +32,7 @@ def main(architecture: str, tag: str):
                                       num_epochs,
                                       optimizer,
                                       loss)
+
     except KeyboardInterrupt:
         # Allow user to manually interrupt training while still saving weights.
         pass
