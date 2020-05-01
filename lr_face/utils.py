@@ -6,6 +6,7 @@ from functools import lru_cache
 import cv2
 import numpy as np
 import tensorflow as tf
+import pandas as pd
 from keras.preprocessing import image
 
 
@@ -184,6 +185,29 @@ def concat_columns(df, column_names, output_column_name, separator='-'):
     for i in range(1, len(column_names)):
         df[output_column_name] += separator + df[column_names[i]].astype(str)
     return df
+
+
+def get_facevacs_lrs():
+    """
+    reads the facevacs scores from disk and does an ad hoc calibration
+    (could cause overfitting). better option would be to get the API working
+    :return:
+    """
+    # read in the scores
+    df = pd.read_excel(os.path.join('resources', 'enfsi',
+                                    'results_ENFSI_FaceVacs.xlsx'))
+    df.columns = ['year', 'query', 'score', 'remarks']
+    del df['remark']
+    # drop those without scores
+    df.dropna(inplace=True)
+
+    # do ad hoc calibration
+    # TODO
+
+    # add pair id
+    df['pair_id'] = df.apply(
+            lambda row: f'enfsi_{int(row.year)}_{int(row.query)}', axis=1)
+    return df[['pair_id', 'score']]
 
 
 def resize_and_normalize(img, target_size):
