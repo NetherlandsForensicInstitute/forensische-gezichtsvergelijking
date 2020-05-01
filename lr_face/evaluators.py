@@ -101,7 +101,7 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
 
 def evaluate(lr_system: CalibratedScorer,
              test_pairs: List[FacePair],
-             output_prefix: Optional[str]) -> Dict[str, float]:
+             make_plots_and_save_as: Optional[str]) -> Dict[str, float]:
     """
     Calculates a variety of evaluation metrics and plots data if
     `make_plots_and_save_as` is not None.
@@ -110,7 +110,7 @@ def evaluate(lr_system: CalibratedScorer,
     lr_predicted = lr_system.calibrator.transform(scores)
     y_test = [int(pair.same_identity) for pair in test_pairs]
 
-    if output_prefix:
+    if make_plots_and_save_as:
         calibrator = lr_system.calibrator
         if type(calibrator) == ELUBbounder:
             calibrator = calibrator.first_step_calibrator
@@ -120,28 +120,29 @@ def evaluate(lr_system: CalibratedScorer,
             test_pairs,
             y_test,
             show_ratio=False,
-            savefig=f'{output_prefix} scores against resolution.png')
+            savefig=f'{make_plots_and_save_as} scores against resolution.png')
 
         plot_score_distribution_and_calibrator_fit(
             calibrator,
             scores,
             y_test,
-            savefig=f'{output_prefix} calibration.png'
+            savefig=f'{make_plots_and_save_as} calibration.png'
         )
 
         plot_lr_distributions(
             np.log10(lr_predicted),
             y_test,
-            savefig=f'{output_prefix} lr distribution.png'
+            savefig=f'{make_plots_and_save_as} lr distribution.png'
         )
 
         plot_tippett(
             np.log10(lr_predicted),
             y_test,
-            savefig=f'{output_prefix} tippett.png'
+            savefig=f'{make_plots_and_save_as} tippett.png'
         )
 
-        save_predicted_lrs(lr_system, test_pairs, lr_predicted, output_prefix)
+        save_predicted_lrs(
+            lr_system, test_pairs, lr_predicted, make_plots_and_save_as)
 
     return calculate_metrics_dict(
         scores,

@@ -238,9 +238,8 @@ def cache(func):
 def save_predicted_lrs(lr_system,
                        test_pairs,
                        lr_predicted,
-                       output_prefix):
-
-    output_file = f'{output_prefix}_lr_results.csv'
+                       make_plots_and_save_as):
+    output_file = f'{make_plots_and_save_as}_lr_results.csv'
 
     # TODO: dataset toevoegen als dit leesbaar is
     field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id', 'LR']
@@ -250,20 +249,20 @@ def save_predicted_lrs(lr_system,
             csv_writer = writer(f, delimiter=',')
             csv_writer.writerow(field_names)
 
-    experiment_id = os.path.split(output_prefix)[-1]
+    experiment_id = os.path.split(make_plots_and_save_as)[-1]
     with open(output_file, 'a+', newline='') as f:
         csv_writer = writer(f, delimiter=',')
         for i in range(len(lr_predicted)):
-            test_pair = test_pairs[i]
+            first, second = test_pairs[i]
             # check if a test_pair is a proper ENFSI pair:
-            if test_pair.first.identity[0:5] == 'ENFSI' and \
-               test_pair.first.meta['year'] == test_pair.second.meta['year'] \
-                    and \
-               test_pair.first.meta['idx'] == test_pair.second.meta['idx']:
+            # TODO: should this be in our generic pipeline if it's ENFSI specific?
+            if first.identity[0:5] == 'ENFSI' \
+                    and first.meta['year'] == second.meta['year'] \
+                    and first.meta['idx'] == second.meta['idx']:
                 csv_writer.writerow([lr_system.scorer,
                                      lr_system.calibrator,
                                      experiment_id,
-                                     f"enfsi_{test_pair.first.meta['year']}_{test_pair.first.meta['idx']}",
+                                     f"enfsi_{first.meta['year']}_{first.meta['idx']}",
                                      lr_predicted[i],
                                      ])
 
@@ -310,7 +309,7 @@ def get_enfsi_lrs():
             df_temp['pictures'].isin(range(1, enfsi_data[year][
                 'no_of_pictures'] + 1))]
         df_temp = df_temp.rename(columns=dict([[i, f'{year}-{i}'] for i in
-                                                range(100)]))
+                                               range(100)]))
         df_temp['pair_id'] = df_temp.apply(
             lambda row: f'enfsi_{year}_{row.pictures}', axis=1)
 

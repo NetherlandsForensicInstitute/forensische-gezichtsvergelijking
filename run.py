@@ -30,10 +30,11 @@ def run(scorers, calibrators, data, params):
     results = []
     for i, experiment in enumerate(tqdm(experimental_setup)):
         # Make plots for the first round only.
-        output_prefix = None
+        make_plots_and_save_as = None
         if i < len(experimental_setup) / TIMES:
-            output_prefix = os.path.join(output_dir, str(experiment))
-        results.append(perform_experiment(experiment, output_prefix))
+            make_plots_and_save_as = os.path.join(
+                output_dir, str(experiment).replace(':', '-'))
+        results.append(perform_experiment(experiment, make_plots_and_save_as))
 
     df = create_dataframe(experimental_setup, results)
     df = process_dataframe(df)
@@ -42,7 +43,7 @@ def run(scorers, calibrators, data, params):
 
 def perform_experiment(
         experiment: Experiment,
-        output_prefix: Optional[str]
+        make_plots_and_save_as: Optional[str]
 ) -> Dict[str, float]:
     """
     Function to run a single experiment with pipeline:
@@ -58,7 +59,7 @@ def perform_experiment(
         X=p[:, 1],
         y=[int(pair.same_identity) for pair in calibration_pairs]
     )
-    return evaluate(lr_system, test_pairs, output_prefix)
+    return evaluate(lr_system, test_pairs, make_plots_and_save_as)
 
 
 if __name__ == '__main__':
