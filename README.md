@@ -55,7 +55,7 @@ Specifically for the model:
 The outcome of the pipeline can be visualised using the Streamlit app. Specify the desired hypothesis you want to test in `run_data_exploration.py`. Adding new hypotheses and code blocks for the plots can be done in this file as well.
 
 The results from the ENFSI proficiency tests (Proficiency_test.xlsx) should be 
-added to the resources folder.
+added to the resources/enfsi folder.
 
 To use the streamlit app, write in terminal: `streamlit run run_data_exploration.py`
 

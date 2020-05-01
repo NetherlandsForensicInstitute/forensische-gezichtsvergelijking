@@ -178,9 +178,9 @@ else:
         size=20).encode(x='group', y='cllr'))
 
     df_lrs_long = pd.melt(df_lrs, id_vars='res_pair_id', value_vars=list(
-        df_lrs)[3:-1], var_name='model', value_name='LR')
+        df_lrs)[3:-1], var_name='lr_assigner', value_name='LR')
 
-    df_lrs_long.loc[df_lrs_long['model'].str.len() < 9, 'model'] = 'expert'
+    df_lrs_long.loc[df_lrs_long['lr_assigner'].str.len() < 9, 'lr_assigner'] = 'expert'
 
     set_calibrators = list(set(df_models['calibrators']))
     set_scorers = list(set(df_models['scorers']))
@@ -199,7 +199,7 @@ else:
             scale=alt.Scale(),
         ),
         y=alt.Y('LR:Q'),
-        color=alt.Color('model:N'),
+        color=alt.Color('lr_assigner:N'),
         column=alt.Column(
             'res_pair_id:N',
             header=alt.Header(
