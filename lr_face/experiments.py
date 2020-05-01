@@ -74,9 +74,9 @@ class ExperimentalSetup:
         self.params = self._get_params(param_names)
         self.num_repeats = num_repeats
         self.name = datetime.now().strftime("%Y-%m-%d %H %M %S")
-        self.experiments = self.compute_experiments()
+        self.experiments = self.prepare_experiments()
 
-    def compute_experiments(self) -> List[Experiment]:
+    def prepare_experiments(self) -> List[Experiment]:
         """
         Returns a list of all experiments that fall under this setup.
 
