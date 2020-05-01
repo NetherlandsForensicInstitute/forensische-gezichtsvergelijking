@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import re
 from csv import writer
+from functools import lru_cache
 
 import cv2
 import numpy as np
@@ -12,7 +13,8 @@ from keras.preprocessing import image
 
 def write_output(df, experiment_name):
     # %H:%M:%S -> : (colon) werkt niet in windows
-    output_file = os.path.join('.', 'output', f'{experiment_name}_experiments_results.csv')
+    output_file = os.path.join('.', 'output',
+                               f'{experiment_name}_experiments_results.csv')
     with open(output_file, 'w+') as f:
         df.to_csv(f, header=True)
 
@@ -23,7 +25,8 @@ def parser_setup():
 
     :return: parser (ArgumentParser object)
     """
-    parser = argparse.ArgumentParser(description='Run one or more calibration experiments')
+    parser = argparse.ArgumentParser(
+        description='Run one or more calibration experiments')
 
     parser.add_argument('--data', '-d',
                         help='Select the type or set of data to be used. Codes can be found in' +
@@ -35,10 +38,12 @@ def parser_setup():
                         nargs='+')
     parser.add_argument('--calibrator', '-c',
                         help='Select the calibrator to be used. Codes can be found in \'params.py\',' +
-                             'e.g.: KDE. Defaults to settings in \'current_set_up\'', nargs='+')
+                             'e.g.: KDE. Defaults to settings in \'current_set_up\'',
+                        nargs='+')
     parser.add_argument('--params', '-p',
                         help='Select the parameter set(s) to be used. Codes can be found in \'params.py\',' +
-                             'e.g.: SET1. Defaults to settings in \'current_set_up\'', nargs='+')
+                             'e.g.: SET1. Defaults to settings in \'current_set_up\'',
+                        nargs='+')
     return parser
 
 
@@ -72,7 +77,8 @@ def parse_object_string(obj_string, name_only=False):
                 for par in body_arr:
                     key_val = par.split('=')
                     if len(key_val) == 2:
-                        obj_dict['body'][key_val[0].strip()] = key_val[1].strip()
+                        obj_dict['body'][key_val[0].strip()] = key_val[
+                            1].strip()
                     else:
                         obj_dict['body'][key_val[0].strip()] = None
     return obj_dict
@@ -94,13 +100,15 @@ def process_dataframe(df):
     }
     for new_column, old_column in make_name_columns.items():
         try:
-            df[new_column] = df.apply(lambda row: get_function_names(row[old_column]), axis=1)
+            df[new_column] = df.apply(
+                lambda row: get_function_names(row[old_column]), axis=1)
         except (KeyError, AttributeError):
             df[new_column] = None
 
     # Cast to string columns:
     df['fraction_training'] = round(df['fraction_training'], 1).astype(str)
-    df['train_calibration_same_data'] = df['train_calibration_same_data'].astype(str)
+    df['train_calibration_same_data'] = df[
+        'train_calibration_same_data'].astype(str)
 
     make_parameter_columns = [
         # old column name: parameter name (new column is [old column name]_[parameter name])
@@ -110,7 +118,9 @@ def process_dataframe(df):
     for column, parameter in make_parameter_columns:
         new_column = column + "_" + parameter
         try:
-            df[new_column] = df.apply(lambda row: get_parameter_value(row[column], parameter), axis=1)
+            df[new_column] = df.apply(
+                lambda row: get_parameter_value(row[column], parameter),
+                axis=1)
         except (KeyError, AttributeError):
             df[new_column] = None
 
@@ -120,7 +130,8 @@ def process_dataframe(df):
         'distr': ['h1_name', 'h2_name'],
         'samedata_scorer': ['scorer_name', 'train_calibration_same_data'],
         'weighted_scorer_label': ['scorer_name', 'scorers_class_weight'],
-        'weighted_calibrator_label': ['calibrator_name', 'calibrators_class_weight'],
+        'weighted_calibrator_label': ['calibrator_name',
+                                      'calibrators_class_weight'],
         'weighted': ['scorers_class_weight', 'calibrators_class_weight']
     }
     for new_column, column_list in make_concatenated_columns.items():
@@ -178,15 +189,15 @@ def concat_columns(df, column_names, output_column_name, separator='-'):
 
 
 def resize_and_normalize(img, target_size):
-        right_size_img = cv2.resize(img, target_size)
+    right_size_img = cv2.resize(img, target_size)
 
-        img_pixels = image.img_to_array(right_size_img)
-        img_pixels = np.expand_dims(img_pixels, axis=0)
+    img_pixels = image.img_to_array(right_size_img)
+    img_pixels = np.expand_dims(img_pixels, axis=0)
 
-        # normalize input in [0, 1]
-        img_pixels /= 255
+    # normalize input in [0, 1]
+    img_pixels /= 255
 
-        return img_pixels
+    return img_pixels
 
 
 def fix_tensorflow_rtx():
@@ -198,7 +209,14 @@ def fix_tensorflow_rtx():
         tf.config.experimental.set_memory_growth(device, True)
 
 
-def save_predicted_lrs(params_dict, data_provider, lr_predicted,
+def cache(func):
+    """
+    A thin wrapper around `lru_cache` so we don't have to specify a `maxsize`.
+    """
+    return lru_cache(maxsize=None)(func)
+
+
+def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
                        experiment_name):
 
     output_file = os.path.join('.', 'output',
@@ -215,12 +233,18 @@ def save_predicted_lrs(params_dict, data_provider, lr_predicted,
     with open(output_file, 'a+', newline='') as f:
         csv_writer = writer(f, delimiter=',')
         for i in range(len(lr_predicted)):
-            csv_writer.writerow([params_dict['scorers'],
-                                 params_dict['calibrators'],
-                                 params_dict['experiment_id'],
-                                 data_provider.ids_test[i],
-                                 lr_predicted[i],
-                                 ])
+            test_pair = test_pairs[i]
+            # check if a test_pair is a proper ENFSI pair:
+            if test_pair.first.identity[0:5] == 'ENFSI' and \
+               test_pair.first.meta['year'] == test_pair.second.meta['year'] \
+                    and \
+               test_pair.first.meta['idx'] == test_pair.second.meta['idx']:
+                csv_writer.writerow([params_dict['scorers'],
+                                     params_dict['calibrators'],
+                                     params_dict['experiment_id'],
+                                     f"enfsi_{test_pair.first.meta['year']}_{test_pair.first.meta['idx']}",
+                                     lr_predicted[i],
+                                     ])
     # TODO: evt alleen van enfsi-data de gegevens opslaan
 
 
@@ -266,11 +290,10 @@ def get_enfsi_lrs():
             df_temp['pictures'].isin(range(1, enfsi_data[year][
                 'no_of_pictures'] + 1))]
         df_temp = df_temp.rename(columns=dict([[i, f'{year}-{i}'] for i in
-                                               range(100)]))
+                                                range(100)]))
         df_temp['pair_id'] = df_temp.apply(
             lambda row: f'enfsi_{year}_{row.pictures}', axis=1)
 
         df_enfsi = df_enfsi.append(df_temp)
 
     return df_enfsi.replace('-', 0)
-

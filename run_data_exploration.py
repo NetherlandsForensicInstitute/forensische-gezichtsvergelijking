@@ -135,8 +135,6 @@ if len(latest_lr_csv) == 0 or latest_exp_csv[:19] != latest_lr_csv[:19]:
     st.markdown('No LR results available.')
 else:
     df_models = deepcopy(get_csv(latest_lr_csv))
-    df_models['pair_id'] = df_models.apply(lambda row: f'{row.pair_id[:-2]}',
-                                           axis=1)
     df_models['model'] = df_models.apply(
         lambda row: f'{row.scorers}_{row.calibrators}_{row.experiment_id}',
         axis=1)

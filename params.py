@@ -1,11 +1,17 @@
 import numpy as np
-from lir import LogitCalibrator, NormalizedCalibrator, ELUBbounder, KDECalibrator, FractionCalibrator, \
-    IsotonicCalibrator, DummyCalibrator
+from lir import (LogitCalibrator,
+                 NormalizedCalibrator,
+                 ELUBbounder,
+                 KDECalibrator,
+                 FractionCalibrator,
+                 IsotonicCalibrator,
+                 DummyCalibrator)
 
+from lr_face.data import TestDataset, EnfsiDataset, LfwDataset
+from lr_face.models import DummyScorerModel, Architecture
+from lr_face.utils import fix_tensorflow_rtx
 
-from lr_face.data_providers import TestData, DataFunctions, EnfsiData
-from lr_face.models import DummyModel, BaseModel
-
+fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 
@@ -47,16 +53,27 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['lfw'],
     'all': {
         'test': {
-            'datasets': [DataFunctions(image_provider=TestData(), pair_provider=None)],
+            'datasets': [TestDataset()],
             'fraction_test': .5,
         },
         'enfsi': {
-            'datasets': [DataFunctions(image_provider=None,
-                                       pair_provider=EnfsiData())],
+            'datasets': [EnfsiDataset(years=[2011, 2012, 2013, 2017])],
             'fraction_test': .2,
+        },
+        'enfsi-separate': {
+            'datasets': [
+                EnfsiDataset(years=[2011]),
+                EnfsiDataset(years=[2012]),
+                EnfsiDataset(years=[2013]),
+                EnfsiDataset(years=[2017])],
+            'fraction_test': .9,
+        },
+        'lfw': {
+            'datasets': [LfwDataset()],
+            'fraction_test': .9,
         }
     }
 }
@@ -66,13 +83,18 @@ New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 SCORERS = {
-    'current_set_up': ['openface', 'facenet', 'vggface', 'fbdeepface', 'dummy'],
+    'current_set_up': ['dummy',
+                       'openface',
+                       'facenet',
+                       'vggface',
+                       'fbdeepface'],
     'all': {
-        'dummy': DummyModel(),
-        'openface': BaseModel.OPENFACE,
-        'facenet': BaseModel.FACENET,
-        'fbdeepface': BaseModel.FBDEEPFACE,
-        'vggface': BaseModel.VGGFACE,
+        'dummy': DummyScorerModel(),
+        # TODO: specify tags to use below.
+        'openface': Architecture.OPENFACE.get_scorer_model(tag=None),
+        'facenet': Architecture.FACENET.get_scorer_model(tag=None),
+        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
+        'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
     }
 }
 
@@ -81,7 +103,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['KDE'],
+    'current_set_up': ['logit'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),
