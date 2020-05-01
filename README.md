@@ -59,6 +59,33 @@ added to the resources/enfsi folder.
 
 To use the streamlit app, write in terminal: `streamlit run run_data_exploration.py`
 
+### Finetuning the model
+##### Setup DGX / Docker for training and evaluating the model
+
+Building the container
+```bash
+docker build . -f Dockerfile -t <image_name>
+```
+
+Pushing the container to the DGX
+```bash
+docker tag <image_name> dgxstation01.holmes.nl:5000/<image_name>
+docker push dgxstation01.holmes.nl:5000/<image_name>
+```
+
+To run a model on the DGX, you first need to mount the weights and dataset folder. 
+- host/volume = `/opt/data/FaceLR/weights` with path in container = `/root/.deepface/weights`
+- host/volume = `/opt/data/FaceLR/resources` with path in container = `/app/resources`
+
+Execute the finetuning from inside the Docker container.
+
+#### Finetuning
+```bash
+python3.7 finetuning.py -a <architecture_name> -t <tag_name>
+```
+Implemented architectures are facenet, fbdeepface, openface and vggface. If running on the DGX, the scripts expects to 
+find the data and weights in `/opt/data/FaceLR/resources` and `/opt/data/FaceLR/weights` respectively. The number of 
+epochs is set to 100 by default, but the training can be stopped at any point and the latest weights will be saved.
 
 ### Labeling
 
