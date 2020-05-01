@@ -2,19 +2,20 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import math
 import os
 import pickle
 import random
 import re
 from enum import Enum
-from typing import Tuple, List, Optional, Union
+from typing import Tuple, List, Optional, Union, Callable
 
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
-import cv2
+from tensorflow.python.keras.layers import Flatten, Dense, Input
 
-from lr_face.data import FaceImage, FaceTriplet, to_array, FacePair
+from lr_face.data import FaceImage, FacePair, FaceTriplet, to_array
 from lr_face.losses import TripletLoss
 from lr_face.utils import cache
 from lr_face.versioning import Tag
@@ -23,23 +24,14 @@ EMBEDDINGS_DIR = 'embeddings'
 WEIGHTS_DIR = 'weights'
 
 
-class DummyScorerModel:
+class DummyModel(tf.keras.Sequential):
     """
-    Dummy model that returns random scores.
+    A dummy model that takes RGB images with dimensions 100x100 as input and
+    outputs random embeddings with dimensionality 100.
     """
 
-    def __init__(self, resolution=(100, 100)):
-        self.resolution = resolution
-
-    def fit(self, X, y):
-        assert X.shape[1:3] == self.resolution
-        pass
-
-    def predict_proba(self, X: List[FacePair]):
-        return np.random.random(size=(len(X), 2))
-
-    def __str__(self):
-        return 'Dummy'
+    def __init__(self):
+        super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(100)])
 
 
 class ScorerModel:
@@ -72,7 +64,11 @@ class ScorerModel:
         return np.asarray(scores)
 
     def __str__(self) -> str:
-        return f'{self.embedding_model.name}Scorer'
+        name = self.embedding_model.name
+        tag = self.embedding_model.tag
+        if tag:
+            return f'{name}Scorer_{tag}'
+        return name
 
 
 class EmbeddingModel:
@@ -175,48 +171,32 @@ class TripletEmbeddingModel(EmbeddingModel):
               batch_size: int,
               num_epochs: int,
               optimizer: tf.keras.optimizers.Optimizer,
-              loss: TripletLoss):
-        trainable_model = self.build_trainable_model()
-        trainable_model.compile(optimizer, loss)
-        anchors, positives, negatives = to_array(
-            triplets,
-            resolution=self.resolution,
-            normalize=True
-        )
-
-        # The triplet loss that is used to train the model actually does not
-        # need any ground truth labels, since it simply aims to maximize the
-        # difference in distances to the anchor embedding between positive and
-        # negative query images. We create a dummy ground truth variable
-        # because Keras loss functions still expect one.
-        inputs = [anchors, positives, negatives]
-        y = np.zeros(shape=(anchors.shape[0], 1))
+              loss: TripletLoss,
+              augmenter: Optional[Callable[[np.ndarray], np.ndarray]] = None):
 
         def generator():
             while True:
-                random.shuffle(triplets)
-                for i in range(0, len(triplets), batch_size):
-                    t = triplets[i:i + batch_size]
-                    RESOLUTION = (100,100)
-                    x_anchors, x_positives, x_negatives = to_array(
-                        t,
+                data = random.sample(triplets, len(triplets))
+                for i in range(0, len(data), batch_size):
+                    batch = data[i:i + batch_size]
+                    inputs = to_array(
+                        batch,
                         resolution=self.resolution,
-                        normalize=True
+                        normalize=True,
+                        augmenter=augmenter
                     )
-                    x_anchors_resized = []
-                    for anchor in x_anchors:
-                        anchor = cv2.resize(anchor, RESOLUTION)
-                        anchor = cv2.resize(anchor, self.resolution)
-                        x_anchors_resized.append(anchor)
-                    x = [np.asarray(x_anchors_resized), x_positives, x_negatives]
-                    y = np.zeros(shape=(len(t), 1))
-                    yield x, y
+                    y = np.zeros(shape=(len(batch), 1))
+                    yield inputs, y
 
+        trainable_model = self.build_trainable_model()
+        trainable_model.compile(optimizer, loss)
+
+        steps_per_epoch = int(math.ceil(len(triplets) / batch_size))
         trainable_model.fit_generator(
             generator=generator(),
-            steps_per_epoch=len(triplets) // batch_size,
+            steps_per_epoch=steps_per_epoch,
             epochs=num_epochs,
-            workers=0
+            workers=0  # Without this we get segmentation faults or OOM errors.
         )
 
     def build_trainable_model(self) -> tf.keras.Model:
@@ -264,6 +244,7 @@ class Architecture(Enum):
     scorer_model = Architecture.VGGFACE.get_scorer_model("0.0.1")
     ```
     """
+    DUMMY = 'Dummy'
     VGGFACE = 'VGGFace'
     FACENET = 'Facenet'
     FBDEEPFACE = 'FbDeepFace'
@@ -281,6 +262,8 @@ class Architecture(Enum):
             module_name = f'insightface.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
+        if self == self.DUMMY:
+            return DummyModel()
         raise ValueError("Unable to load base model")
 
     def get_embedding_model(self,
@@ -359,11 +342,12 @@ class Architecture(Enum):
         return self.get_model().output_shape[1]
 
     @property
-    def source(self) -> str:
+    def source(self) -> Optional[str]:
         """
-        Returns a textual description of where the model comes from.
+        Returns a textual description of where the model comes from, or None if
+        no source can be determined.
 
-        :return: str
+        :return: Optional[str]
         """
         deepface_models = [self.VGGFACE,
                            self.FACENET,
@@ -373,6 +357,6 @@ class Architecture(Enum):
         
         if self in deepface_models:
             return 'deepface'
-        elif self in insightface_models:
+        if self in insightface_models:
             return 'insightface'
-        raise ValueError("Unknown model source.")
+        return None

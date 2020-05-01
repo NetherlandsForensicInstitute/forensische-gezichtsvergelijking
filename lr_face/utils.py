@@ -1,12 +1,13 @@
 import argparse
 import os
-import pandas as pd
 import re
 from csv import writer
 from functools import lru_cache
+from typing import Dict, List
 
 import cv2
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from keras.preprocessing import image
 
@@ -32,11 +33,11 @@ def parser_setup():
                         help='Select the type or set of data to be used. Codes can be found in' +
                              '\'params.py\' e.g.: SIM1. Defaults to settings in \'current_set_up\'',
                         nargs='+')
-    parser.add_argument('--scorer', '-s',
+    parser.add_argument('--scorers', '-s',
                         help='Select the scorer to be used. Codes can be found in \'params.py\',' +
                              'e.g.: GB. Defaults to settings in \'current_set_up\'',
                         nargs='+')
-    parser.add_argument('--calibrator', '-c',
+    parser.add_argument('--calibrators', '-c',
                         help='Select the calibrator to be used. Codes can be found in \'params.py\',' +
                              'e.g.: KDE. Defaults to settings in \'current_set_up\'',
                         nargs='+')
@@ -82,6 +83,24 @@ def parse_object_string(obj_string, name_only=False):
                     else:
                         obj_dict['body'][key_val[0].strip()] = None
     return obj_dict
+
+
+def create_dataframe(experimental_setup: 'ExperimentalSetup',
+                     results: List[Dict]) -> pd.DataFrame:
+    df = pd.DataFrame({
+        'scorers': [e.scorer for e in experimental_setup],
+        'calibrators': [e.calibrator for e in experimental_setup],
+        **{k: [e.params[k] for e in experimental_setup]
+           for k in experimental_setup.params_keys},
+        **{k: [e.data_config[k] for e in experimental_setup]
+           for k in experimental_setup.data_keys}
+    })
+    for i, result in enumerate(results):
+        for k, v in result.items():
+            df.loc[i, k] = v
+
+    df['index'] = df.index
+    return df
 
 
 def process_dataframe(df):
@@ -204,8 +223,8 @@ def fix_tensorflow_rtx():
     """
     A fix to make tensorflow-gpu work with RTX cards (or at least the 2700).
     """
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    for device in gpus:
+    gpu_devices = tf.config.experimental.list_physical_devices('GPU')
+    for device in gpu_devices:
         tf.config.experimental.set_memory_growth(device, True)
 
 
@@ -216,11 +235,12 @@ def cache(func):
     return lru_cache(maxsize=None)(func)
 
 
-def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
-                       experiment_name):
+def save_predicted_lrs(lr_system,
+                       test_pairs,
+                       lr_predicted,
+                       output_prefix):
 
-    output_file = os.path.join('.', 'output',
-                               f'{experiment_name}_lr_results.csv')
+    output_file = f'{output_prefix}_lr_results.csv'
 
     # TODO: dataset toevoegen als dit leesbaar is
     field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id', 'LR']
@@ -230,6 +250,7 @@ def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
             csv_writer = writer(f, delimiter=',')
             csv_writer.writerow(field_names)
 
+    experiment_id = os.path.split(output_prefix)[-1]
     with open(output_file, 'a+', newline='') as f:
         csv_writer = writer(f, delimiter=',')
         for i in range(len(lr_predicted)):
@@ -239,9 +260,9 @@ def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
                test_pair.first.meta['year'] == test_pair.second.meta['year'] \
                     and \
                test_pair.first.meta['idx'] == test_pair.second.meta['idx']:
-                csv_writer.writerow([params_dict['scorers'],
-                                     params_dict['calibrators'],
-                                     params_dict['experiment_id'],
+                csv_writer.writerow([lr_system.scorer,
+                                     lr_system.calibrator,
+                                     experiment_id,
                                      f"enfsi_{test_pair.first.meta['year']}_{test_pair.first.meta['idx']}",
                                      lr_predicted[i],
                                      ])
