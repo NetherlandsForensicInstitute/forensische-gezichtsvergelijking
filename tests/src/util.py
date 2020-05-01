@@ -1,6 +1,19 @@
 import os
 import shutil
+from os.path import dirname, abspath, isabs, join
 from typing import Generator
+
+
+def get_project_path(relative_path: str) -> str:
+    """
+    Takes a path relative to the root directory of the project (the directory
+    above the `tests` directory) and returns an absolute path to it.
+    
+    :param relative_path: str
+    :return: str
+    """
+    root_path = dirname(dirname(dirname(abspath(__file__))))
+    return os.path.join(root_path, relative_path)
 
 
 def get_tests_path(relative_path: str) -> str:
@@ -11,8 +24,7 @@ def get_tests_path(relative_path: str) -> str:
     :param relative_path: str
     :return: str
     """
-    tests_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(tests_path, relative_path)
+    return get_project_path(join('tests', relative_path))
 
 
 def scratch_dir(path: str) -> Generator[str, None, None]:
@@ -24,7 +36,7 @@ def scratch_dir(path: str) -> Generator[str, None, None]:
     :param path: str, the path to the directory that should be created
     :return: Generator[str, None, None]
     """
-    if not os.path.isabs(path):
+    if not isabs(path):
         path = get_tests_path(path)
     try:
         os.makedirs(path, exist_ok=True)

@@ -12,9 +12,9 @@ from keras.preprocessing import image
 
 
 def distance(a, b):
-    x1 = a[0];
+    x1 = a[0]
     y1 = a[1]
-    x2 = b[0];
+    x2 = b[0]
     y2 = b[1]
 
     return math.sqrt(((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)))
@@ -112,7 +112,7 @@ def findThreshold(model_name, distance_metric):
     return threshold
 
 
-def detectFace(image_path, target_size=(224, 224), grayscale=False) -> Tuple[np.ndarray, float, bool, Tuple[int]]:
+def detectFace(image_path, target_size=None, grayscale=False) -> Tuple[np.ndarray, float, bool, Tuple[int]]:
     """
     detects the face in an image, rotates (roll) if necessary (based on location of two eyes), and resizes the face.
     if no face is found, the whole image is resized. if no eyes are found, or no face is found after rotation,
@@ -250,7 +250,8 @@ def detectFace(image_path, target_size=(224, 224), grayscale=False) -> Tuple[np.
     if grayscale == True:
         detected_face = cv2.cvtColor(detected_face, cv2.COLOR_BGR2GRAY)
 
-    detected_face = cv2.resize(detected_face, target_size)
+    if target_size:
+        detected_face = cv2.resize(detected_face, target_size)
 
     img_pixels = image.img_to_array(detected_face)
     img_pixels = np.expand_dims(img_pixels, axis=0)

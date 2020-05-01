@@ -10,6 +10,8 @@ __pycache__
 /build
 /dist
 /.idea
+/embeddings
+/weights
 /results
 /output
 /scratch
