@@ -6,6 +6,7 @@ from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, \
     plot_score_distribution_and_calibrator_fit
 from sklearn.metrics import accuracy_score, roc_auc_score
 
+from lr_face.utils import save_predicted_lrs
 from lr_face.data import FacePair
 
 
@@ -98,8 +99,10 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
 
 
 def evaluate(lr_system: CalibratedScorer,
+             params_dict: Dict,
              test_pairs: List[FacePair],
-             make_plots_and_save_as: Optional[str] = None) -> Dict[str, float]:
+             make_plots_and_save_as: Optional[str] = None,
+             experiment_name=None) -> Dict[str, float]:
     """
     Calculates a variety of evaluation metrics and plots data if
     `make_plots_and_save_as` is not None.
@@ -135,6 +138,11 @@ def evaluate(lr_system: CalibratedScorer,
             y_test,
             savefig=f'{make_plots_and_save_as} tippett.png'
         )
+
+        save_predicted_lrs(params_dict=params_dict,
+                           test_pairs=test_pairs,
+                           lr_predicted=lr_predicted,
+                           experiment_name=experiment_name)
 
     return calculate_metrics_dict(
         scores,
