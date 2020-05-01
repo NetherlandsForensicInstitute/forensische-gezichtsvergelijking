@@ -6,6 +6,7 @@ from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, \
     plot_score_distribution_and_calibrator_fit
 from sklearn.metrics import accuracy_score, roc_auc_score
 
+from lr_face.utils import save_predicted_lrs
 from lr_face.data import FacePair
 
 
@@ -18,6 +19,39 @@ def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):
     plt.hist(points0, bins=20, alpha=.25, density=True)
     plt.hist(points1, bins=20, alpha=.25, density=True)
     plt.xlabel('10log LR')
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
+
+def plot_performance_as_function_of_resolution(scores,
+                                               test_pairs: List[FacePair],
+                                               y_test,
+                                               show_ratio: bool = False,
+                                               savefig: Optional[str] = None,
+                                               show: Optional[bool] = None):
+    """
+    plots the scores as a function of the minimum resolution found on the
+    two images of the pair, coloured by ground truth
+    """
+    plt.figure(figsize=(10, 10), dpi=100)
+
+    if show_ratio:
+        resolutions = [np.prod(pair.first.get_image().shape[:2])/
+                       np.prod(pair.second.get_image().shape[:2]) for
+                       pair in test_pairs]
+        label = 'ratio pixels'
+    else:
+        resolutions = [min(np.prod(pair.first.get_image().shape[:2]),
+                            np.prod(pair.second.get_image().shape[:2]))/10**6
+                       for pair in test_pairs]
+        label = 'Mpixels (smallest image)'
+    colors = list(map(lambda x: 'blue' if x else 'red', y_test))
+    plt.scatter(resolutions, scores, c=colors)
+    plt.xlabel(label)
+    plt.ylabel('score')
     if savefig is not None:
         plt.savefig(savefig)
         plt.close()
@@ -65,8 +99,10 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
 
 
 def evaluate(lr_system: CalibratedScorer,
+             params_dict: Dict,
              test_pairs: List[FacePair],
-             make_plots_and_save_as: Optional[str] = None) -> Dict[str, float]:
+             make_plots_and_save_as: Optional[str] = None,
+             experiment_name=None) -> Dict[str, float]:
     """
     Calculates a variety of evaluation metrics and plots data if
     `make_plots_and_save_as` is not None.
@@ -79,6 +115,10 @@ def evaluate(lr_system: CalibratedScorer,
         calibrator = lr_system.calibrator
         if type(calibrator) == ELUBbounder:
             calibrator = calibrator.first_step_calibrator
+
+        plot_performance_as_function_of_resolution(scores, test_pairs, y_test,
+                                                   show_ratio=False,
+            savefig=f'{make_plots_and_save_as} scores against resolution.png')
 
         plot_score_distribution_and_calibrator_fit(
             calibrator,
@@ -98,6 +138,11 @@ def evaluate(lr_system: CalibratedScorer,
             y_test,
             savefig=f'{make_plots_and_save_as} tippett.png'
         )
+
+        save_predicted_lrs(params_dict=params_dict,
+                           test_pairs=test_pairs,
+                           lr_predicted=lr_predicted,
+                           experiment_name=experiment_name)
 
     return calculate_metrics_dict(
         scores,

@@ -1,6 +1,8 @@
 import argparse
 import os
+import pandas as pd
 import re
+from csv import writer
 from functools import lru_cache
 
 import cv2
@@ -211,5 +213,87 @@ def cache(func):
     """
     A thin wrapper around `lru_cache` so we don't have to specify a `maxsize`.
     """
-    # return lru_cache(maxsize=None)(func)
-    return func
+    return lru_cache(maxsize=None)(func)
+
+
+def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
+                       experiment_name):
+
+    output_file = os.path.join('.', 'output',
+                               f'{experiment_name}_lr_results.csv')
+
+    # TODO: dataset toevoegen als dit leesbaar is
+    field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id', 'LR']
+
+    if not os.path.exists(output_file):
+        with open(output_file, 'w', newline='') as f:
+            csv_writer = writer(f, delimiter=',')
+            csv_writer.writerow(field_names)
+
+    with open(output_file, 'a+', newline='') as f:
+        csv_writer = writer(f, delimiter=',')
+        for i in range(len(lr_predicted)):
+            test_pair = test_pairs[i]
+            # check if a test_pair is a proper ENFSI pair:
+            if test_pair.first.identity[0:5] == 'ENFSI' and \
+               test_pair.first.meta['year'] == test_pair.second.meta['year'] \
+                    and \
+               test_pair.first.meta['idx'] == test_pair.second.meta['idx']:
+                csv_writer.writerow([params_dict['scorers'],
+                                     params_dict['calibrators'],
+                                     params_dict['experiment_id'],
+                                     f"enfsi_{test_pair.first.meta['year']}_{test_pair.first.meta['idx']}",
+                                     lr_predicted[i],
+                                     ])
+
+
+def get_enfsi_lrs():
+    enfsi_data = {
+        '2011': {
+            'header_row': 1,
+            'no_of_pictures': 30,
+            'no_of_participants': 17
+        },
+        '2012': {
+            'header_row': 1,
+            'no_of_pictures': 30,
+            'no_of_participants': 9
+        },
+        '2013': {
+            'header_row': 0,
+            'no_of_pictures': 40,
+            'no_of_participants': 23
+        },
+        '2017': {
+            'header_row': 1,
+            'no_of_pictures': 35,
+            'no_of_participants': 25
+        },
+    }
+
+    columns_df = ['Groundtruth', 'pictures', 'pair_id']
+    df_enfsi = pd.DataFrame(columns=columns_df)
+    columns_df.extend([n for n in range(1, 40 + 1)])
+
+    for year in ['2011', '2012', '2013', '2017']:
+        df_temp = pd.read_excel(os.path.join('resources', 'enfsi',
+                                             'Proficiency_test.xlsx'),
+                                sheet_name=year,
+                                header=enfsi_data[year]['header_row'])
+
+        columns = ['Groundtruth', 'pictures']
+        columns.extend([n for n in range(1, enfsi_data[year][
+            'no_of_participants'] + 1)])
+        df_temp = df_temp[columns]
+        df_temp = df_temp.loc[
+            df_temp['pictures'].isin(range(1, enfsi_data[year][
+                'no_of_pictures'] + 1))]
+        df_temp = df_temp.rename(columns=dict([[i, f'{year}-{i}'] for i in
+                                                range(100)]))
+        df_temp['pair_id'] = df_temp.apply(
+            lambda row: f'enfsi_{year}_{row.pictures}', axis=1)
+
+        df_enfsi = df_enfsi.append(df_temp)
+
+    return df_enfsi.replace('-', 0)
+

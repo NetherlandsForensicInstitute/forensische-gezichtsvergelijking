@@ -77,7 +77,7 @@ class ExperimentSettings:
                     df = df.append(tmp_df, sort=True)
                 else:
                     df = tmp_df
-
+        df['experiment_id'] = range(len(df))
         df = pd.concat([df] * repeat_n_times, ignore_index=True)
         if df is not None:
             df = df.reset_index()
