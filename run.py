@@ -47,7 +47,8 @@ def run(args):
         results = experiment(params_dict,
                              calibration_pairs,
                              test_pairs,
-                             make_plots_and_save_as)
+                             make_plots_and_save_as,
+                             experiment_name)
 
         for k, v in results.items():
             experiments_setup.data_frame.loc[row, k] = v
@@ -58,11 +59,13 @@ def run(args):
 
 
 def experiment(
-        params,
+        params: dict,
         calibration_pairs: List[FacePair],
         test_pairs: List[FacePair],
-        make_plots_and_save_as: Optional[str] = None
+        make_plots_and_save_as: Optional[str] = None,
+        experiment_name: Optional[str]=None
 ) -> Dict[str, float]:
+    # TODO: naam make_plots_and_save_as veranderen? Nu ook opslaan van data
     """
     Function to run a single experiment with pipeline:
     - Fit model on train data
@@ -73,6 +76,7 @@ def experiment(
     :param calibration_pairs: List[FacePair]
     :param test_pairs: List[FacePair]
     :param make_plots_and_save_as: str
+    :param experiment_name: str
     :return: Dict[str, float]
     """
     lr_system = CalibratedScorer(params['scorers'], params['calibrators'])
@@ -81,7 +85,8 @@ def experiment(
         X=p[:, 1],
         y=[int(pair.same_identity) for pair in calibration_pairs]
     )
-    return evaluate(lr_system, test_pairs, make_plots_and_save_as)
+    return evaluate(lr_system, test_pairs, params,
+                    make_plots_and_save_as, experiment_name)
 
 
 if __name__ == '__main__':

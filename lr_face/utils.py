@@ -2,6 +2,7 @@ import argparse
 import os
 import re
 from functools import lru_cache
+from csv import writer
 
 import cv2
 import numpy as np
@@ -236,3 +237,35 @@ def cache(func):
     A thin wrapper around `lru_cache` so we don't have to specify a `maxsize`.
     """
     return lru_cache(maxsize=None)(func)
+
+
+def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
+                       experiment_name):
+
+    output_file = os.path.join('.', 'output',
+                               f'{experiment_name}_lr_results.csv')
+
+    # TODO: dataset toevoegen als dit leesbaar is
+    field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id', 'LR']
+
+    if not os.path.exists(output_file):
+        with open(output_file, 'w', newline='') as f:
+            csv_writer = writer(f, delimiter=',')
+            csv_writer.writerow(field_names)
+
+    with open(output_file, 'a+', newline='') as f:
+        csv_writer = writer(f, delimiter=',')
+        for lr, pair in zip(lr_predicted, test_pairs):
+             # only save for enfsi pairs
+             if 'idx' in pair.first.meta \
+                    and pair.first.meta['year'] == pair.second.meta['year'] \
+                    and pair.first.meta['idx'] == pair.second.meta['idx']:
+                pair_id='enfsi_'+pair.first.meta['year']+'_'+pair.first.meta[
+                    'idx'],
+                csv_writer.writerow([params_dict['scorers'],
+                                 params_dict['calibrators'],
+                                 params_dict['experiment_id'],
+                                 pair_id,
+                                 lr,
+                                 ])
+    # TODO: evt alleen van enfsi-data de gegevens opslaan
