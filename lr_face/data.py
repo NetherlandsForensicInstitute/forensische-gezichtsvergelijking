@@ -7,7 +7,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import islice
-from typing import Dict, Any, Tuple, List, Optional, Union, Iterator
+from typing import Dict, Any, Tuple, List, Optional, Union, Iterator, Callable
 
 import cv2
 import numpy as np
@@ -39,9 +39,12 @@ class FaceImage:
     meta: Dict[str, Any] = None
 
     @cache
-    def get_image(self,
-                  resolution: Optional[Tuple[int, int]] = None,
-                  normalize: bool = False) -> np.ndarray:
+    def get_image(
+            self,
+            resolution: Optional[Tuple[int, int]] = None,
+            normalize: bool = False,
+            augmenter: Optional[Callable[[np.ndarray], np.ndarray]] = None
+    ) -> np.ndarray:
         """
         Returns a 3D array of shape `(height, width, num_channels)`. Optionally
         a `resolution` may be specified as a `(height, width)` tuple to resize
@@ -51,6 +54,7 @@ class FaceImage:
 
         :param resolution: Optional[Tuple[int, int]]
         :param normalize: bool
+        :param augmenter: Optional[Callable[[np.ndarray], np.ndarray]]
         :return: np.ndarray
         """
         res = cv2.imread(self.path)
@@ -58,6 +62,8 @@ class FaceImage:
             raise ValueError(f'Reading {self.path} resulted in None')
         if res.shape[-1] != 3:
             raise ValueError(f'Expected 3 channels, got {res.shape[-1]}')
+        if augmenter:
+            res = augmenter(res)
         if resolution:
             res = cv2.resize(res, (resolution[1], resolution[0]))
         if normalize:
@@ -144,9 +150,12 @@ class DummyFaceImage(FaceImage):
     """
 
     @cache
-    def get_image(self,
-                  resolution: Optional[Tuple[int, int]] = None,
-                  normalize: bool = False) -> np.ndarray:
+    def get_image(
+            self,
+            resolution: Optional[Tuple[int, int]] = None,
+            normalize: bool = False,
+            augmenter: Optional[Callable[[np.ndarray], np.ndarray]] = None
+    ) -> np.ndarray:
         """
         Since dummy instances don't have a real path, we override the
         `get_image()` method to just return random pixel data.
@@ -154,6 +163,9 @@ class DummyFaceImage(FaceImage):
         if not resolution:
             resolution = (100, 100)
         image = np.random.random(size=(*resolution, 3))
+        if augmenter:
+            image = augmenter(image)
+        image = cv2.resize(image, (resolution[1], resolution[0]))
         if normalize:
             image = image / 255
         return image
@@ -266,7 +278,6 @@ class ForenFaceDataset(Dataset):
 
 class LfwDataset(Dataset):
     RESOURCE_FOLDER = os.path.join('resources', 'lfw')
-    PAIRS_FILE = 'pairs.txt'
 
     @property
     @cache
@@ -289,8 +300,8 @@ class LfwDataset(Dataset):
     @cache
     def pairs(self) -> List[FacePair]:
         pairs = []
-        with open(os.path.join(self.RESOURCE_FOLDER, self.PAIRS_FILE),
-                  'r') as f:
+        pairs_path = os.path.join(self.RESOURCE_FOLDER, self.pairs_file)
+        with open(pairs_path, 'r') as f:
             # The first line tells us how many splits in the data there are,
             # and how many positive and negative pairs there are per split.
             # This second number is therefore half the split size, since each
@@ -320,6 +331,10 @@ class LfwDataset(Dataset):
                     ))
         return pairs
 
+    @property
+    def pairs_file(self) -> str:
+        return 'pairs.txt'
+
     def _create_face_image(self, person: str, idx: int) -> FaceImage:
         return FaceImage(
             path=self._get_path(person, idx),
@@ -345,70 +360,29 @@ class LfwDataset(Dataset):
                             f'{person}_{idx:04}.jpg')
 
 
-class DevLfwDataset(LfwDataset):
+class LfwDevDataset(LfwDataset):
+    """
+    A variant of the LFW dataset that can be used for development. It is a
+    subset of the full LFW dataset. The constructor takes a boolean `training`
+    argument that allows you to toggle between predefined train (True) and test
+    (False) sets.
+    """
+
+    def __init__(self, training: bool):
+        super().__init__()
+        self.training = training
+
     @property
     @cache
     def images(self) -> List[FaceImage]:
-        images = []
-        with open(os.path.join(self.RESOURCE_FOLDER, self.PAIRS_FILE),
-                  'r') as f:
-            num_lines = int(f.readline())
-            lines = iter(line.strip() for line in f.readlines())
-
-            # The first half of the lines in each split consists of
-            # positive pairs (images with the same identity).
-            positive_lines = islice(lines, num_lines)
-            for line in positive_lines:
-                person, idx1, idx2 = line.split('\t')
-                images.append(self._create_face_image(person, int(idx1)))
-                images.append(self._create_face_image(person, int(idx2)))
-
-            # The second half consists of negative pairs (images with
-            # different identities).
-            negative_lines = islice(lines, num_lines)
-            for line in negative_lines:
-                person1, idx1, person2, idx2 = line.split('\t')
-                images.append(self._create_face_image(person1, int(idx1)))
-                images.append(self._create_face_image(person2, int(idx2)))
-        return list(set(images))
+        return list(set(x for pair in self.pairs for x in pair))
 
     @property
-    @cache
-    def pairs(self) -> List[FacePair]:
-        pairs = []
-        with open(os.path.join(self.RESOURCE_FOLDER, self.PAIRS_FILE),
-                  'r') as f:
-            num_lines = int(f.readline())
-            lines = iter(line.strip() for line in f.readlines())
+    def pairs_file(self) -> str:
+        return 'pairs_train.txt' if self.training else 'pairs_test.txt'
 
-            # The first half of the lines in each split consists of
-            # positive pairs (images with the same identity).
-            positive_lines = islice(lines, num_lines)
-            for line in positive_lines:
-                person, idx1, idx2 = line.split('\t')
-                pairs.append(FacePair(
-                    self._create_face_image(person, int(idx1)),
-                    self._create_face_image(person, int(idx2))
-                ))
-
-            # The second half consists of negative pairs (images with
-            # different identities).
-            negative_lines = islice(lines, num_lines)
-            for line in negative_lines:
-                person1, idx1, person2, idx2 = line.split('\t')
-                pairs.append(FacePair(
-                    self._create_face_image(person1, int(idx1)),
-                    self._create_face_image(person2, int(idx2))
-                ))
-        return pairs
-
-
-class TrainLfwDataset(DevLfwDataset):
-    PAIRS_FILE = 'lfw_pairs_train.txt'
-
-
-class TestLfwDataset(DevLfwDataset):
-    PAIRS_FILE = 'lfw_pairs_test.txt'
+    def __str__(self):
+        return f'{super().__str__()}[training={self.training}]'
 
 
 class EnfsiDataset(Dataset):
@@ -638,12 +612,15 @@ def make_triplets(data: Union[Dataset, List[FaceImage]]) -> List[FaceTriplet]:
     return triplets
 
 
-def to_array(data: Union[Dataset,
-                         List[FaceImage],
-                         List[FacePair],
-                         List[FaceTriplet]],
-             resolution: Optional[Tuple[int, int]] = None,
-             normalize: bool = True) -> Union[np.ndarray, List[np.ndarray]]:
+def to_array(
+        data: Union[Dataset,
+                    List[FaceImage],
+                    List[FacePair],
+                    List[FaceTriplet]],
+        resolution: Optional[Tuple[int, int]] = None,
+        normalize: bool = True,
+        augmenter: Optional[Callable[[np.ndarray], np.ndarray]] = None
+) -> Union[np.ndarray, List[np.ndarray]]:
     """
     Converts the `data` to one or more numpy arrays of the appropriate shape.
     This method accepts a variety of data types. Depending on the input, one of
@@ -664,13 +641,17 @@ def to_array(data: Union[Dataset,
     resized to the same dimensions. If no `resolution` is provided, it is
     assumed all images already have the same dimensions.
 
-    If `normalize` is True, the pixel values will also
-    be normalized. See the `FaceImage.get_image()` docstring for more
-    information on how this normalization is done.
+    If `normalize` is True, the pixel values will also be normalized. See the
+    `FaceImage.get_image()` docstring for more information on how this
+    normalization is done.
+
+    If an `augmenter` is specified, all images will be augmented using this
+    `augmenter` function.
 
     :param data:
     :param resolution: Optional[Tuple[int, int]]
     :param normalize: bool
+    :param augmenter: Optional[Callable[[np.ndarray], np.ndarray]]
     :return: Union[np.ndarray, List[np.ndarray]]
     """
 
@@ -683,7 +664,11 @@ def to_array(data: Union[Dataset,
     # When `data` is a `Dataset` or a list of `FaceImage` instances.
     if isinstance(data, Dataset) or all(
             isinstance(x, FaceImage) for x in data):
-        image_data = [x.get_image(resolution, normalize) for x in data]
+        image_data = [x.get_image(
+            resolution,
+            normalize,
+            augmenter
+        ) for x in data]
         if len(set([x.shape for x in image_data])) > 1:
             raise ValueError(
                 'Not all images have the same dimensions, '
@@ -698,7 +683,8 @@ def to_array(data: Union[Dataset,
         return [to_array(
             x,
             resolution,
-            normalize
+            normalize,
+            augmenter
         ) for x in map(list, zip(*data))]
 
     # If we haven't returned something by now it means an invalid data type
