@@ -99,8 +99,8 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
 
 
 def evaluate(lr_system: CalibratedScorer,
+             params_dict: Dict,
              test_pairs: List[FacePair],
-             params_dict: dict,
              make_plots_and_save_as: Optional[str] = None,
              experiment_name=None) -> Dict[str, float]:
     """

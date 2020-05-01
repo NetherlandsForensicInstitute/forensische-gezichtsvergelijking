@@ -70,9 +70,8 @@ def experiment(
         calibration_pairs: List[FacePair],
         test_pairs: List[FacePair],
         make_plots_and_save_as: Optional[str] = None,
-        experiment_name: Optional[str]=None
+        experiment_name: Optional[str] = None
 ) -> Dict[str, float]:
-    # TODO: naam make_plots_and_save_as veranderen? Nu ook opslaan van data
     """
     Function to run a single experiment with pipeline:
     - Fit model on train data
@@ -92,8 +91,11 @@ def experiment(
         X=p[:, 1],
         y=[int(pair.same_identity) for pair in calibration_pairs]
     )
-    return evaluate(lr_system, test_pairs, params,
-                    make_plots_and_save_as, experiment_name)
+    return evaluate(lr_system=lr_system,
+                    params_dict=params,
+                    test_pairs=test_pairs,
+                    make_plots_and_save_as=make_plots_and_save_as,
+                    experiment_name=experiment_name)
 
 
 if __name__ == '__main__':

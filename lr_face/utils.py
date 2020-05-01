@@ -1,13 +1,13 @@
 import argparse
 import os
 import re
-from functools import lru_cache
 from csv import writer
+from functools import lru_cache
 
 import cv2
 import numpy as np
-import tensorflow as tf
 import pandas as pd
+import tensorflow as tf
 from keras.preprocessing import image
 from pandas import DataFrame
 
@@ -205,10 +205,10 @@ def get_facevacs_log_lrs() -> DataFrame:
 
     # do ad hoc calibration
     # TODO
-    df['facevacs'] = np.log10(df['score']/(1-df['score']))
+    df['facevacs'] = np.log10(df['score'] / (1 - df['score']))
     # add pair id
     df['pair_id'] = df.apply(
-            lambda row: f'enfsi_{int(row.year)}_{int(row.query)}', axis=1)
+        lambda row: f'enfsi_{int(row.year)}_{int(row.query)}', axis=1)
     return df[['pair_id', 'facevacs']]
 
 
@@ -242,7 +242,6 @@ def cache(func):
 
 def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
                        experiment_name):
-
     output_file = os.path.join('.', 'output',
                                f'{experiment_name}_lr_results.csv')
 
@@ -259,14 +258,65 @@ def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
         csv_writer = writer(f, delimiter=',')
         for lr, pair in zip(lr_predicted, test_pairs):
             # only save for enfsi pairs
-            if 'idx' in pair.first.meta \
+            if pair.first.identity[0:5] == 'ENFSI' \
                     and pair.first.meta['year'] == pair.second.meta['year'] \
                     and pair.first.meta['idx'] == pair.second.meta['idx']:
-                pair_id=f"enfsi_{pair.first.meta['year']}_" \
-                        f"{pair.first.meta['idx']}"
+                pair_id = f"enfsi_{pair.first.meta['year']}_" \
+                          f"{pair.first.meta['idx']}"
                 csv_writer.writerow([params_dict['scorers'],
                                      params_dict['calibrators'],
                                      params_dict['experiment_id'],
                                      pair_id,
                                      np.log10(lr),
                                      ])
+
+
+def get_enfsi_lrs():
+    enfsi_data = {
+        '2011': {
+            'header_row': 1,
+            'no_of_pictures': 30,
+            'no_of_participants': 17
+        },
+        '2012': {
+            'header_row': 1,
+            'no_of_pictures': 30,
+            'no_of_participants': 9
+        },
+        '2013': {
+            'header_row': 0,
+            'no_of_pictures': 40,
+            'no_of_participants': 23
+        },
+        '2017': {
+            'header_row': 1,
+            'no_of_pictures': 35,
+            'no_of_participants': 25
+        },
+    }
+
+    columns_df = ['Groundtruth', 'pictures', 'pair_id']
+    df_enfsi = pd.DataFrame(columns=columns_df)
+    columns_df.extend([n for n in range(1, 40 + 1)])
+
+    for year in ['2011', '2012', '2013', '2017']:
+        df_temp = pd.read_excel(os.path.join('resources', 'enfsi',
+                                             'Proficiency_test.xlsx'),
+                                sheet_name=year,
+                                header=enfsi_data[year]['header_row'])
+
+        columns = ['Groundtruth', 'pictures']
+        columns.extend([n for n in range(1, enfsi_data[year][
+            'no_of_participants'] + 1)])
+        df_temp = df_temp[columns]
+        df_temp = df_temp.loc[
+            df_temp['pictures'].isin(range(1, enfsi_data[year][
+                'no_of_pictures'] + 1))]
+        df_temp = df_temp.rename(columns=dict([(i, f'{year}-{i}') for i in
+                                               range(100)]))
+        df_temp['pair_id'] = df_temp.apply(
+            lambda row: f'enfsi_{year}_{row.pictures}', axis=1)
+
+        df_enfsi = df_enfsi.append(df_temp)
+
+    return df_enfsi.replace('-', 0)

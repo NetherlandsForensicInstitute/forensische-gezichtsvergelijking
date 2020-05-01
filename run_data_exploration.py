@@ -16,7 +16,7 @@ import streamlit as st
 # -train_calibrate_same_data
 from lir import Xy_to_Xn, calculate_cllr
 
-from lr_face.utils import get_facevacs_log_lrs
+from lr_face.utils import get_facevacs_log_lrs, get_enfsi_lrs
 
 research_question = 'train_calibrate_same_data'
 
@@ -42,55 +42,8 @@ def get_csv(csv):
 
 
 @st.cache
-def get_enfsi_lrs():
-    enfsi_data = {
-        '2011': {
-            'header_row': 1,
-            'no_of_pictures': 30,
-            'no_of_participants': 17
-        },
-        '2012': {
-            'header_row': 1,
-            'no_of_pictures': 30,
-            'no_of_participants': 9
-        },
-        '2013': {
-            'header_row': 0,
-            'no_of_pictures': 40,
-            'no_of_participants': 23
-        },
-        '2017': {
-            'header_row': 1,
-            'no_of_pictures': 35,
-            'no_of_participants': 25
-        },
-    }
-
-    columns_df = ['Groundtruth', 'pictures', 'pair_id']
-    df_enfsi = pd.DataFrame(columns=columns_df)
-    columns_df.extend([n for n in range(1, 40 + 1)])
-
-    for year in ['2011', '2012', '2013', '2017']:
-        df_temp = pd.read_excel(os.path.join('resources', 'enfsi',
-                                             'Proficiency_test.xlsx'),
-                                sheet_name=year,
-                                header=enfsi_data[year]['header_row'])
-
-        columns = ['Groundtruth', 'pictures']
-        columns.extend([n for n in range(1, enfsi_data[year][
-            'no_of_participants'] + 1)])
-        df_temp = df_temp[columns]
-        df_temp = df_temp.loc[
-            df_temp['pictures'].isin(range(1, enfsi_data[year][
-                'no_of_pictures'] + 1))]
-        df_temp = df_temp.rename(columns=dict([[i, f'{year}-{i}'] for i in
-                                               range(100)]))
-        df_temp['pair_id'] = df_temp.apply(
-            lambda row: f'enfsi_{year}_{row.pictures}', axis=1)
-
-        df_enfsi = df_enfsi.append(df_temp)
-
-    return df_enfsi.replace('-', 0)
+def get_enfsi_lrs_cacheable():
+    return get_enfsi_lrs()
 
 
 st.title('Data exploration for face comparison models')
@@ -133,7 +86,7 @@ if research_question == 'train_calibrate_same_data':
     st.header('Metrics for each combination of dataset, scorer and '
               'calibrator:')
     for metric in ('cllr', 'auc', 'accuracy'):
-        st.altair_chart(alt.Chart(df_exp).mark_boxplot().encode(
+        st.altair_chart(alt.Chart(df_exp, width=40).mark_boxplot().encode(
             x='datasets',
             y=alt.Y(metric,
                     scale=alt.Scale(domain=[0, 1.2])
@@ -178,14 +131,13 @@ st.header('LR results')
 latest_lr_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
     'lr_results.csv')])[-1]
 
-
 def get_cllr_df(df_lrs):
     cllrs = []
     all_lrs_per_year = defaultdict(list)
     for rater in df_lrs.columns:
         if rater not in ['Groundtruth', 'pictures', 'pair_id', 'res_pair_id']:
             df_lr_y = df_lrs[False == pd.isna(df_lrs[rater])][[rater,
-                                                               'Groundtruth']]
+                                                              'Groundtruth']]
             if len(df_lr_y) > 0:
                 X1, X2 = Xy_to_Xn(10 ** df_lr_y[rater],
                                   df_lr_y['Groundtruth'])
@@ -204,7 +156,6 @@ def get_cllr_df(df_lrs):
         cllrs.append([group, group + '-all', round(cllr_results.cllr, 4),
                       round(cllr_results.cllr_min, 4)])
     return pd.DataFrame(cllrs, columns=['rater', 'group', 'cllr', 'cllr_min'])
-
 
 if len(latest_lr_csv) == 0 or latest_exp_csv[:19] != latest_lr_csv[:19]:
     st.markdown('No LR results available.')
@@ -255,9 +206,9 @@ else:
                     ).encode(x='group',y='cllr_min').interactive())
 
     df_lrs_long = pd.melt(df_lrs, id_vars='res_pair_id', value_vars=list(
-        df_lrs)[3:-1], var_name='model', value_name='logLR')
+        df_lrs)[3:-1], var_name='lr_assigner', value_name='logLR')
 
-    df_lrs_long.loc[df_lrs_long['model'].str.len() < 8, 'model'] = 'expert'
+    df_lrs_long.loc[df_lrs_long['lr_assigner'].str.len() < 8, 'lr_assigner'] = 'expert'
 
     set_calibrators = list(set(df_models['calibrators']))
     set_scorers = list(set(df_models['scorers']))
@@ -276,7 +227,7 @@ else:
             scale=alt.Scale(),
         ),
         y=alt.Y('logLR:Q'),
-        color=alt.Color('model:N'),
+        color=alt.Color('lr_assigner:N'),
         column=alt.Column(
             'res_pair_id:N',
             header=alt.Header(
