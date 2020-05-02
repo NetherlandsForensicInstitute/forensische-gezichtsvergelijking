@@ -7,7 +7,7 @@ from lir import (LogitCalibrator,
                  IsotonicCalibrator,
                  DummyCalibrator)
 
-from lr_face.data import TestDataset, EnfsiDataset, LfwDataset
+from lr_face.data import TestDataset, EnfsiDataset, LfwDataset, SCDataset
 from lr_face.models import DummyScorerModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
@@ -53,7 +53,7 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['lfw'],
+    'current_set_up': ['SC'],
     'all': {
         'test': {
             'datasets': [TestDataset()],
@@ -66,6 +66,10 @@ DATA = {
         'lfw': {
             'datasets': [LfwDataset()],
             'fraction_test': .9,
+            },
+         'SC': {
+            'datasets': [SCDataset(imagetype = ['frontal','rotated','surveillance'])],
+            'fraction_test': .9,   
         }
     }
 }
@@ -74,12 +78,15 @@ DATA = {
 New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
+
 SCORERS = {
     'current_set_up': ['dummy',
                        'openface',
                        'facenet',
                        'vggface',
-                       'fbdeepface'],
+                       'fbdeepface',
+                       'arcface'                       
+                       ],
     'all': {
         'dummy': DummyScorerModel(),
         # TODO: specify tags to use below.
@@ -87,6 +94,7 @@ SCORERS = {
         'facenet': Architecture.FACENET.get_scorer_model(tag=None),
         'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
         'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
+        'arcface':Architecture.ARCFACE.get_scorer_model(tag=None)
     }
 }
 
