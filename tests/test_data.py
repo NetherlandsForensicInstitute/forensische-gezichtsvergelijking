@@ -138,7 +138,7 @@ def test_lfw_dataset_has_correct_num_images(lfw):
 
 @skip_if_missing_dataset(LfwDataset)
 def test_lfw_dataset_has_correct_num_pairs(lfw):
-    assert len(lfw.pairs) == 6000
+    assert len(lfw.predefined_pairs) == 6000
 
 
 ##################
@@ -152,8 +152,8 @@ def test_enfsi_dataset_has_correct_num_images(enfsi_all):
 
 @skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
-    assert len(enfsi_all.pairs) == 135
-    assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.pairs])
+    assert len(enfsi_all.predefined_pairs) == 135
+    assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.predefined_pairs])
 
 
 ###############
@@ -279,8 +279,8 @@ def test_enfsi_dataset_has_correct_num_images(enfsi_all):
 
 @skip_if_missing_dataset(EnfsiDataset)
 def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
-    assert len(enfsi_all.pairs) == 135
-    assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.pairs])
+    assert len(enfsi_all.predefined_pairs) == 135
+    assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.predefined_pairs])
 
 
 ###############

@@ -33,9 +33,9 @@ def run(args):
         params_dict = \
             experiments_setup.data_frame[parameters_used].iloc[row].to_dict()
         if isinstance(params_dict['datasets'], Dataset) and \
-                params_dict['datasets'].pairs:
+                params_dict['datasets'].predefined_pairs:
             calibration_pairs, test_pairs = \
-                train_test_split(params_dict['datasets'].pairs,
+                train_test_split(params_dict['datasets'].predefined_pairs,
                                  test_size=params_dict['fraction_test'])
         else:
             calibration_pairs, test_pairs = map(make_pairs, split_by_identity(

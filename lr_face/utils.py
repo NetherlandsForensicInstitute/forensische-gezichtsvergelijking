@@ -203,8 +203,7 @@ def get_facevacs_log_lrs() -> DataFrame:
     # drop those without scores
     df.dropna(inplace=True)
 
-    # do ad hoc calibration
-    # TODO
+    # currently, we do no calibration, just take probabilities at face value
     df['facevacs'] = np.log10(df['score'] / (1 - df['score']))
     # add pair id
     df['pair_id'] = df.apply(

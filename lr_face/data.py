@@ -176,7 +176,7 @@ class Dataset:
 
     @property
     @cache
-    def pairs(self) -> List[FacePair]:
+    def predefined_pairs(self) -> List[FacePair]:
         """
         Subclasses can override this method if the dataset has a
         specific set of pairs associated with it (where not all images are used
@@ -286,7 +286,7 @@ class LfwDataset(Dataset):
 
     @property
     @cache
-    def pairs(self) -> List[FacePair]:
+    def predefined_pairs(self) -> List[FacePair]:
         pairs = []
         with open(os.path.join(self.RESOURCE_FOLDER, 'pairs.txt'), 'r') as f:
             # The first line tells us how many splits in the data there are,
@@ -391,7 +391,7 @@ class EnfsiDataset(Dataset):
 
     @property
     @cache
-    def pairs(self) -> List[FacePair]:
+    def predefined_pairs(self) -> List[FacePair]:
         pairs = []
         for first, second in zip(self.images[0::2], self.images[1::2]):
             # Check if the images are in the right order (i.e. every pair of
