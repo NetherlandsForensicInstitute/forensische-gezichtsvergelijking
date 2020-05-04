@@ -137,6 +137,7 @@ class EmbeddingModel:
         self.tag = tag
 
     def save_weights(self, tag: Tag):
+        os.makedirs(self.model_dir, exist_ok=True)
         weights_path = self.get_weights_path(tag)
         self.model.save_weights(weights_path, overwrite=False)
         self.tag = tag
@@ -275,7 +276,6 @@ class Architecture(Enum):
         if isinstance(tag, str):
             tag = Tag(tag)
         base_model = self.get_model()
-        os.makedirs(self.model_dir, exist_ok=True)
         cls = TripletEmbeddingModel if use_triplets else EmbeddingModel
         return cls(
             base_model,

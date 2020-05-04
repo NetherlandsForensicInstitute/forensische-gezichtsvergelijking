@@ -518,7 +518,7 @@ def loadModel():
     reshape_layer = Flatten()(av_pool)
     dense_layer = Dense(128, name='dense_layer')(reshape_layer)
     norm_layer = Lambda(
-        lambda x: K.l2_normalize(x, axis=1),
+        lambda x: tf.math.l2_normalize(x, axis=1),
         name='norm_layer'
     )(dense_layer)
 
