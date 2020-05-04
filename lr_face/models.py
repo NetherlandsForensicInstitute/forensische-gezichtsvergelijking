@@ -172,7 +172,7 @@ class TripletEmbeddingModel(EmbeddingModel):
               num_epochs: int,
               optimizer: tf.keras.optimizers.Optimizer,
               loss: TripletLoss,
-              augmenter: Optional[Callable[[np.ndarray], np.ndarray]] = None):
+              augmenter: Optional[Augmenter] = None):
 
         def generator():
             while True:

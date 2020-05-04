@@ -15,6 +15,8 @@ from sklearn.model_selection import GroupShuffleSplit
 
 from lr_face.utils import cache
 
+Augmenter = Callable[[np.ndarray], np.ndarray]
+
 
 @dataclass
 class FaceImage:
@@ -43,7 +45,7 @@ class FaceImage:
             self,
             resolution: Optional[Tuple[int, int]] = None,
             normalize: bool = False,
-            augmenter: Optional[Callable[[np.ndarray], np.ndarray]] = None
+            augmenter: Optional[Augmenter] = None
     ) -> np.ndarray:
         """
         Returns a 3D array of shape `(height, width, num_channels)`. Optionally
@@ -54,7 +56,7 @@ class FaceImage:
 
         :param resolution: Optional[Tuple[int, int]]
         :param normalize: bool
-        :param augmenter: Optional[Callable[[np.ndarray], np.ndarray]]
+        :param augmenter: Optional[Augmenter]
         :return: np.ndarray
         """
         res = cv2.imread(self.path)
@@ -154,7 +156,7 @@ class DummyFaceImage(FaceImage):
             self,
             resolution: Optional[Tuple[int, int]] = None,
             normalize: bool = False,
-            augmenter: Optional[Callable[[np.ndarray], np.ndarray]] = None
+            augmenter: Optional[Augmenter] = None
     ) -> np.ndarray:
         """
         Since dummy instances don't have a real path, we override the
@@ -619,7 +621,10 @@ def to_array(
                     List[FaceTriplet]],
         resolution: Optional[Tuple[int, int]] = None,
         normalize: bool = True,
-        augmenter: Optional[Callable[[np.ndarray], np.ndarray]] = None
+        augmenter: Union[
+            Optional[Augmenter],
+            Tuple[Optional[Augmenter], ...]
+        ] = None
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """
     Converts the `data` to one or more numpy arrays of the appropriate shape.
@@ -645,13 +650,25 @@ def to_array(
     `FaceImage.get_image()` docstring for more information on how this
     normalization is done.
 
-    If an `augmenter` is specified, all images will be augmented using this
-    `augmenter` function.
+    The type of `augmenter` should be compatible with that of `data`, i.e.:
+        - If `data` is a `Dataset` or a list of `FaceImage` instances,
+            `augmenter` should be a single `Augmenter` or None;
+        - If `data` is a list of `FacePair` instances, `augmenter` should be a
+            2-tuple, where each element is either an `Augmenter` or None.
+        - If `data` is a list of `FaceTriplet` instances, `augmenter` should be
+            3-tuple, where each element is either an `Augmenter` or None.
+    If only a single `Augmenter` is specified, but `data` is a list of
+    `FacePair` or `FaceTriplet` instances, that augmenter is applied to all
+    images in each pair or triplet. Otherwise, if `augmenter` is a tuple, the
+    first Augmenter is applied to the first or anchor image in each pair or
+    triplet, the second Augmenter is applied to the second or positive image in
+    each pair or triplet and the third Augmenter is applied to the negative
+    image in each triplet, respectively.
 
     :param data:
     :param resolution: Optional[Tuple[int, int]]
     :param normalize: bool
-    :param augmenter: Optional[Callable[[np.ndarray], np.ndarray]]
+    :param augmenter: Union[Optional[Augmenter]
     :return: Union[np.ndarray, List[np.ndarray]]
     """
 
@@ -684,8 +701,8 @@ def to_array(
             x,
             resolution,
             normalize,
-            augmenter
-        ) for x in map(list, zip(*data))]
+            augmenter[i] if hasattr(augmenter, '__getitem__') else augmenter
+        ) for i, x in enumerate(map(list, zip(*data)))]
 
     # If we haven't returned something by now it means an invalid data type
     # was passed along, so we let the user know about that.
