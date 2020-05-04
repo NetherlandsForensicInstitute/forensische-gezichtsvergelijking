@@ -6,8 +6,8 @@ from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, \
     plot_score_distribution_and_calibrator_fit
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-from lr_face.utils import save_predicted_lrs
 from lr_face.data import FacePair
+from lr_face.utils import save_predicted_lrs
 
 
 def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):

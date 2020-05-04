@@ -7,7 +7,8 @@ from lir import (LogitCalibrator,
                  IsotonicCalibrator,
                  DummyCalibrator)
 
-from lr_face.data import TestDataset, EnfsiDataset, LfwDataset, SCDataset
+from lr_face.data import TestDataset, EnfsiDataset, LfwDataset, \
+    ForenFaceDataset, SCDataset
 from lr_face.models import DummyScorerModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
@@ -62,7 +63,7 @@ DATA = {
         },
         'enfsi': {
             'datasets': [EnfsiDataset(years=[2011, 2012, 2013, 2017])],
-            'fraction_test': .2,
+            'fraction_test': .5,
         },
         'enfsi-separate': {
             'datasets': [
@@ -70,11 +71,15 @@ DATA = {
                 EnfsiDataset(years=[2012]),
                 EnfsiDataset(years=[2013]),
                 EnfsiDataset(years=[2017])],
-            'fraction_test': .9,
+            'fraction_test': .5,
         },
         'lfw': {
             'datasets': [LfwDataset()],
             'fraction_test': .9,
+        },
+        'forenface': {
+            'datasets': [ForenFaceDataset()],
+            'fraction_test': .5,
             },
          'SC': {
             'datasets': [SCDataset(imagetype = ['frontal','rotated','surveillance'])],
@@ -120,6 +125,6 @@ CALIBRATORS = {
         'elub_KDE': ELUBbounder(KDECalibrator()),
         'dummy': DummyCalibrator(),
         'fraction': FractionCalibrator(),
-        'isotonic': IsotonicCalibrator()
+        'isotonic': IsotonicCalibrator(add_one=True)
     }
 }

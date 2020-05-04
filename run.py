@@ -5,9 +5,10 @@ from typing import List, Optional, Dict
 
 import confidence
 from lir import CalibratedScorer
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from lr_face.data import FacePair, split_by_identity, make_pairs
+from lr_face.data import FacePair, split_by_identity, make_pairs, Dataset
 from lr_face.evaluators import evaluate
 from lr_face.experiment_settings import ExperimentSettings
 from lr_face.utils import write_output, parser_setup, process_dataframe
@@ -31,10 +32,16 @@ def run(args):
     for row in tqdm(range(n_experiments)):
         params_dict = \
             experiments_setup.data_frame[parameters_used].iloc[row].to_dict()
-        calibration_pairs, test_pairs = map(make_pairs, split_by_identity(
-            data=params_dict['datasets'],
-            test_size=params_dict['fraction_test']
-        ))
+        if isinstance(params_dict['datasets'], Dataset) and \
+                params_dict['datasets'].predefined_pairs:
+            calibration_pairs, test_pairs = \
+                train_test_split(params_dict['datasets'].predefined_pairs,
+                                 test_size=params_dict['fraction_test'])
+        else:
+            calibration_pairs, test_pairs = map(make_pairs, split_by_identity(
+                data=params_dict['datasets'],
+                test_size=params_dict['fraction_test']
+            ))
 
         make_plots_and_save_as = None
         # For the first round, make plots
@@ -59,13 +66,12 @@ def run(args):
 
 
 def experiment(
-        params,
+        params: dict,
         calibration_pairs: List[FacePair],
         test_pairs: List[FacePair],
         make_plots_and_save_as: Optional[str] = None,
         experiment_name: Optional[str] = None
 ) -> Dict[str, float]:
-
     """
     Function to run a single experiment with pipeline:
     - Fit model on train data
@@ -85,7 +91,6 @@ def experiment(
         X=p[:, 1],
         y=[int(pair.same_identity) for pair in calibration_pairs]
     )
-
     return evaluate(lr_system=lr_system,
                     params_dict=params,
                     test_pairs=test_pairs,
