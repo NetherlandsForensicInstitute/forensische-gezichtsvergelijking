@@ -8,14 +8,14 @@ import pickle
 import random
 import re
 from enum import Enum
-from typing import Tuple, List, Optional, Union, Callable
+from typing import Tuple, List, Optional, Union
 
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
 from tensorflow.python.keras.layers import Flatten, Dense, Input
 
-from lr_face.data import FaceImage, FacePair, FaceTriplet, to_array
+from lr_face.data import FaceImage, FacePair, FaceTriplet, to_array, Augmenter
 from lr_face.losses import TripletLoss
 from lr_face.utils import cache
 from lr_face.versioning import Tag
@@ -172,7 +172,10 @@ class TripletEmbeddingModel(EmbeddingModel):
               num_epochs: int,
               optimizer: tf.keras.optimizers.Optimizer,
               loss: TripletLoss,
-              augmenter: Optional[Augmenter] = None):
+              augmenter: Union[Optional[Augmenter],
+                               Tuple[Optional[Augmenter],
+                                     Optional[Augmenter],
+                                     Optional[Augmenter]]] = None):
 
         def generator():
             while True:
