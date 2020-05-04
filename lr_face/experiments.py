@@ -1,5 +1,5 @@
-from datetime import datetime
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List, Dict, Any, Iterator, Tuple, Optional, Union
 
 from sklearn.base import BaseEstimator
@@ -31,7 +31,12 @@ class Experiment:
 
         data_str = '_'.join(data_values)
         params_str = '_'.join(map(str, self.params.values()))
-        return f'{self.scorer}_{self.calibrator}_{data_str}_{params_str}'
+        return '_'.join(map(str, [
+            self.scorer,
+            self.calibrator,
+            data_str,
+            params_str
+        ])).replace(':', '-')  # Windows forbids ':'
 
     def get_calibration_and_test_pairs(self) -> Tuple[
         List[FacePair],
