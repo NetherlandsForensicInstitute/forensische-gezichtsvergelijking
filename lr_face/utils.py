@@ -248,26 +248,30 @@ def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
     field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id',
                    'logLR']
 
-    if not os.path.exists(output_file):
-        with open(output_file, 'w', newline='') as f:
-            csv_writer = writer(f, delimiter=',')
-            csv_writer.writerow(field_names)
+    rows_to_write = []
+    for lr, pair in zip(lr_predicted, test_pairs):
+        # only save for enfsi pairs
+        if pair.first.identity[0:5] == 'ENFSI' \
+                and pair.first.meta['year'] == pair.second.meta['year'] \
+                and pair.first.meta['idx'] == pair.second.meta['idx']:
+            pair_id = f"enfsi_{pair.first.meta['year']}_" \
+                      f"{pair.first.meta['idx']}"
+            rows_to_write.append([params_dict['scorers'],
+                                 params_dict['calibrators'],
+                                 params_dict['experiment_id'],
+                                 pair_id,
+                                 np.log10(lr),
+                                 ])
 
-    with open(output_file, 'a+', newline='') as f:
-        csv_writer = writer(f, delimiter=',')
-        for lr, pair in zip(lr_predicted, test_pairs):
-            # only save for enfsi pairs
-            if pair.first.identity[0:5] == 'ENFSI' \
-                    and pair.first.meta['year'] == pair.second.meta['year'] \
-                    and pair.first.meta['idx'] == pair.second.meta['idx']:
-                pair_id = f"enfsi_{pair.first.meta['year']}_" \
-                          f"{pair.first.meta['idx']}"
-                csv_writer.writerow([params_dict['scorers'],
-                                     params_dict['calibrators'],
-                                     params_dict['experiment_id'],
-                                     pair_id,
-                                     np.log10(lr),
-                                     ])
+    if rows_to_write:
+        if not os.path.exists(output_file):
+            with open(output_file, 'w', newline='') as f:
+                csv_writer = writer(f, delimiter=',')
+                csv_writer.writerow(field_names)
+
+        with open(output_file, 'a+', newline='') as f:
+            csv_writer = writer(f, delimiter=',')
+            csv_writer.writerows(rows_to_write)
 
 
 def get_enfsi_lrs():
