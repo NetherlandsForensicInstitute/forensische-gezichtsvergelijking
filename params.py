@@ -13,6 +13,7 @@ from lr_face.utils import fix_tensorflow_rtx
 
 fix_tensorflow_rtx()
 
+
 """How often to repeat all experiments"""
 
 TIMES = 10
@@ -63,6 +64,14 @@ DATA = {
             'datasets': [EnfsiDataset(years=[2011, 2012, 2013, 2017])],
             'fraction_test': .2,
         },
+        'enfsi-separate': {
+            'datasets': [
+                EnfsiDataset(years=[2011]),
+                EnfsiDataset(years=[2012]),
+                EnfsiDataset(years=[2013]),
+                EnfsiDataset(years=[2017])],
+            'fraction_test': .9,
+        },
         'lfw': {
             'datasets': [LfwDataset()],
             'fraction_test': .9,
@@ -85,7 +94,7 @@ SCORERS = {
                        'facenet',
                        'vggface',
                        'fbdeepface',
-                       'arcface'                       
+                       'arcface'
                        ],
     'all': {
         'dummy': DummyScorerModel(),
