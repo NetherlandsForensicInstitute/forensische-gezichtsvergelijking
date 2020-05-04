@@ -170,12 +170,6 @@ def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
 def test_forenface_dataset_has_correct_num_images(forenface):
     assert len(forenface.images) == 2476
 
-
-@skip_if_missing_dataset(ForenFaceDataset)
-def test_forenface_dataset_has_correct_num_pairs(forenface):
-    assert len(forenface.pairs) == 60798
-
-
 ##################
 # `make_pairs()` #
 ##################

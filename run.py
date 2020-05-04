@@ -26,7 +26,6 @@ def run(scorers, calibrators, data, params):
     output_dir = os.path.join('output', experimental_setup.name)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-
     results = []
     for i, experiment in enumerate(tqdm(experimental_setup)):
         # Make plots for the first round only.

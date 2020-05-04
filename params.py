@@ -11,7 +11,7 @@ from lr_face.data import (TestDataset,
                           EnfsiDataset,
                           LfwDataset,
                           LfwDevDataset,
-                          SCDataset)
+                          SCDataset, ForenFaceDataset)
 from lr_face.models import Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
@@ -56,7 +56,7 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['SC'],
+    'current_set_up': ['enfsi'],
     'all': {
         # Either specify a single dataset as `datasets`, in which case the
         # dataset is split into calibration and test pairs according to the
@@ -84,6 +84,10 @@ DATA = {
         'lfw_sanity_check': {
             'datasets': (LfwDevDataset(True), LfwDevDataset(False)),
             'fraction_test': None  # Can be omitted if `datasets` is a tuple.
+        },
+        'forenface': {
+            'datasets': [ForenFaceDataset()],
+            'fraction_test': .5,
         }
     }
 }
@@ -124,6 +128,6 @@ CALIBRATORS = {
         'elub_KDE': ELUBbounder(KDECalibrator()),
         'dummy': DummyCalibrator(),
         'fraction': FractionCalibrator(),
-        'isotonic': IsotonicCalibrator()
+        'isotonic': IsotonicCalibrator(add_one=True)
     }
 }

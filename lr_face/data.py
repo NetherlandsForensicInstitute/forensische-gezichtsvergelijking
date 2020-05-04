@@ -192,14 +192,14 @@ class Dataset:
     @cache
     def pairs(self) -> List[FacePair]:
         """
-        Returns a list of `FacePair` instances from the images stored in this
-        dataset. Subclasses can override this method if the dataset has a
+        Subclasses can override this method if the dataset has a
         specific set of pairs associated with it (where not all images are used
-        for example).
+        for example). Returns an empty list otherwise, make_pairs should be
+        used on self.images
 
         :return: List[FacePair]
         """
-        return make_pairs(self.images)
+        return []
 
     @property
     @cache
