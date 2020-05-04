@@ -193,7 +193,6 @@ def get_facevacs_log_lrs() -> DataFrame:
     """
     reads the facevacs scores from disk and does an ad hoc calibration
     (could cause overfitting). better option would be to get the API working
-    :return:
     """
     # read in the scores
     df = pd.read_excel(os.path.join('resources', 'enfsi',
