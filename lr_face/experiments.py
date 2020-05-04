@@ -135,7 +135,7 @@ class ExperimentalSetup:
             if isinstance(tag, str):
                 tag = Tag(tag)
             # If no version is specified, use latest version.
-            if not tag.version:
+            if tag and not tag.version:
                 tag.version = architecture.get_latest_version(tag)
             return architecture.get_scorer_model(tag)
 
