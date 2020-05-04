@@ -38,6 +38,10 @@ class FaceImage:
     # metadata about the image can be stored.
     meta: Dict[str, Any] = None
 
+    # annotation of the yaw (looking sideways) of the face. 0 for frontal, 4
+    # for sideways, 1,2,3 for intermediate. -1 for unknown.
+    yaw: int = -1
+
     @cache
     def get_image(self,
                   resolution: Optional[Tuple[int, int]] = None,
@@ -61,7 +65,7 @@ class FaceImage:
         if resolution:
             res = cv2.resize(res, (resolution[1], resolution[0]))
         if normalize:
-            #TODO : Check if image is already normalized before dividing.
+            # TODO : Check if image is already normalized before dividing.
             res = res / 255
         return res
 
@@ -342,93 +346,96 @@ class LfwDataset(Dataset):
         """
         return os.path.join(cls.RESOURCE_FOLDER, f'{person}',
                             f'{person}_{idx:04}.jpg')
-    
-    
-    
-class SCDataset(Dataset):   
+
+
+class SCDataset(Dataset):
     RESOURCE_FOLDER = os.path.join('resources', 'SCface')
-    
+
     def __init__(self, imagetype: List[str]):
         self.imagetype = imagetype
-    
-    
+
     @property
     @cache
     def images(self) -> List[FaceImage]:
         data = []
-        
+
         for type in self.imagetype:
             if type == 'frontal':
-                folder = os.path.join(self.RESOURCE_FOLDER, 'mugshot_frontal_cropped_all')
+                folder = os.path.join(self.RESOURCE_FOLDER,
+                                      'mugshot_frontal_cropped_all')
                 for filename in os.listdir(folder):
-                    path = os.path.join(folder,filename)
+                    path = os.path.join(folder, filename)
                     identity = filename[0:3]
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=0,
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose' : str('frontal'),
                             'cam': None,
-                            'dist' : None                            
+                            'dist': None
                         }
-                    ))                   
-                
-                
+                    ))
+
             elif type == 'rotated':
-                folder = os.path.join(self.RESOURCE_FOLDER, 'mugshot_rotation_all')
-                
+                folder = os.path.join(self.RESOURCE_FOLDER,
+                                      'mugshot_rotation_all')
+
                 for filename in os.listdir(folder):
-                    path = os.path.join(folder,filename)                    
+                    path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     identity = filename[0:3]
-                    pose = name[4:]
+                    # we ignore information on left/right, just take the angle
+                    # 0 is frontal, 4 is sideways (1,2,3 intermediate steps)
+                    if name[4:] == 'frontal':
+                        pose = 0
+                    else:
+                        pose = int(name[5:])
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=pose,
                         source=str(self),
                         meta={
                             'cropped': False,
-                            'pose' : pose,
                             'cam': None,
-                            'dist' : None                            
+                            'dist': None
                         }
-                    ))  
-                
+                    ))
+
             elif type == 'surveillance':
-                folder = os.path.join(self.RESOURCE_FOLDER, 'surveillance_cameras_all')
-                
+                folder = os.path.join(self.RESOURCE_FOLDER,
+                                      'surveillance_cameras_all')
+
                 for filename in os.listdir(folder):
-                    path = os.path.join(folder,filename)                    
+                    path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     atrib = name.split('_')
                     identity = atrib[0]
                     cam = atrib[1]
-                    if len(atrib)>2:
+                    if len(atrib) > 2:
                         dist = atrib[2]
                     else:
                         dist = None
-                    
+
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=0,
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose' : 'frontal',
                             'cam': cam,
-                            'dist' : dist                            
+                            'dist': dist
                         }
-                    ))  
-                
+                    ))
+
             else:
-                raise ValueError(f'Imagetype string value {type} is incorrect (frontal, rotated, surveillance')
-        
-        
+                raise ValueError(
+                    f'Imagetype string value {type} is incorrect (frontal, rotated, surveillance')
+
         return data
-        
-    
 
 
 class EnfsiDataset(Dataset):

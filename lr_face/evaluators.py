@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,8 +6,8 @@ from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, \
     plot_score_distribution_and_calibrator_fit
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-from lr_face.utils import save_predicted_lrs
 from lr_face.data import FacePair
+from lr_face.utils import save_predicted_lrs
 
 
 def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):
@@ -26,6 +26,25 @@ def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):
         plt.show()
 
 
+def plot_performance_as_function_of_yaw(scores,
+                                        test_pairs: List[FacePair],
+                                        y_test,
+                                        savefig: Optional[str] = None,
+                                        show: Optional[bool] = None):
+    """
+    plots the scores as a function of the maximum yaw (=looking sideways) on
+    the images, coloured by ground truth
+    """
+
+    # give it a slight offset so both classes are visible
+    yaws = [max(pair.first.yaw, pair.second.yaw) - 0.1 + 0.2 * int(y) for
+            pair, y in zip(test_pairs, y_test)]
+    label = 'yaw (0=frontal)'
+    plot_performance_as_a_function_of_x(yaws, scores, y_test, label, savefig,
+                                        show, bins=[(i - .5, i + .5) for i in
+                                                    range(5)])
+
+
 def plot_performance_as_function_of_resolution(scores,
                                                test_pairs: List[FacePair],
                                                y_test,
@@ -36,22 +55,48 @@ def plot_performance_as_function_of_resolution(scores,
     plots the scores as a function of the minimum resolution found on the
     two images of the pair, coloured by ground truth
     """
-    plt.figure(figsize=(10, 10), dpi=100)
 
     if show_ratio:
-        resolutions = [np.prod(pair.first.get_image().shape[:2])/
+        resolutions = [np.prod(pair.first.get_image().shape[:2]) /
                        np.prod(pair.second.get_image().shape[:2]) for
                        pair in test_pairs]
         label = 'ratio pixels'
     else:
         resolutions = [min(np.prod(pair.first.get_image().shape[:2]),
-                            np.prod(pair.second.get_image().shape[:2]))/10**6
+                           np.prod(
+                               pair.second.get_image().shape[:2])) / 10 ** 6
                        for pair in test_pairs]
         label = 'Mpixels (smallest image)'
+
+    plot_performance_as_a_function_of_x(resolutions, scores, y_test, label,
+                                        savefig, show)
+
+
+def plot_performance_as_a_function_of_x(
+        properties: List[float],
+        scores: List[float],
+        y_test: List[Union[int, bool]],
+        x_label: str, savefig: str, show: bool,
+        bins: Optional[List[Tuple[float, float]]] = None):
+    """
+    plots the scores as a function of some vector of properties, coloured by
+    ground truth. Includes mean in each of the bins, if provided
+    """
+    plt.figure(figsize=(10, 10), dpi=100)
     colors = list(map(lambda x: 'blue' if x else 'red', y_test))
-    plt.scatter(resolutions, scores, c=colors)
-    plt.xlabel(label)
+    plt.scatter(properties, scores, c=colors)
+    plt.xlabel(x_label)
     plt.ylabel('score')
+    if bins:
+        for bin in bins:
+            avg = np.mean([score for score, prop, y in
+                           zip(scores, properties, y_test)
+                           if bin[0] < prop < bin[1] and y])
+            plt.plot(bin, [avg, avg], c='blue')
+            avg = np.mean([score for score, prop, y in
+                           zip(scores, properties, y_test)
+                           if bin[0] < prop < bin[1] and not y])
+            plt.plot(bin, [avg, avg], c='red')
     if savefig is not None:
         plt.savefig(savefig)
         plt.close()
@@ -118,7 +163,10 @@ def evaluate(lr_system: CalibratedScorer,
 
         plot_performance_as_function_of_resolution(scores, test_pairs, y_test,
                                                    show_ratio=False,
-            savefig=f'{make_plots_and_save_as} scores against resolution.png')
+                                                   savefig=f'{make_plots_and_save_as} scores against resolution.png')
+
+        plot_performance_as_function_of_yaw(scores, test_pairs, y_test,
+                                            savefig=f'{make_plots_and_save_as} scores against yaw.png')
 
         plot_score_distribution_and_calibrator_fit(
             calibrator,

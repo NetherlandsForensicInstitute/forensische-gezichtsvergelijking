@@ -13,7 +13,6 @@ from lr_face.utils import fix_tensorflow_rtx
 
 fix_tensorflow_rtx()
 
-
 """How often to repeat all experiments"""
 
 TIMES = 10
@@ -75,10 +74,11 @@ DATA = {
         'lfw': {
             'datasets': [LfwDataset()],
             'fraction_test': .9,
-            },
-         'SC': {
-            'datasets': [SCDataset(imagetype = ['frontal','rotated','surveillance'])],
-            'fraction_test': .9,   
+        },
+        'SC': {
+            'datasets': [
+                SCDataset(imagetype=['frontal', 'rotated', 'surveillance'])],
+            'fraction_test': .9,
         }
     }
 }
@@ -103,7 +103,7 @@ SCORERS = {
         'facenet': Architecture.FACENET.get_scorer_model(tag=None),
         'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
         'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
-        'arcface':Architecture.ARCFACE.get_scorer_model(tag=None)
+        'arcface': Architecture.ARCFACE.get_scorer_model(tag=None)
     }
 }
 
