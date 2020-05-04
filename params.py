@@ -8,7 +8,7 @@ from lir import (LogitCalibrator,
                  DummyCalibrator)
 
 from lr_face.data import TestDataset, EnfsiDataset, LfwDataset, \
-    ForenFaceDataset
+    ForenFaceDataset, SCDataset
 from lr_face.models import DummyScorerModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
@@ -55,7 +55,7 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['SC'],
     'all': {
         'test': {
             'datasets': [TestDataset()],
@@ -80,6 +80,10 @@ DATA = {
         'forenface': {
             'datasets': [ForenFaceDataset()],
             'fraction_test': .5,
+            },
+         'SC': {
+            'datasets': [SCDataset(imagetype = ['frontal','rotated','surveillance'])],
+            'fraction_test': .9,   
         }
     }
 }
@@ -88,6 +92,7 @@ DATA = {
 New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
+
 SCORERS = {
     'current_set_up': ['dummy',
                        'openface',
@@ -96,7 +101,6 @@ SCORERS = {
                        'fbdeepface',
                        'arcface'
                        ],
-
     'all': {
         'dummy': DummyScorerModel(),
         # TODO: specify tags to use below.
