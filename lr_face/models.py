@@ -10,6 +10,7 @@ import re
 from enum import Enum
 from typing import Tuple, List, Optional, Union
 
+import cv2
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
@@ -22,6 +23,7 @@ from lr_face.versioning import Tag
 
 EMBEDDINGS_DIR = 'embeddings'
 WEIGHTS_DIR = 'weights'
+AUGMENT_RESOLUTION = (50, 50)
 
 
 class DummyModel(tf.keras.Sequential):
@@ -56,9 +58,15 @@ class ScorerModel:
         """
         scores = []
         cache_dir = EMBEDDINGS_DIR
+
+        def augmenter(image):
+            return cv2.resize(image, AUGMENT_RESOLUTION)
+
         for pair in X:
-            embedding1 = self.embedding_model.embed(pair.first, cache_dir)
-            embedding2 = self.embedding_model.embed(pair.second, cache_dir)
+            embedding1 = self.embedding_model.embed(
+                pair.first, augmenter, cache_dir)
+            embedding2 = self.embedding_model.embed(
+                pair.second, None, cache_dir)
             score = spatial.distance.cosine(embedding1, embedding2)
             scores.append([score, 1 - score])
         return np.asarray(scores)
@@ -89,6 +97,7 @@ class EmbeddingModel:
     @cache
     def embed(self,
               image: FaceImage,
+              augmenter: Optional[Augmenter] = None,
               cache_dir: Optional[str] = None) -> np.ndarray:
         """
         Computes an embedding of the `image`. Returns a 1D array of shape
@@ -99,10 +108,13 @@ class EmbeddingModel:
         is typically faster than recomputing the embedding.
 
         :param image: FaceImage
+        :param augmenter: Optional[Augmenter]
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
-        x = image.get_image(self.resolution, normalize=True)
+        x = image.get_image(self.resolution,
+                            normalize=True,
+                            augmenter=augmenter)
         x = np.expand_dims(x, axis=0)
         if cache_dir:
             output_path = os.path.join(
