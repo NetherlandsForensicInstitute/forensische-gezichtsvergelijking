@@ -76,9 +76,9 @@ DATA = {
             'fraction_test': .9,
         },
         'SC': {
-            'datasets': SCDataset(imagetype=['frontal',
-                                             'rotated',
-                                             'surveillance']),
+            'datasets': SCDataset(image_types=['frontal',
+                                               'rotated',
+                                               'surveillance']),
             'fraction_test': .9,
         },
         'lfw_sanity_check': {
@@ -94,12 +94,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['dummy',
-                       'openface',
-                       'facenet',
-                       'vggface',
-                       'fbdeepface',
-                       'arcface'],
+    'current_set_up': ['dummy'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
