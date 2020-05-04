@@ -111,6 +111,7 @@ SCORERS = {
         'facenet': (Architecture.FACENET, None),
         'fbdeepface': (Architecture.FBDEEPFACE, None),
         'vggface': (Architecture.VGGFACE, None),
+        'arcface': (Architecture.ARCFACE, None),
         'lfw_sanity_check': (Architecture.VGGFACE, 'lfw_resized_50')
     }
 }
