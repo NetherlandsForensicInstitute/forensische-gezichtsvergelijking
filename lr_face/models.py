@@ -245,11 +245,17 @@ class Architecture(Enum):
     FACENET = 'Facenet'
     FBDEEPFACE = 'FbDeepFace'
     OPENFACE = 'OpenFace'
+    ARCFACE = 'ArcFace'
 
     @cache
     def get_model(self):
+        #TODO : unify cases
         if self.source == 'deepface':
             module_name = f'deepface.basemodels.{self.value}'
+            module = importlib.import_module(module_name)
+            return module.loadModel()
+        elif self.source == 'insightface':
+            module_name = f'insightface.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
         raise ValueError("Unable to load base model")
@@ -340,6 +346,10 @@ class Architecture(Enum):
                            self.FACENET,
                            self.FBDEEPFACE,
                            self.OPENFACE]
+        insightface_models = [self.ARCFACE]
+        
         if self in deepface_models:
             return 'deepface'
+        elif self in insightface_models:
+            return 'insightface'
         raise ValueError("Unknown model source.")

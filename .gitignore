@@ -17,3 +17,6 @@ __pycache__
 /scratch
 /resources/*
 .DS_Store
+
+/insightface/checkpoints/*
+**/**/__pycache__
