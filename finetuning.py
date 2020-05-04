@@ -40,7 +40,8 @@ def main(architecture: str, tag: str):
                                       NUM_EPOCHS,
                                       OPTIMIZER,
                                       LOSS,
-                                      augmenter)
+                                      # Apply augmenter to anchors only.
+                                      augmenter=(augmenter, None, None))
     # Allow user to manually interrupt training while still saving weights.
     except KeyboardInterrupt:
         pass

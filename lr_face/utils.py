@@ -85,8 +85,7 @@ def parse_object_string(obj_string, name_only=False):
     return obj_dict
 
 
-def create_dataframe(experimental_setup: 'ExperimentalSetup',
-                     results: List[Dict]) -> pd.DataFrame:
+def create_dataframe(experimental_setup, results: List[Dict]) -> pd.DataFrame:
     df = pd.DataFrame({
         'scorers': [e.scorer for e in experimental_setup],
         'calibrators': [e.calibrator for e in experimental_setup],
