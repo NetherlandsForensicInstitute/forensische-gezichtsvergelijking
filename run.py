@@ -32,8 +32,7 @@ def run(scorers, calibrators, data, params):
         # Make plots for the first round only.
         make_plots_and_save_as = None
         if i < len(experimental_setup) / TIMES:
-            make_plots_and_save_as = os.path.join(
-                output_dir, str(experiment).replace(':', '-'))
+            make_plots_and_save_as = os.path.join(output_dir, str(experiment))
         results.append(perform_experiment(experiment, make_plots_and_save_as))
 
     df = create_dataframe(experimental_setup, results)
