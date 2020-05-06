@@ -1,9 +1,11 @@
 FROM nvidia/cuda:10.0-cudnn7-runtime-ubuntu18.04
 
-ENV http_proxy "http://172.17.26.15:8080"
-ENV https_proxy "http://172.17.26.15:8080"
-ENV HTTP_PROXY "http://172.17.26.15:8080"
-ENV HTTPS_PROXY "http://172.17.26.15:8080"
+ARG http_proxy
+ENV http_proxy = $(http_proxy)
+ENV https_proxy = $(http_proxy)
+ENV HTTP_PROXY = $(http_proxy)
+ENV HTTPS_PROXY = $(http_proxy)
+
 ENV DEBIAN_FRONTEND noninteractive
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/compat/
 

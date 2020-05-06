@@ -64,13 +64,13 @@ To use the streamlit app, write in terminal: `streamlit run run_data_exploration
 
 Building the container
 ```bash
-docker build . -f Dockerfile -t <image_name>
+docker build . -f Dockerfile -t <image_name> --build-arg http_proxy=<http_proxy_value>
 ```
 
 Pushing the container to the DGX
 ```bash
-docker tag <image_name> dgxstation01.holmes.nl:5000/<image_name>
-docker push dgxstation01.holmes.nl:5000/<image_name>
+docker tag <image_name> <dgx_address>/<image_name>
+docker push <dgx_address>/<image_name>
 ```
 
 To run a model on the DGX, you first need to mount the weights and dataset folder. 
