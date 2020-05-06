@@ -64,7 +64,7 @@ To use the streamlit app, write in terminal: `streamlit run run_data_exploration
 
 Building the container
 ```bash
-docker build . -f Dockerfile -t <image_name> --build-arg http_proxy=<http_proxy_value>
+docker build . -f Dockerfile -t <image_name> --build-arg http_proxy=$HTTP_PROXY
 ```
 
 Pushing the container to the DGX

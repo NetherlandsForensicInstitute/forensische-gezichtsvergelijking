@@ -1,25 +1,20 @@
-FROM nvidia/cuda:10.0-cudnn7-runtime-ubuntu18.04
+FROM nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04
 
 ARG http_proxy
-ENV http_proxy = $(http_proxy)
-ENV https_proxy = $(http_proxy)
-ENV HTTP_PROXY = $(http_proxy)
-ENV HTTPS_PROXY = $(http_proxy)
+ENV http_proxy=$http_proxy
+ENV https_proxy=$http_proxy
+ENV HTTP_PROXY=$http_proxy
+ENV HTTPS_PROXY=$http_proxy
 
 ENV DEBIAN_FRONTEND noninteractive
-ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/compat/
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.1/compat/
 
 RUN apt-get update && apt-get install -y --fix-missing \
     nano \
-    vim \
-    unzip \
-    git \
     wget \
     python3.7 \
     python3-distutils \
     python-pil \
-    python-lxml \
-    python3-tk \
     libsm6 \
     libxext6 \
     libxrender-dev \
@@ -42,4 +37,3 @@ COPY lr_face /app/lr_face
 COPY deepface /app/deepface
 
 RUN apt-get clean && rm -rf /tmp/* /var/tmp/*
-
