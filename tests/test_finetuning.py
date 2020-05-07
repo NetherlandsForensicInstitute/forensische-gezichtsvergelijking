@@ -8,9 +8,12 @@ from tensorflow.keras.optimizers import Adam
 from lr_face.data import FaceImage, DummyFaceImage, FacePair, make_pairs, \
     FaceTriplet, make_triplets
 from lr_face.losses import TripletLoss
-from lr_face.models import TripletEmbeddingModel, EmbeddingModel
+from lr_face.models import TripletEmbeddingModel, EmbeddingModel, Architecture
+from lr_face.utils import fix_tensorflow_rtx
 from lr_face.versioning import Tag
 from tests.src.util import scratch_dir, get_tests_path
+
+fix_tensorflow_rtx()
 
 SCRATCH_DIR = get_tests_path('scratch/finetuning')
 
@@ -76,15 +79,11 @@ def dummy_triplets() -> List[FaceTriplet]:
     return make_triplets(images)
 
 
-def test_can_load_weights_from_training_model_into_embedding_model(
-        dummy_triplets,
-        scratch
+def finetune_and_embed(
+        triplet_embedding_model: TripletEmbeddingModel,
+        triplets: List[FaceTriplet]
 ):
-    input_shape = (10, 10, 3)
-    base_model = get_dummy_base_model(input_shape)
-    triplet_embedding_model = get_dummy_triplet_embedding_model(base_model)
-
-    dummy_image = dummy_triplets[0].anchor
+    dummy_image = triplets[0].anchor
     y_original = triplet_embedding_model.embed(dummy_image)
 
     batch_size = 1
@@ -92,7 +91,7 @@ def test_can_load_weights_from_training_model_into_embedding_model(
     optimizer = Adam(learning_rate=3e-4)
     loss = TripletLoss(alpha=0.5, force_normalization=True)
     triplet_embedding_model.train(
-        dummy_triplets,
+        triplets,
         batch_size,
         num_epochs,
         optimizer,
@@ -103,8 +102,83 @@ def test_can_load_weights_from_training_model_into_embedding_model(
     triplet_embedding_model.save_weights(tag)
     y_trained = triplet_embedding_model.embed(dummy_image)
 
-    embedding_model = get_dummy_embedding_model(base_model)
-    embedding_model.load_weights(tag)
-    y_restored = embedding_model.embed(dummy_image)
+    triplet_embedding_model.load_weights(tag)
+    y_restored = triplet_embedding_model.embed(dummy_image)
+    return y_original, y_trained, y_restored
+
+
+def test_can_load_weights_from_training_model_into_embedding_model(
+        dummy_triplets,
+        scratch
+):
+    input_shape = (10, 10, 3)
+    base_model = get_dummy_base_model(input_shape)
+    triplet_embedding_model = get_dummy_triplet_embedding_model(base_model)
+
+    y_original, y_trained, y_restored = finetune_and_embed(
+        triplet_embedding_model,
+        dummy_triplets
+    )
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+def test_can_finetune_vggface(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.VGGFACE.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+def test_can_finetune_openface(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.OPENFACE.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+def test_can_finetune_fbdeepface(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.FBDEEPFACE.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+def test_can_finetune_facenet(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.FACENET.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+def test_can_finetune_arcface(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.ARCFACE.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
     assert not np.all(y_original == y_trained)
     assert np.all(y_trained == y_restored)
