@@ -71,6 +71,22 @@ DATA = {
             'datasets': EnfsiDataset(years=[2011, 2012, 2013, 2017]),
             'fraction_test': .2,
         },
+        'enfsi2011': {
+            'datasets': EnfsiDataset(years=[2011]),
+            'fraction_test': .2,
+        },
+        'enfsi2012': {
+            'datasets': EnfsiDataset(years=[2012]),
+            'fraction_test': .2,
+        },
+        'enfsi2013': {
+            'datasets': EnfsiDataset(years=[2013]),
+            'fraction_test': .2,
+        },
+        'enfsi2017': {
+            'datasets': EnfsiDataset(years=[2017]),
+            'fraction_test': .2,
+        },
         'lfw': {
             'datasets': LfwDataset(),
             'fraction_test': .9,
@@ -86,7 +102,7 @@ DATA = {
             'fraction_test': None  # Can be omitted if `datasets` is a tuple.
         },
         'forenface': {
-            'datasets': [ForenFaceDataset()],
+            'datasets': ForenFaceDataset(),
             'fraction_test': .5,
         }
     }
