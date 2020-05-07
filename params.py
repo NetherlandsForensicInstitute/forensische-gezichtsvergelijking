@@ -81,11 +81,6 @@ DATA = {
                                                'surveillance']),
             'fraction_test': .9,
         },
-        'SC': {
-            'datasets': [
-                SCDataset(imagetype=['frontal', 'rotated', 'surveillance'])],
-            'fraction_test': .9,
-        },
         'lfw_sanity_check': {
             'datasets': (LfwDevDataset(True), LfwDevDataset(False)),
             'fraction_test': None  # Can be omitted if `datasets` is a tuple.
