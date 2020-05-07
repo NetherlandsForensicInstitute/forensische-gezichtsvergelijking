@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -12,6 +13,7 @@ from lr_face.models import TripletEmbeddingModel, EmbeddingModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
 from lr_face.versioning import Tag
 from tests.src.util import scratch_dir, get_tests_path
+from tests.test_architectures import skip_on_github
 
 fix_tensorflow_rtx()
 
@@ -124,6 +126,7 @@ def test_can_load_weights_from_training_model_into_embedding_model(
     assert np.all(y_trained == y_restored)
 
 
+@skip_on_github
 def test_can_finetune_vggface(
         dummy_triplets,
         scratch
@@ -136,6 +139,7 @@ def test_can_finetune_vggface(
     assert np.all(y_trained == y_restored)
 
 
+@skip_on_github
 def test_can_finetune_openface(
         dummy_triplets,
         scratch
@@ -148,6 +152,7 @@ def test_can_finetune_openface(
     assert np.all(y_trained == y_restored)
 
 
+@skip_on_github
 def test_can_finetune_fbdeepface(
         dummy_triplets,
         scratch
@@ -160,6 +165,7 @@ def test_can_finetune_fbdeepface(
     assert np.all(y_trained == y_restored)
 
 
+@skip_on_github
 def test_can_finetune_facenet(
         dummy_triplets,
         scratch
