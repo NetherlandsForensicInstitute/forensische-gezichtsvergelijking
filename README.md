@@ -76,6 +76,7 @@ docker push <dgx_address>/<image_name>
 To run a model on the DGX, you first need to mount the weights and dataset folder. 
 - host/volume = `/opt/data/FaceLR/weights` with path in container = `/root/.deepface/weights`
 - host/volume = `/opt/data/FaceLR/resources` with path in container = `/app/resources`
+- host/volume = `/opt/data/FaceLR/weights` with path in container = `/app/weights`
 
 Execute the finetuning from inside the Docker container.
 
