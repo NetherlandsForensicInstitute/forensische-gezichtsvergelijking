@@ -9,6 +9,7 @@ from pathlib import Path
 
 def test_github():
     print(str(Path.home()))
+    assert 1>2
 
 
 @pytest.mark.skip(reason="Fails on Github because model weights don't exist")
