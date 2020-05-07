@@ -1,14 +1,16 @@
 import argparse
 import os
-import pandas as pd
 import re
 from csv import writer
 from functools import lru_cache
+from typing import Dict, List
 
 import cv2
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from keras.preprocessing import image
+from pandas import DataFrame
 
 
 def write_output(df, experiment_name):
@@ -32,11 +34,11 @@ def parser_setup():
                         help='Select the type or set of data to be used. Codes can be found in' +
                              '\'params.py\' e.g.: SIM1. Defaults to settings in \'current_set_up\'',
                         nargs='+')
-    parser.add_argument('--scorer', '-s',
+    parser.add_argument('--scorers', '-s',
                         help='Select the scorer to be used. Codes can be found in \'params.py\',' +
                              'e.g.: GB. Defaults to settings in \'current_set_up\'',
                         nargs='+')
-    parser.add_argument('--calibrator', '-c',
+    parser.add_argument('--calibrators', '-c',
                         help='Select the calibrator to be used. Codes can be found in \'params.py\',' +
                              'e.g.: KDE. Defaults to settings in \'current_set_up\'',
                         nargs='+')
@@ -82,6 +84,23 @@ def parse_object_string(obj_string, name_only=False):
                     else:
                         obj_dict['body'][key_val[0].strip()] = None
     return obj_dict
+
+
+def create_dataframe(experimental_setup, results: List[Dict]) -> pd.DataFrame:
+    df = pd.DataFrame({
+        'scorers': [e.scorer for e in experimental_setup],
+        'calibrators': [e.calibrator for e in experimental_setup],
+        **{k: [e.params[k] for e in experimental_setup]
+           for k in experimental_setup.params_keys},
+        **{k: [e.data_config[k] for e in experimental_setup]
+           for k in experimental_setup.data_keys}
+    })
+    for i, result in enumerate(results):
+        for k, v in result.items():
+            df.loc[i, k] = v
+
+    df['index'] = df.index
+    return df
 
 
 def process_dataframe(df):
@@ -188,6 +207,27 @@ def concat_columns(df, column_names, output_column_name, separator='-'):
     return df
 
 
+def get_facevacs_log_lrs() -> DataFrame:
+    """
+    reads the facevacs scores from disk and does an ad hoc calibration
+    (could cause overfitting). better option would be to get the API working
+    """
+    # read in the scores
+    df = pd.read_excel(os.path.join('resources', 'enfsi',
+                                    'results_ENFSI_FaceVacs.xlsx'))
+    df.columns = ['year', 'query', 'score', 'remarks']
+    del df['remarks']
+    # drop those without scores
+    df.dropna(inplace=True)
+
+    # currently, we do no calibration, just take probabilities at face value
+    df['facevacs'] = np.log10(df['score'] / (1 - df['score']))
+    # add pair id
+    df['pair_id'] = df.apply(
+        lambda row: f'enfsi_{int(row.year)}_{int(row.query)}', axis=1)
+    return df[['pair_id', 'facevacs']]
+
+
 def resize_and_normalize(img, target_size):
     right_size_img = cv2.resize(img, target_size)
 
@@ -216,35 +256,41 @@ def cache(func):
     return lru_cache(maxsize=None)(func)
 
 
-def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
-                       experiment_name):
-
-    output_file = os.path.join('.', 'output',
-                               f'{experiment_name}_lr_results.csv')
+def save_predicted_lrs(lr_system,
+                       test_pairs,
+                       lr_predicted,
+                       make_plots_and_save_as):
+    output_file = f'{make_plots_and_save_as}_lr_results.csv'
+    experiment_id = os.path.split(make_plots_and_save_as)[-1]
 
     # TODO: dataset toevoegen als dit leesbaar is
-    field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id', 'LR']
+    field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id',
+                   'logLR']
 
-    if not os.path.exists(output_file):
-        with open(output_file, 'w', newline='') as f:
+    rows_to_write = []
+    for lr, pair in zip(lr_predicted, test_pairs):
+        first, second = pair
+        # only save for enfsi pairs
+        if first.identity[0:5] == 'ENFSI' \
+                and first.meta['year'] == second.meta['year'] \
+                and first.meta['idx'] == second.meta['idx']:
+            pair_id = f"enfsi_{first.meta['year']}_" \
+                      f"{first.meta['idx']}"
+            rows_to_write.append([lr_system.scorer,
+                                  lr_system.calibrator,
+                                  experiment_id,
+                                  pair_id,
+                                  np.log10(lr)])
+
+    if rows_to_write:
+        if not os.path.exists(output_file):
+            with open(output_file, 'w', newline='') as f:
+                csv_writer = writer(f, delimiter=',')
+                csv_writer.writerow(field_names)
+
+        with open(output_file, 'a+', newline='') as f:
             csv_writer = writer(f, delimiter=',')
-            csv_writer.writerow(field_names)
-
-    with open(output_file, 'a+', newline='') as f:
-        csv_writer = writer(f, delimiter=',')
-        for i in range(len(lr_predicted)):
-            test_pair = test_pairs[i]
-            # check if a test_pair is a proper ENFSI pair:
-            if test_pair.first.identity[0:5] == 'ENFSI' and \
-               test_pair.first.meta['year'] == test_pair.second.meta['year'] \
-                    and \
-               test_pair.first.meta['idx'] == test_pair.second.meta['idx']:
-                csv_writer.writerow([params_dict['scorers'],
-                                     params_dict['calibrators'],
-                                     params_dict['experiment_id'],
-                                     f"enfsi_{test_pair.first.meta['year']}_{test_pair.first.meta['idx']}",
-                                     lr_predicted[i],
-                                     ])
+            csv_writer.writerows(rows_to_write)
 
 
 def get_enfsi_lrs():
@@ -288,8 +334,8 @@ def get_enfsi_lrs():
         df_temp = df_temp.loc[
             df_temp['pictures'].isin(range(1, enfsi_data[year][
                 'no_of_pictures'] + 1))]
-        df_temp = df_temp.rename(columns=dict([[i, f'{year}-{i}'] for i in
-                                                range(100)]))
+        df_temp = df_temp.rename(columns=dict([(i, f'{year}-{i}') for i in
+                                               range(100)]))
         df_temp['pair_id'] = df_temp.apply(
             lambda row: f'enfsi_{year}_{row.pictures}', axis=1)
 

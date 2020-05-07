@@ -154,10 +154,8 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
 
 
 def evaluate(lr_system: CalibratedScorer,
-             params_dict: Dict,
              test_pairs: List[FacePair],
-             make_plots_and_save_as: Optional[str] = None,
-             experiment_name=None) -> Dict[str, float]:
+             make_plots_and_save_as: Optional[str]) -> Dict[str, float]:
     """
     Calculates a variety of evaluation metrics and plots data if
     `make_plots_and_save_as` is not None.
@@ -171,12 +169,19 @@ def evaluate(lr_system: CalibratedScorer,
         if type(calibrator) == ELUBbounder:
             calibrator = calibrator.first_step_calibrator
 
-        plot_performance_as_function_of_resolution(scores, test_pairs, y_test,
-                                                   show_ratio=False,
-                                                   savefig=f'{make_plots_and_save_as} scores against resolution.png')
 
-        plot_performance_as_function_of_yaw(scores, test_pairs, y_test,
-                                            savefig=f'{make_plots_and_save_as} scores against yaw.png')
+        plot_performance_as_function_of_yaw(
+            scores,
+            test_pairs,
+            y_test,
+            savefig=f'{make_plots_and_save_as} scores against yaw.png')
+
+        plot_performance_as_function_of_resolution(
+            scores,
+            test_pairs,
+            y_test,
+            show_ratio=False,
+            savefig=f'{make_plots_and_save_as} scores against resolution.png')
 
         plot_score_distribution_and_calibrator_fit(
             calibrator,
@@ -197,10 +202,8 @@ def evaluate(lr_system: CalibratedScorer,
             savefig=f'{make_plots_and_save_as} tippett.png'
         )
 
-        save_predicted_lrs(params_dict=params_dict,
-                           test_pairs=test_pairs,
-                           lr_predicted=lr_predicted,
-                           experiment_name=experiment_name)
+        save_predicted_lrs(
+            lr_system, test_pairs, lr_predicted, make_plots_and_save_as)
 
     return calculate_metrics_dict(
         scores,

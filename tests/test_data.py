@@ -3,6 +3,7 @@ from functools import wraps
 from typing import List
 
 import cv2
+import numpy as np
 import pytest
 
 from lr_face.data import (FaceImage,
@@ -17,8 +18,6 @@ from lr_face.data import (FaceImage,
                           make_triplets,
                           to_array,
                           split_by_identity)
-from lr_face.models import Architecture
-from lr_face.utils import fix_tensorflow_rtx
 from tests.src.util import get_project_path, scratch_dir
 
 
@@ -31,6 +30,13 @@ def dataset_testable(func):
         return dataset
 
     return wrapper
+
+
+def augmenter(image: np.ndarray) -> np.ndarray:
+    """
+    Dummy augmenter that makes each image completely black
+    """
+    return np.zeros(image.shape)
 
 
 def skip_if_missing_dataset(dataset: Dataset):
@@ -163,12 +169,6 @@ def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
 @skip_if_missing_dataset(ForenFaceDataset)
 def test_forenface_dataset_has_correct_num_images(forenface):
     assert len(forenface.images) == 2476
-
-
-@skip_if_missing_dataset(ForenFaceDataset)
-def test_forenface_dataset_has_correct_num_pairs(forenface):
-    assert len(forenface.pairs) == 60798
-
 
 ##################
 # `make_pairs()` #
@@ -368,6 +368,122 @@ def test_face_triplets_to_array(dummy_triplets):
     assert anchors.shape == expected_shape
     assert positives.shape == expected_shape
     assert negatives.shape == expected_shape
+
+
+def test_face_images_to_array_with_augmenter(dummy_images):
+    resolution = (50, 50)
+    expected_shape = (len(dummy_images), *reversed(resolution), 3)
+    array = to_array(dummy_images, resolution, augmenter=None)
+    assert array.shape == expected_shape
+    assert not np.all(array == 0)
+    augmented = to_array(dummy_images, resolution, augmenter=augmenter)
+    assert augmented.shape == expected_shape
+    assert np.all(augmented == 0)
+
+
+def test_face_pairs_to_array_with_augmenters(dummy_pairs):
+    resolution = (50, 50)
+    expected_shape = (len(dummy_pairs), *reversed(resolution), 3)
+    a, b = to_array(dummy_pairs, resolution, augmenter=None)
+    assert a.shape == expected_shape
+    assert b.shape == expected_shape
+    assert not np.all(a == 0)
+    assert not np.all(b == 0)
+    a_augmented, b_augmented = \
+        to_array(dummy_pairs, resolution, augmenter=(augmenter, augmenter))
+    assert a_augmented.shape == expected_shape
+    assert b_augmented.shape == expected_shape
+    assert np.all(a_augmented == 0)
+    assert np.all(b_augmented == 0)
+
+
+def test_face_pairs_to_array_with_single_augmenter(dummy_pairs):
+    resolution = (50, 50)
+    a, b = to_array(dummy_pairs, resolution, augmenter=None)
+    assert not np.all(a == 0)
+    assert not np.all(b == 0)
+    a_augmented, b_augmented = \
+        to_array(dummy_pairs, resolution, augmenter=augmenter)
+    assert np.all(a_augmented == 0)
+    assert np.all(b_augmented == 0)
+
+
+def test_face_pairs_to_array_with_augmenter_only_first(dummy_pairs):
+    resolution = (50, 50)
+    a, b = to_array(dummy_pairs, resolution, augmenter=None)
+    assert not np.all(a == 0)
+    assert not np.all(b == 0)
+    a_augmented, b_augmented = \
+        to_array(dummy_pairs, resolution, augmenter=(augmenter, None))
+    assert np.all(a_augmented == 0)
+    assert np.all(b == b_augmented)
+
+
+def test_face_triplets_to_array_with_augmenters(dummy_triplets):
+    resolution = (50, 50)
+    expected_shape = (len(dummy_triplets), *reversed(resolution), 3)
+    anchors, positives, negatives = to_array(
+        dummy_triplets,
+        resolution,
+        augmenter=None
+    )
+    assert anchors.shape == expected_shape
+    assert positives.shape == expected_shape
+    assert negatives.shape == expected_shape
+    assert not np.all(anchors == 0)
+    assert not np.all(positives == 0)
+    assert not np.all(negatives == 0)
+    anchors_augmented, positives_augmented, negatives_augmented = to_array(
+        dummy_triplets,
+        resolution,
+        augmenter=(augmenter, augmenter, augmenter)
+    )
+    assert anchors_augmented.shape == expected_shape
+    assert positives_augmented.shape == expected_shape
+    assert negatives_augmented.shape == expected_shape
+    assert np.all(anchors_augmented == 0)
+    assert np.all(positives_augmented == 0)
+    assert np.all(negatives_augmented == 0)
+
+
+def test_face_triplets_to_array_with_single_augmenter(dummy_triplets):
+    resolution = (50, 50)
+    anchors, positives, negatives = to_array(
+        dummy_triplets,
+        resolution,
+        augmenter=None
+    )
+    assert not np.all(anchors == 0)
+    assert not np.all(positives == 0)
+    assert not np.all(negatives == 0)
+    anchors_augmented, positives_augmented, negatives_augmented = to_array(
+        dummy_triplets,
+        resolution,
+        augmenter=augmenter
+    )
+    assert np.all(anchors_augmented == 0)
+    assert np.all(positives_augmented == 0)
+    assert np.all(negatives_augmented == 0)
+
+
+def test_face_triplets_to_array_with_augmenter_only_anchor(dummy_triplets):
+    resolution = (50, 50)
+    anchors, positives, negatives = to_array(
+        dummy_triplets,
+        resolution,
+        augmenter=None
+    )
+    assert not np.all(anchors == 0)
+    assert not np.all(positives == 0)
+    assert not np.all(negatives == 0)
+    anchors_augmented, positives_augmented, negatives_augmented = to_array(
+        dummy_triplets,
+        resolution,
+        augmenter=(augmenter, None, None)
+    )
+    assert np.all(anchors_augmented == 0)
+    assert np.all(positives == positives_augmented)
+    assert np.all(negatives == negatives_augmented)
 
 
 #########################

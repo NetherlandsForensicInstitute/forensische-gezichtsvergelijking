@@ -1,100 +1,67 @@
 #!/usr/bin/env python3
 import os
-from datetime import datetime
-from typing import List, Optional, Dict
+from typing import Dict, Optional
 
 import confidence
 from lir import CalibratedScorer
 from tqdm import tqdm
 
-from lr_face.data import FacePair, split_by_identity, make_pairs
 from lr_face.evaluators import evaluate
-from lr_face.experiment_settings import ExperimentSettings
-from lr_face.utils import write_output, parser_setup, process_dataframe
+from lr_face.experiments import ExperimentalSetup, Experiment
+from lr_face.utils import (write_output,
+                           parser_setup,
+                           process_dataframe,
+                           create_dataframe)
 from params import TIMES
 
 
-def run(args):
-    """
-    Run one or more calibration experiments.
-    The ExperimentSettings class generates a dataframe containing the different
-    parameter combinations called in the command line or in params.py.
-    """
-    experiments_setup = ExperimentSettings(args)
-    parameters_used = experiments_setup.input_parameters
-    experiment_name = datetime.now().strftime("%Y-%m-%d %H %M %S")
-    plots_dir = os.path.join('output', experiment_name)
-    if not os.path.exists(plots_dir):
-        os.makedirs(plots_dir)
-
-    n_experiments = experiments_setup.data_frame.shape[0]
-    for row in tqdm(range(n_experiments)):
-        params_dict = \
-            experiments_setup.data_frame[parameters_used].iloc[row].to_dict()
-        calibration_pairs, test_pairs = map(make_pairs, split_by_identity(
-            data=params_dict['datasets'],
-            test_size=params_dict['fraction_test']
-        ))
-
+def run(scorers, calibrators, data, params):
+    experimental_setup = ExperimentalSetup(
+        scorer_names=scorers,
+        calibrator_names=calibrators,
+        data_config_names=data,
+        param_names=params,
+        num_repeats=TIMES
+    )
+    output_dir = os.path.join('output', experimental_setup.name)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    results = []
+    for i, experiment in enumerate(tqdm(experimental_setup)):
+        # Make plots for the first round only.
         make_plots_and_save_as = None
-        # For the first round, make plots
-        if row < n_experiments / TIMES:
-            make_plots_and_save_as = os.path.join(
-                plots_dir,
-                f"{'_'.join([str(v)[:25] for v in params_dict.values()])}"
-            )
+        if i < len(experimental_setup) / TIMES:
+            make_plots_and_save_as = os.path.join(output_dir, str(experiment))
+        results.append(perform_experiment(experiment, make_plots_and_save_as))
 
-        results = experiment(params_dict,
-                             calibration_pairs,
-                             test_pairs,
-                             make_plots_and_save_as,
-                             experiment_name)
-
-        for k, v in results.items():
-            experiments_setup.data_frame.loc[row, k] = v
-
-    experiments_setup.data_frame = \
-        process_dataframe(experiments_setup.data_frame)
-    write_output(experiments_setup.data_frame, experiment_name)
+    df = create_dataframe(experimental_setup, results)
+    df = process_dataframe(df)
+    write_output(df, experimental_setup.name)
 
 
-def experiment(
-        params,
-        calibration_pairs: List[FacePair],
-        test_pairs: List[FacePair],
-        make_plots_and_save_as: Optional[str] = None,
-        experiment_name: Optional[str] = None
+def perform_experiment(
+        experiment: Experiment,
+        make_plots_and_save_as: Optional[str]
 ) -> Dict[str, float]:
-
     """
     Function to run a single experiment with pipeline:
     - Fit model on train data
     - Fit calibrator on calibrator data
     - Evaluate test set
-
-    :param params: Dict
-    :param calibration_pairs: List[FacePair]
-    :param test_pairs: List[FacePair]
-    :param make_plots_and_save_as: str
-    :param experiment_name: str
-    :return: Dict[str, float]
     """
-    lr_system = CalibratedScorer(params['scorers'], params['calibrators'])
+
+    calibration_pairs, test_pairs = experiment.get_calibration_and_test_pairs()
+    lr_system = CalibratedScorer(experiment.scorer, experiment.calibrator)
     p = lr_system.scorer.predict_proba(calibration_pairs)
     lr_system.calibrator.fit(
         X=p[:, 1],
         y=[int(pair.same_identity) for pair in calibration_pairs]
     )
-
-    return evaluate(lr_system=lr_system,
-                    params_dict=params,
-                    test_pairs=test_pairs,
-                    make_plots_and_save_as=make_plots_and_save_as,
-                    experiment_name=experiment_name)
+    return evaluate(lr_system, test_pairs, make_plots_and_save_as)
 
 
 if __name__ == '__main__':
     config = confidence.load_name('lr_face')
     parser = parser_setup()
-    arg = parser.parse_args()
-    run(arg)
+    args = parser.parse_args()
+    run(**vars(args))

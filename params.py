@@ -7,8 +7,12 @@ from lir import (LogitCalibrator,
                  IsotonicCalibrator,
                  DummyCalibrator)
 
-from lr_face.data import TestDataset, EnfsiDataset, LfwDataset, SCDataset
-from lr_face.models import DummyScorerModel, Architecture
+from lr_face.data import (TestDataset,
+                          EnfsiDataset,
+                          LfwDataset,
+                          LfwDevDataset,
+                          SCDataset, ForenFaceDataset)
+from lr_face.models import Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
 fix_tensorflow_rtx()
@@ -22,7 +26,6 @@ Parameters to be used in an experiment, different/new sets can be added under 'a
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
-
     'current_set_up': ['SET1'],
     'all': {
         'SET1': {
@@ -53,32 +56,43 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['SC'],
+    'current_set_up': ['enfsi'],
     'all': {
+        # Either specify a single dataset as `datasets`, in which case the
+        # dataset is split into calibration and test pairs according to the
+        # specified `fraction_test`, or specify a tuple of 2 datasets, in which
+        # case the pairs from the first dataset are used for calibration and
+        # the pairs from the second dataset are used for testing.
         'test': {
-            'datasets': [TestDataset()],
+            'datasets': TestDataset(),
             'fraction_test': .5,
         },
         'enfsi': {
-            'datasets': [EnfsiDataset(years=[2011, 2012, 2013, 2017])],
+            'datasets': EnfsiDataset(years=[2011, 2012, 2013, 2017]),
             'fraction_test': .2,
         },
-        'enfsi-separate': {
-            'datasets': [
-                EnfsiDataset(years=[2011]),
-                EnfsiDataset(years=[2012]),
-                EnfsiDataset(years=[2013]),
-                EnfsiDataset(years=[2017])],
+        'lfw': {
+            'datasets': LfwDataset(),
             'fraction_test': .9,
         },
-        'lfw': {
-            'datasets': [LfwDataset()],
+        'SC': {
+            'datasets': SCDataset(image_types=['frontal',
+                                               'rotated',
+                                               'surveillance']),
             'fraction_test': .9,
         },
         'SC': {
             'datasets': [
                 SCDataset(imagetype=['frontal', 'rotated', 'surveillance'])],
             'fraction_test': .9,
+        },
+        'lfw_sanity_check': {
+            'datasets': (LfwDevDataset(True), LfwDevDataset(False)),
+            'fraction_test': None  # Can be omitted if `datasets` is a tuple.
+        },
+        'forenface': {
+            'datasets': [ForenFaceDataset()],
+            'fraction_test': .5,
         }
     }
 }
@@ -89,21 +103,20 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['dummy',
-                       'openface',
-                       'facenet',
-                       'vggface',
-                       'fbdeepface',
-                       'arcface'
-                       ],
+    'current_set_up': ['dummy'],
     'all': {
-        'dummy': DummyScorerModel(),
-        # TODO: specify tags to use below.
-        'openface': Architecture.OPENFACE.get_scorer_model(tag=None),
-        'facenet': Architecture.FACENET.get_scorer_model(tag=None),
-        'fbdeepface': Architecture.FBDEEPFACE.get_scorer_model(tag=None),
-        'vggface': Architecture.VGGFACE.get_scorer_model(tag=None),
-        'arcface': Architecture.ARCFACE.get_scorer_model(tag=None)
+        # We apply lazy loading to the scorer models since they take up a lot
+        # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
+        # To pin a specific version of a tag, use a colon (':') as a delimiter,
+        # e.g. 'my_tag:2'. If no version is specified, the latest version is
+        # used by default.
+        'dummy': (Architecture.DUMMY, None),
+        'openface': (Architecture.OPENFACE, None),
+        'facenet': (Architecture.FACENET, None),
+        'fbdeepface': (Architecture.FBDEEPFACE, None),
+        'vggface': (Architecture.VGGFACE, None),
+        'arcface': (Architecture.ARCFACE, None),
+        'lfw_sanity_check': (Architecture.VGGFACE, 'lfw_resized_50')
     }
 }
 
@@ -120,6 +133,6 @@ CALIBRATORS = {
         'elub_KDE': ELUBbounder(KDECalibrator()),
         'dummy': DummyCalibrator(),
         'fraction': FractionCalibrator(),
-        'isotonic': IsotonicCalibrator()
+        'isotonic': IsotonicCalibrator(add_one=True)
     }
 }
