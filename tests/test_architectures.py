@@ -7,8 +7,14 @@ import tensorflow as tf
 from lr_face.models import Architecture
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+def skip_on_github(func):
+    return pytest.mark.skipif(
+        str(Path.home()) == '/home/runner',
+        reason="Fails on Github because model weights don't exist"
+    )(func)
+
+
+@skip_on_github
 def test_get_embedding_models():
     """
     Tests whether no exceptions are thrown when we try to load the embedding
@@ -25,18 +31,16 @@ def test_embedding_models_return_normalized_embeddings():
     that are L2-normalized.
     """
     for architecture in Architecture:
-        embedding_model: tf.keras.Model = architecture.get_embedding_model(
-        ).model
-        batch_input_shape = embedding_model.input_shape
+        model = architecture.get_model()
+        batch_input_shape = model.input_shape
         x = np.random.normal(size=(2, *batch_input_shape[1:]))
-        embedding = embedding_model.predict(x)
+        embedding = model.predict(x)
         squared_sum = np.sum(np.square(embedding), axis=1)
         assert np.all((0.999 < squared_sum) & (squared_sum < 1.001)), \
             f"{architecture.value}'s embeddings are not properly L2-normalized"
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+@skip_on_github
 def test_get_triplet_embedding_models():
     """
     Tests whether no exceptions are thrown when we try to load the finetune
@@ -46,49 +50,41 @@ def test_get_triplet_embedding_models():
         architecture.get_triplet_embedding_model()
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+@skip_on_github
 def test_resolution_vggface():
     assert Architecture.VGGFACE.resolution == (224, 224)
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+@skip_on_github
 def test_embedding_size_vggface():
     assert Architecture.VGGFACE.embedding_size == 4096
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+@skip_on_github
 def test_resolution_openface():
     assert Architecture.OPENFACE.resolution == (96, 96)
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+@skip_on_github
 def test_embedding_size_openface():
     assert Architecture.OPENFACE.embedding_size == 128
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+@skip_on_github
 def test_resolution_fbdeepface():
     assert Architecture.FBDEEPFACE.resolution == (152, 152)
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+@skip_on_github
 def test_embedding_size_fbdeepface():
     assert Architecture.FBDEEPFACE.embedding_size == 4096
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+@skip_on_github
 def test_resolution_facenet():
     assert Architecture.FACENET.resolution == (160, 160)
 
 
-@pytest.mark.skipif(str(Path.home()) == '/home/runner',
-                    reason="Fails on Github because model weights don't exist")
+@skip_on_github
 def test_embedding_size_facenet():
     assert Architecture.FACENET.embedding_size == 128
