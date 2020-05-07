@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import math
 import os
 import pickle
+import random
 import re
 from enum import Enum
 from typing import Tuple, List, Optional, Union
@@ -11,8 +13,9 @@ from typing import Tuple, List, Optional, Union
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
+from tensorflow.python.keras.layers import Flatten, Dense, Input
 
-from lr_face.data import FaceImage, FaceTriplet, to_array, FacePair
+from lr_face.data import FaceImage, FacePair, FaceTriplet, to_array, Augmenter
 from lr_face.losses import TripletLoss
 from lr_face.utils import cache
 from lr_face.versioning import Tag
@@ -21,23 +24,14 @@ EMBEDDINGS_DIR = 'embeddings'
 WEIGHTS_DIR = 'weights'
 
 
-class DummyScorerModel:
+class DummyModel(tf.keras.Sequential):
     """
-    Dummy model that returns random scores.
+    A dummy model that takes RGB images with dimensions 100x100 as input and
+    outputs random embeddings with dimensionality 100.
     """
 
-    def __init__(self, resolution=(100, 100)):
-        self.resolution = resolution
-
-    def fit(self, X, y):
-        assert X.shape[1:3] == self.resolution
-        pass
-
-    def predict_proba(self, X: List[FacePair]):
-        return np.random.random(size=(len(X), 2))
-
-    def __str__(self):
-        return 'Dummy'
+    def __init__(self):
+        super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(100)])
 
 
 class ScorerModel:
@@ -70,7 +64,11 @@ class ScorerModel:
         return np.asarray(scores)
 
     def __str__(self) -> str:
-        return f'{self.embedding_model.name}Scorer'
+        name = self.embedding_model.name
+        tag = self.embedding_model.tag
+        if tag:
+            return f'{name}Scorer_{tag}'
+        return name
 
 
 class EmbeddingModel:
@@ -139,6 +137,7 @@ class EmbeddingModel:
         self.tag = tag
 
     def save_weights(self, tag: Tag):
+        os.makedirs(self.model_dir, exist_ok=True)
         weights_path = self.get_weights_path(tag)
         self.model.save_weights(weights_path, overwrite=False)
         self.tag = tag
@@ -173,27 +172,35 @@ class TripletEmbeddingModel(EmbeddingModel):
               batch_size: int,
               num_epochs: int,
               optimizer: tf.keras.optimizers.Optimizer,
-              loss: TripletLoss):
+              loss: TripletLoss,
+              augmenter: Union[Optional[Augmenter],
+                               Tuple[Optional[Augmenter],
+                                     Optional[Augmenter],
+                                     Optional[Augmenter]]] = None):
+
+        def generator():
+            while True:
+                data = random.sample(triplets, len(triplets))
+                for i in range(0, len(data), batch_size):
+                    batch = data[i:i + batch_size]
+                    inputs = to_array(
+                        batch,
+                        resolution=self.resolution,
+                        normalize=True,
+                        augmenter=augmenter
+                    )
+                    y = np.zeros(shape=(len(batch), 1))
+                    yield inputs, y
+
         trainable_model = self.build_trainable_model()
         trainable_model.compile(optimizer, loss)
-        anchors, positives, negatives = to_array(
-            triplets,
-            resolution=self.resolution,
-            normalize=True
-        )
 
-        # The triplet loss that is used to train the model actually does not
-        # need any ground truth labels, since it simply aims to maximize the
-        # difference in distances to the anchor embedding between positive and
-        # negative query images. We create a dummy ground truth variable
-        # because Keras loss functions still expect one.
-        inputs = [anchors, positives, negatives]
-        y = np.zeros(shape=(anchors.shape[0], 1))
-        trainable_model.fit(
-            x=inputs,
-            y=y,
-            batch_size=batch_size,
-            epochs=num_epochs
+        steps_per_epoch = int(math.ceil(len(triplets) / batch_size))
+        trainable_model.fit_generator(
+            generator=generator(),
+            steps_per_epoch=steps_per_epoch,
+            epochs=num_epochs,
+            workers=0  # Without this we get segmentation faults or OOM errors.
         )
 
     def build_trainable_model(self) -> tf.keras.Model:
@@ -241,6 +248,7 @@ class Architecture(Enum):
     scorer_model = Architecture.VGGFACE.get_scorer_model("0.0.1")
     ```
     """
+    DUMMY = 'Dummy'
     VGGFACE = 'VGGFace'
     FACENET = 'Facenet'
     FBDEEPFACE = 'FbDeepFace'
@@ -249,7 +257,7 @@ class Architecture(Enum):
 
     @cache
     def get_model(self):
-        #TODO : unify cases
+        # TODO: unify cases
         if self.source == 'deepface':
             module_name = f'deepface.basemodels.{self.value}'
             module = importlib.import_module(module_name)
@@ -258,6 +266,8 @@ class Architecture(Enum):
             module_name = f'insightface.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
+        if self == self.DUMMY:
+            return DummyModel()
         raise ValueError("Unable to load base model")
 
     def get_embedding_model(self,
@@ -266,7 +276,6 @@ class Architecture(Enum):
         if isinstance(tag, str):
             tag = Tag(tag)
         base_model = self.get_model()
-        os.makedirs(self.model_dir, exist_ok=True)
         cls = TripletEmbeddingModel if use_triplets else EmbeddingModel
         return cls(
             base_model,
@@ -336,20 +345,21 @@ class Architecture(Enum):
         return self.get_model().output_shape[1]
 
     @property
-    def source(self) -> str:
+    def source(self) -> Optional[str]:
         """
-        Returns a textual description of where the model comes from.
+        Returns a textual description of where the model comes from, or None if
+        no source can be determined.
 
-        :return: str
+        :return: Optional[str]
         """
         deepface_models = [self.VGGFACE,
                            self.FACENET,
                            self.FBDEEPFACE,
                            self.OPENFACE]
         insightface_models = [self.ARCFACE]
-        
+
         if self in deepface_models:
             return 'deepface'
-        elif self in insightface_models:
+        if self in insightface_models:
             return 'insightface'
-        raise ValueError("Unknown model source.")
+        return None

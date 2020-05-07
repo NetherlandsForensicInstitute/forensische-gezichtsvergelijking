@@ -9,6 +9,12 @@ def test_create_tag_from_string():
     assert tag.version == 1
 
 
+def test_create_tag_from_string_without_version():
+    tag = Tag('tag')
+    assert tag.name == 'tag'
+    assert tag.version is None
+
+
 def test_create_tag_from_string_double_colon():
     with pytest.raises(ValueError):
         Tag('tag:2:1')
@@ -24,6 +30,13 @@ def test_get_tag_from_filename():
     tag = Tag.from_filename(filename)
     assert tag.name == 'mytag_simple'
     assert tag.version == 2
+
+
+def test_get_tag_from_filename_without_version():
+    filename = 'myfile-mytag_simple.txt'
+    tag = Tag.from_filename(filename)
+    assert tag.name == 'mytag_simple'
+    assert tag.version is None
 
 
 def test_append_to_filename():

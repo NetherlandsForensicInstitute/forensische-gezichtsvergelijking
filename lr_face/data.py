@@ -7,13 +7,15 @@ from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import islice
-from typing import Dict, Any, Tuple, List, Optional, Union, Iterator
+from typing import Dict, Any, Tuple, List, Optional, Union, Iterator, Callable
 
 import cv2
 import numpy as np
 from sklearn.model_selection import GroupShuffleSplit
 
 from lr_face.utils import cache
+
+Augmenter = Callable[[np.ndarray], np.ndarray]
 
 
 @dataclass
@@ -39,9 +41,12 @@ class FaceImage:
     meta: Dict[str, Any] = None
 
     @cache
-    def get_image(self,
-                  resolution: Optional[Tuple[int, int]] = None,
-                  normalize: bool = False) -> np.ndarray:
+    def get_image(
+            self,
+            resolution: Optional[Tuple[int, int]] = None,
+            normalize: bool = False,
+            augmenter: Optional[Augmenter] = None
+    ) -> np.ndarray:
         """
         Returns a 3D array of shape `(height, width, num_channels)`. Optionally
         a `resolution` may be specified as a `(height, width)` tuple to resize
@@ -51,6 +56,7 @@ class FaceImage:
 
         :param resolution: Optional[Tuple[int, int]]
         :param normalize: bool
+        :param augmenter: Optional[Augmenter]
         :return: np.ndarray
         """
         res = cv2.imread(self.path)
@@ -58,10 +64,11 @@ class FaceImage:
             raise ValueError(f'Reading {self.path} resulted in None')
         if res.shape[-1] != 3:
             raise ValueError(f'Expected 3 channels, got {res.shape[-1]}')
+        if augmenter:
+            res = augmenter(res)
         if resolution:
             res = cv2.resize(res, (resolution[1], resolution[0]))
         if normalize:
-            #TODO : Check if image is already normalized before dividing.
             res = res / 255
         return res
 
@@ -145,9 +152,12 @@ class DummyFaceImage(FaceImage):
     """
 
     @cache
-    def get_image(self,
-                  resolution: Optional[Tuple[int, int]] = None,
-                  normalize: bool = False) -> np.ndarray:
+    def get_image(
+            self,
+            resolution: Optional[Tuple[int, int]] = None,
+            normalize: bool = False,
+            augmenter: Optional[Augmenter] = None
+    ) -> np.ndarray:
         """
         Since dummy instances don't have a real path, we override the
         `get_image()` method to just return random pixel data.
@@ -155,6 +165,9 @@ class DummyFaceImage(FaceImage):
         if not resolution:
             resolution = (100, 100)
         image = np.random.random(size=(*resolution, 3))
+        if augmenter:
+            image = augmenter(image)
+        image = cv2.resize(image, (resolution[1], resolution[0]))
         if normalize:
             image = image / 255
         return image
@@ -177,7 +190,7 @@ class Dataset:
 
     @property
     @cache
-    def predefined_pairs(self) -> List[FacePair]:
+    def pairs(self) -> List[FacePair]:
         """
         Subclasses can override this method if the dataset has a
         specific set of pairs associated with it (where not all images are used
@@ -287,9 +300,10 @@ class LfwDataset(Dataset):
 
     @property
     @cache
-    def predefined_pairs(self) -> List[FacePair]:
+    def pairs(self) -> List[FacePair]:
         pairs = []
-        with open(os.path.join(self.RESOURCE_FOLDER, 'pairs.txt'), 'r') as f:
+        pairs_path = os.path.join(self.RESOURCE_FOLDER, self.pairs_file)
+        with open(pairs_path, 'r') as f:
             # The first line tells us how many splits in the data there are,
             # and how many positive and negative pairs there are per split.
             # This second number is therefore half the split size, since each
@@ -319,6 +333,10 @@ class LfwDataset(Dataset):
                     ))
         return pairs
 
+    @property
+    def pairs_file(self) -> str:
+        return 'pairs.txt'
+
     def _create_face_image(self, person: str, idx: int) -> FaceImage:
         return FaceImage(
             path=self._get_path(person, idx),
@@ -342,26 +360,25 @@ class LfwDataset(Dataset):
         """
         return os.path.join(cls.RESOURCE_FOLDER, f'{person}',
                             f'{person}_{idx:04}.jpg')
-    
-    
-    
-class SCDataset(Dataset):   
+
+
+class SCDataset(Dataset):
     RESOURCE_FOLDER = os.path.join('resources', 'SCface')
-    
-    def __init__(self, imagetype: List[str]):
-        self.imagetype = imagetype
-    
-    
+
+    def __init__(self, image_types: List[str]):
+        self.image_types = image_types
+
     @property
     @cache
     def images(self) -> List[FaceImage]:
         data = []
-        
-        for type in self.imagetype:
-            if type == 'frontal':
-                folder = os.path.join(self.RESOURCE_FOLDER, 'mugshot_frontal_cropped_all')
+
+        for image_type in self.image_types:
+            if image_type == 'frontal':
+                folder = os.path.join(
+                    self.RESOURCE_FOLDER, 'mugshot_frontal_cropped_all')
                 for filename in os.listdir(folder):
-                    path = os.path.join(folder,filename)
+                    path = os.path.join(folder, filename)
                     identity = filename[0:3]
                     data.append(FaceImage(
                         path,
@@ -369,18 +386,18 @@ class SCDataset(Dataset):
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose' : str('frontal'),
+                            'pose': 'frontal',
                             'cam': None,
-                            'dist' : None                            
+                            'dist': None
                         }
-                    ))                   
-                
-                
-            elif type == 'rotated':
-                folder = os.path.join(self.RESOURCE_FOLDER, 'mugshot_rotation_all')
-                
+                    ))
+
+            elif image_type == 'rotated':
+                folder = os.path.join(
+                    self.RESOURCE_FOLDER, 'mugshot_rotation_all')
+
                 for filename in os.listdir(folder):
-                    path = os.path.join(folder,filename)                    
+                    path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     identity = filename[0:3]
                     pose = name[4:]
@@ -390,45 +407,70 @@ class SCDataset(Dataset):
                         source=str(self),
                         meta={
                             'cropped': False,
-                            'pose' : pose,
+                            'pose': pose,
                             'cam': None,
-                            'dist' : None                            
+                            'dist': None
                         }
-                    ))  
-                
-            elif type == 'surveillance':
-                folder = os.path.join(self.RESOURCE_FOLDER, 'surveillance_cameras_all')
-                
+                    ))
+
+            elif image_type == 'surveillance':
+                folder = os.path.join(
+                    self.RESOURCE_FOLDER, 'surveillance_cameras_all')
+
                 for filename in os.listdir(folder):
-                    path = os.path.join(folder,filename)                    
+                    path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     atrib = name.split('_')
                     identity = atrib[0]
                     cam = atrib[1]
-                    if len(atrib)>2:
+                    if len(atrib) > 2:
                         dist = atrib[2]
                     else:
                         dist = None
-                    
+
                     data.append(FaceImage(
                         path,
                         identity,
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose' : 'frontal',
+                            'pose': 'frontal',
                             'cam': cam,
-                            'dist' : dist                            
+                            'dist': dist
                         }
-                    ))  
-                
+                    ))
+
             else:
-                raise ValueError(f'Imagetype string value {type} is incorrect (frontal, rotated, surveillance')
-        
-        
+                raise ValueError(
+                    f'Imagetype string value {image_type} is incorrect, should'
+                    f'be one of frontal, rotated or surveillance')
+
         return data
-        
-    
+
+
+class LfwDevDataset(LfwDataset):
+    """
+    A variant of the LFW dataset that can be used for development. It is a
+    subset of the full LFW dataset. The constructor takes a boolean `training`
+    argument that allows you to toggle between predefined train (True) and test
+    (False) sets.
+    """
+
+    def __init__(self, training: bool):
+        super().__init__()
+        self.training = training
+
+    @property
+    @cache
+    def images(self) -> List[FaceImage]:
+        return list(set(x for pair in self.pairs for x in pair))
+
+    @property
+    def pairs_file(self) -> str:
+        return 'pairs_train.txt' if self.training else 'pairs_test.txt'
+
+    def __str__(self):
+        return f'{super().__str__()}[training={self.training}]'
 
 
 class EnfsiDataset(Dataset):
@@ -479,7 +521,7 @@ class EnfsiDataset(Dataset):
 
     @property
     @cache
-    def predefined_pairs(self) -> List[FacePair]:
+    def pairs(self) -> List[FacePair]:
         pairs = []
         for first, second in zip(self.images[0::2], self.images[1::2]):
             # Check if the images are in the right order (i.e. every pair of
@@ -658,12 +700,18 @@ def make_triplets(data: Union[Dataset, List[FaceImage]]) -> List[FaceTriplet]:
     return triplets
 
 
-def to_array(data: Union[Dataset,
-                         List[FaceImage],
-                         List[FacePair],
-                         List[FaceTriplet]],
-             resolution: Optional[Tuple[int, int]] = None,
-             normalize: bool = True) -> Union[np.ndarray, List[np.ndarray]]:
+def to_array(
+        data: Union[Dataset,
+                    List[FaceImage],
+                    List[FacePair],
+                    List[FaceTriplet]],
+        resolution: Optional[Tuple[int, int]] = None,
+        normalize: bool = True,
+        augmenter: Union[
+            Optional[Augmenter],
+            Tuple[Optional[Augmenter], ...]
+        ] = None
+) -> Union[np.ndarray, List[np.ndarray]]:
     """
     Converts the `data` to one or more numpy arrays of the appropriate shape.
     This method accepts a variety of data types. Depending on the input, one of
@@ -684,13 +732,29 @@ def to_array(data: Union[Dataset,
     resized to the same dimensions. If no `resolution` is provided, it is
     assumed all images already have the same dimensions.
 
-    If `normalize` is True, the pixel values will also
-    be normalized. See the `FaceImage.get_image()` docstring for more
-    information on how this normalization is done.
+    If `normalize` is True, the pixel values will also be normalized. See the
+    `FaceImage.get_image()` docstring for more information on how this
+    normalization is done.
+
+    The type of `augmenter` should be compatible with that of `data`, i.e.:
+        - If `data` is a `Dataset` or a list of `FaceImage` instances,
+            `augmenter` should be a single `Augmenter` or None;
+        - If `data` is a list of `FacePair` instances, `augmenter` should be a
+            2-tuple, where each element is either an `Augmenter` or None.
+        - If `data` is a list of `FaceTriplet` instances, `augmenter` should be
+            3-tuple, where each element is either an `Augmenter` or None.
+    If only a single `Augmenter` is specified, but `data` is a list of
+    `FacePair` or `FaceTriplet` instances, that augmenter is applied to all
+    images in each pair or triplet. Otherwise, if `augmenter` is a tuple, the
+    first Augmenter is applied to the first or anchor image in each pair or
+    triplet, the second Augmenter is applied to the second or positive image in
+    each pair or triplet and the third Augmenter is applied to the negative
+    image in each triplet, respectively.
 
     :param data:
     :param resolution: Optional[Tuple[int, int]]
     :param normalize: bool
+    :param augmenter: Union[Optional[Augmenter]
     :return: Union[np.ndarray, List[np.ndarray]]
     """
 
@@ -703,7 +767,11 @@ def to_array(data: Union[Dataset,
     # When `data` is a `Dataset` or a list of `FaceImage` instances.
     if isinstance(data, Dataset) or all(
             isinstance(x, FaceImage) for x in data):
-        image_data = [x.get_image(resolution, normalize) for x in data]
+        image_data = [x.get_image(
+            resolution,
+            normalize,
+            augmenter
+        ) for x in data]
         if len(set([x.shape for x in image_data])) > 1:
             raise ValueError(
                 'Not all images have the same dimensions, '
@@ -718,8 +786,9 @@ def to_array(data: Union[Dataset,
         return [to_array(
             x,
             resolution,
-            normalize
-        ) for x in map(list, zip(*data))]
+            normalize,
+            augmenter[i] if hasattr(augmenter, '__getitem__') else augmenter
+        ) for i, x in enumerate(map(list, zip(*data)))]
 
     # If we haven't returned something by now it means an invalid data type
     # was passed along, so we let the user know about that.

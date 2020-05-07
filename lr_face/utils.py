@@ -3,6 +3,7 @@ import os
 import re
 from csv import writer
 from functools import lru_cache
+from typing import Dict, List
 
 import cv2
 import numpy as np
@@ -33,11 +34,11 @@ def parser_setup():
                         help='Select the type or set of data to be used. Codes can be found in' +
                              '\'params.py\' e.g.: SIM1. Defaults to settings in \'current_set_up\'',
                         nargs='+')
-    parser.add_argument('--scorer', '-s',
+    parser.add_argument('--scorers', '-s',
                         help='Select the scorer to be used. Codes can be found in \'params.py\',' +
                              'e.g.: GB. Defaults to settings in \'current_set_up\'',
                         nargs='+')
-    parser.add_argument('--calibrator', '-c',
+    parser.add_argument('--calibrators', '-c',
                         help='Select the calibrator to be used. Codes can be found in \'params.py\',' +
                              'e.g.: KDE. Defaults to settings in \'current_set_up\'',
                         nargs='+')
@@ -83,6 +84,23 @@ def parse_object_string(obj_string, name_only=False):
                     else:
                         obj_dict['body'][key_val[0].strip()] = None
     return obj_dict
+
+
+def create_dataframe(experimental_setup, results: List[Dict]) -> pd.DataFrame:
+    df = pd.DataFrame({
+        'scorers': [e.scorer for e in experimental_setup],
+        'calibrators': [e.calibrator for e in experimental_setup],
+        **{k: [e.params[k] for e in experimental_setup]
+           for k in experimental_setup.params_keys},
+        **{k: [e.data_config[k] for e in experimental_setup]
+           for k in experimental_setup.data_keys}
+    })
+    for i, result in enumerate(results):
+        for k, v in result.items():
+            df.loc[i, k] = v
+
+    df['index'] = df.index
+    return df
 
 
 def process_dataframe(df):
@@ -238,10 +256,12 @@ def cache(func):
     return lru_cache(maxsize=None)(func)
 
 
-def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
-                       experiment_name):
-    output_file = os.path.join('.', 'output',
-                               f'{experiment_name}_lr_results.csv')
+def save_predicted_lrs(lr_system,
+                       test_pairs,
+                       lr_predicted,
+                       make_plots_and_save_as):
+    output_file = f'{make_plots_and_save_as}_lr_results.csv'
+    experiment_id = os.path.split(make_plots_and_save_as)[-1]
 
     # TODO: dataset toevoegen als dit leesbaar is
     field_names = ['scorers', 'calibrators', 'experiment_id', 'pair_id',
@@ -249,18 +269,18 @@ def save_predicted_lrs(params_dict, test_pairs, lr_predicted,
 
     rows_to_write = []
     for lr, pair in zip(lr_predicted, test_pairs):
+        first, second = pair
         # only save for enfsi pairs
-        if pair.first.identity[0:5] == 'ENFSI' \
-                and pair.first.meta['year'] == pair.second.meta['year'] \
-                and pair.first.meta['idx'] == pair.second.meta['idx']:
-            pair_id = f"enfsi_{pair.first.meta['year']}_" \
-                      f"{pair.first.meta['idx']}"
-            rows_to_write.append([params_dict['scorers'],
-                                 params_dict['calibrators'],
-                                 params_dict['experiment_id'],
-                                 pair_id,
-                                 np.log10(lr),
-                                 ])
+        if first.identity[0:5] == 'ENFSI' \
+                and first.meta['year'] == second.meta['year'] \
+                and first.meta['idx'] == second.meta['idx']:
+            pair_id = f"enfsi_{first.meta['year']}_" \
+                      f"{first.meta['idx']}"
+            rows_to_write.append([lr_system.scorer,
+                                  lr_system.calibrator,
+                                  experiment_id,
+                                  pair_id,
+                                  np.log10(lr)])
 
     if rows_to_write:
         if not os.path.exists(output_file):
