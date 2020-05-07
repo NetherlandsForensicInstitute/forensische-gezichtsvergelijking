@@ -15,7 +15,7 @@ from tests.src.util import scratch_dir, get_tests_path
 
 fix_tensorflow_rtx()
 
-SCRATCH_DIR = get_tests_path('scratch/finetuning/tmp')
+SCRATCH_DIR = get_tests_path('scratch/finetuning')
 
 
 def get_dummy_base_model(input_shape) -> tf.keras.Model:
