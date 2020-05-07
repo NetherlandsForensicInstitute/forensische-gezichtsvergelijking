@@ -33,16 +33,21 @@ def plot_performance_as_function_of_yaw(scores,
                                         show: Optional[bool] = None):
     """
     plots the scores as a function of the maximum yaw (=looking sideways) on
-    the images, coloured by ground truth
+    the images, coloured by ground truth. calls plt.show() if show is True.
     """
 
     # give it a slight offset so both classes are visible
     yaws = [max(pair.first.yaw, pair.second.yaw) - 0.1 + 0.2 * int(y) for
             pair, y in zip(test_pairs, y_test)]
     label = 'yaw (0=frontal)'
-    plot_performance_as_a_function_of_x(yaws, scores, y_test, label, savefig,
-                                        show, bins=[(i - .5, i + .5) for i in
-                                                    range(5)])
+    plot_performance_as_a_function_of_x(
+        properties=yaws,
+        scores=scores,
+        y_test=y_test,
+        x_label=label,
+        savefig=savefig,
+        show=show,
+        bins=[(i - .5, i + .5) for i in range(5)])
 
 
 def plot_performance_as_function_of_resolution(scores,
@@ -68,15 +73,20 @@ def plot_performance_as_function_of_resolution(scores,
                        for pair in test_pairs]
         label = 'Mpixels (smallest image)'
 
-    plot_performance_as_a_function_of_x(resolutions, scores, y_test, label,
-                                        savefig, show)
+    plot_performance_as_a_function_of_x(
+        properties=resolutions,
+        scores=scores,
+        y_test=y_test,
+        x_label=label,
+        savefig=savefig,
+        show=show)
 
 
 def plot_performance_as_a_function_of_x(
         properties: List[float],
         scores: List[float],
         y_test: List[Union[int, bool]],
-        x_label: str, savefig: str, show: bool,
+        x_label: str, savefig: Optional[str], show: bool,
         bins: Optional[List[Tuple[float, float]]] = None):
     """
     plots the scores as a function of some vector of properties, coloured by

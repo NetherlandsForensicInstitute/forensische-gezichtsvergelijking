@@ -389,13 +389,13 @@ class SCDataset(Dataset):
                     # we ignore information on left/right, just take the angle
                     # 0 is frontal, 4 is sideways (1,2,3 intermediate steps)
                     if name[4:] == 'frontal':
-                        pose = 0
+                        yaw = 0
                     else:
-                        pose = int(name[5:])
+                        yaw = int(name[5:])
                     data.append(FaceImage(
                         path,
                         identity,
-                        yaw=pose,
+                        yaw=yaw,
                         source=str(self),
                         meta={
                             'cropped': False,
@@ -433,7 +433,8 @@ class SCDataset(Dataset):
 
             else:
                 raise ValueError(
-                    f'Imagetype string value {type} is incorrect (frontal, rotated, surveillance')
+                    f'Imagetype string value {type} is incorrect '
+                    f'(frontal, rotated, surveillance)')
 
         return data
 
