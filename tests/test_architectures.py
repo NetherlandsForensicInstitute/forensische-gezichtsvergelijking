@@ -7,8 +7,8 @@ from lr_face.models import Architecture
 from pathlib import Path
 
 
+@pytest.mark.skipif(str(Path.home())[:13] == '/home/runner/', reason="Fails on Github because model weights don't exist")
 def test_github():
-    print(str(Path.home()))
     assert 1>2
 
 
@@ -59,8 +59,6 @@ def test_embedding_size_vggface():
     assert Architecture.VGGFACE.embedding_size == 4096
 
 
-@pytest.mark.skipif(1>1, reason="Fails on Github because model " \
-                                       "weights don't exist")
 def test_resolution_openface():
     assert Architecture.OPENFACE.resolution == (96, 96)
 
