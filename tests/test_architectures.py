@@ -7,7 +7,8 @@ from lr_face.models import Architecture
 from pathlib import Path
 
 
-@pytest.mark.skipif(str(Path.home())[:13] == '/home/runner/', reason="Fails on Github because model weights don't exist")
+@pytest.mark.skipif(str(Path.home()) == '/home/runner', reason="Fails on "
+                    "Github because model weights don't exist")
 def test_github():
     print(str(Path.home()))
     assert 1>2
