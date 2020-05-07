@@ -1,10 +1,10 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 import tensorflow as tf
 
 from lr_face.models import Architecture
-
-from pathlib import Path
 
 
 @pytest.mark.skipif(str(Path.home()) == '/home/runner',

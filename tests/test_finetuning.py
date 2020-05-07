@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -124,6 +125,8 @@ def test_can_load_weights_from_training_model_into_embedding_model(
     assert np.all(y_trained == y_restored)
 
 
+@pytest.mark.skipif(str(Path.home()) == '/home/runner',
+                    reason="Fails on Github because model weights don't exist")
 def test_can_finetune_vggface(
         dummy_triplets,
         scratch
@@ -136,6 +139,8 @@ def test_can_finetune_vggface(
     assert np.all(y_trained == y_restored)
 
 
+@pytest.mark.skipif(str(Path.home()) == '/home/runner',
+                    reason="Fails on Github because model weights don't exist")
 def test_can_finetune_openface(
         dummy_triplets,
         scratch
@@ -148,6 +153,8 @@ def test_can_finetune_openface(
     assert np.all(y_trained == y_restored)
 
 
+@pytest.mark.skipif(str(Path.home()) == '/home/runner',
+                    reason="Fails on Github because model weights don't exist")
 def test_can_finetune_fbdeepface(
         dummy_triplets,
         scratch
@@ -160,6 +167,8 @@ def test_can_finetune_fbdeepface(
     assert np.all(y_trained == y_restored)
 
 
+@pytest.mark.skipif(str(Path.home()) == '/home/runner',
+                    reason="Fails on Github because model weights don't exist")
 def test_can_finetune_facenet(
         dummy_triplets,
         scratch

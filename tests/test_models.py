@@ -1,6 +1,7 @@
 import hashlib
 import os
 import pickle
+from pathlib import Path
 from typing import List
 
 import cv2
@@ -25,6 +26,8 @@ def scratch():
     yield from scratch_dir('scratch/test_models')
 
 
+@pytest.mark.skipif(str(Path.home()) == '/home/runner',
+                    reason="Fails on Github because model weights don't exist")
 def test_get_vggface_embedding(dummy_images):
     architecture = Architecture.VGGFACE
     embedding_model = architecture.get_embedding_model()
@@ -32,6 +35,8 @@ def test_get_vggface_embedding(dummy_images):
     assert embedding.shape == (architecture.embedding_size,)
 
 
+@pytest.mark.skipif(str(Path.home()) == '/home/runner',
+                    reason="Fails on Github because model weights don't exist")
 def test_get_vggface_embedding_is_deterministic(dummy_images, scratch):
     architecture = Architecture.VGGFACE
     embedding_model = architecture.get_embedding_model()
@@ -50,6 +55,8 @@ def test_get_vggface_embedding_is_deterministic(dummy_images, scratch):
     assert all(embeddings[0] == embeddings[2])
 
 
+@pytest.mark.skipif(str(Path.home()) == '/home/runner',
+                    reason="Fails on Github because model weights don't exist")
 def test_get_vggface_embedding_with_filesystem_caching(dummy_images, scratch):
     dummy_image = dummy_images[0]
     dummy_image.source = 'test'
