@@ -59,6 +59,34 @@ added to the resources/enfsi folder.
 
 To use the streamlit app, write in terminal: `streamlit run run_data_exploration.py`
 
+### Finetuning the model
+##### Setup DGX / Docker for training and evaluating the model
+
+Building the container
+```bash
+docker build . -f Dockerfile -t <image_name> --build-arg http_proxy=$HTTP_PROXY
+```
+
+Pushing the container to the DGX
+```bash
+docker tag <image_name> <dgx_address>/<image_name>
+docker push <dgx_address>/<image_name>
+```
+
+To run a model on the DGX, you first need to mount the weights and dataset folder. 
+- host/volume = `/opt/data/FaceLR/weights` with path in container = `/root/.deepface/weights`
+- host/volume = `/opt/data/FaceLR/resources` with path in container = `/app/resources`
+- host/volume = `/opt/data/FaceLR/weights` with path in container = `/app/weights`
+
+Execute the finetuning from inside the Docker container.
+
+#### Finetuning
+```bash
+python3.7 finetuning.py -a <architecture_name> -t <tag_name>
+```
+If running on the DGX, the scripts expects to 
+find the data and weights in `/opt/data/FaceLR/resources` and `/opt/data/FaceLR/weights` respectively. The number of 
+epochs is set to 100 by default, but the training can be stopped at any point and the latest weights will be saved.
 
 ### Labeling
 
@@ -76,4 +104,3 @@ label-studio start annotations/<project-id>
 
 You can then start labeling at localhost:8200, your labels will be saved in the annotations/<project-id> folder. 
 (It might automatically open localhost:8200/start, remove the /start to start labeling in that case). 
-
