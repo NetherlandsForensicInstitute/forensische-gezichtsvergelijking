@@ -107,15 +107,13 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
-        args = locals()
+        kwargs = locals()
         x = image.get_image(self.resolution, normalize=True)
         x = np.expand_dims(x, axis=0)
 
         if cache_dir:
-            cache_id = '_'.join([
-                hashlib.md5(image.path.encode()).hexdigest(),
-                str(hash(tuple(args)))
-            ])
+            cache_id = hashlib.md5(
+                str(map(hash, kwargs.values())).encode()).hexdigest()
             output_path = os.path.join(
                 cache_dir,
                 str(self).replace(':', '-'),  # Windows compatibility
