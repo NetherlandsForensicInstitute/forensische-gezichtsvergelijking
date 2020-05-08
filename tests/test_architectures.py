@@ -2,9 +2,11 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-import tensorflow as tf
 
 from lr_face.models import Architecture
+from lr_face.utils import fix_tensorflow_rtx
+
+fix_tensorflow_rtx()
 
 
 def skip_on_github(func):
@@ -24,7 +26,7 @@ def test_get_embedding_models():
         architecture.get_embedding_model()
 
 
-@pytest.mark.skip(reason="Not all embedding models have been normalized yet")
+@skip_on_github
 def test_embedding_models_return_normalized_embeddings():
     """
     Tests whether the embedding model of each `Architecture` returns embeddings
