@@ -40,6 +40,10 @@ class FaceImage:
     # metadata about the image can be stored.
     meta: Dict[str, Any] = None
 
+    # annotation of the yaw (looking sideways) of the face. 0 for frontal, 4
+    # for sideways, 1,2,3 for intermediate. -1 for unknown.
+    yaw: int = -1
+
     @cache
     def get_image(
             self,
@@ -383,10 +387,10 @@ class SCDataset(Dataset):
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=0,
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose': 'frontal',
                             'cam': None,
                             'dist': None
                         }
@@ -400,14 +404,19 @@ class SCDataset(Dataset):
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     identity = filename[0:3]
-                    pose = name[4:]
+                    # we ignore information on left/right, just take the angle
+                    # 0 is frontal, 4 is sideways (1,2,3 intermediate steps)
+                    if name[4:] == 'frontal':
+                        yaw = 0
+                    else:
+                        yaw = int(name[5:])
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=yaw,
                         source=str(self),
                         meta={
                             'cropped': False,
-                            'pose': pose,
                             'cam': None,
                             'dist': None
                         }
@@ -416,7 +425,6 @@ class SCDataset(Dataset):
             elif image_type == 'surveillance':
                 folder = os.path.join(
                     self.RESOURCE_FOLDER, 'surveillance_cameras_all')
-
                 for filename in os.listdir(folder):
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
@@ -431,10 +439,10 @@ class SCDataset(Dataset):
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=0,
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose': 'frontal',
                             'cam': cam,
                             'dist': dist
                         }
@@ -444,7 +452,6 @@ class SCDataset(Dataset):
                 raise ValueError(
                     f'Imagetype string value {image_type} is incorrect, should'
                     f'be one of frontal, rotated or surveillance')
-
         return data
 
 
