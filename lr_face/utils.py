@@ -253,8 +253,8 @@ def cache(func):
     """
     A thin wrapper around `lru_cache` so we don't have to specify a `maxsize`.
     """
-    return lru_cache(maxsize=None)(func)
-
+    # return lru_cache(maxsize=None)(func)
+    return func
 
 def save_predicted_lrs(lr_system,
                        test_pairs,
