@@ -8,7 +8,7 @@ import pickle
 import random
 import re
 from enum import Enum
-from typing import Tuple, List, Optional, Union
+from typing import Tuple, List, Optional, Union, Any
 
 import numpy as np
 import tensorflow as tf
@@ -112,13 +112,15 @@ class EmbeddingModel:
         x = np.expand_dims(x, axis=0)
 
         if cache_dir:
-            cache_id = hashlib.md5(
-                str(map(hash, kwargs.values())).encode()).hexdigest()
+            def md5(text: str) -> str:
+                return hashlib.md5(text.encode()).hexdigest()
+
+            cache_id = md5(''.join(map(str, kwargs.values())))
             output_path = os.path.join(
                 cache_dir,
                 str(self).replace(':', '-'),  # Windows compatibility
                 image.source or '_',
-                f'{cache_id}.obj'
+                f'{md5(image.path)}_{cache_id}.obj'
             )
 
             # If the embedding has been cached before, load and return it.
