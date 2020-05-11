@@ -86,3 +86,8 @@ def test_embedding_size_facenet():
 @skip_on_github
 def test_embedding_size_keras_vggface():
     assert Architecture.KERAS_VGGFACE.embedding_size == 4096
+
+
+@skip_on_github
+def test_embedding_size_keras_vggface_resnet():
+    assert Architecture.KERAS_VGGFACE_RESNET.embedding_size == 2048

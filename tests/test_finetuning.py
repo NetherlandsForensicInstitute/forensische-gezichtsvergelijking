@@ -5,8 +5,12 @@ import pytest
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 
-from lr_face.data import FaceImage, DummyFaceImage, FacePair, make_pairs, \
-    FaceTriplet, make_triplets
+from lr_face.data import (FaceImage,
+                          DummyFaceImage,
+                          FacePair,
+                          FaceTriplet,
+                          make_pairs,
+                          make_triplets)
 from lr_face.losses import TripletLoss
 from lr_face.models import TripletEmbeddingModel, EmbeddingModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
@@ -196,6 +200,19 @@ def test_can_finetune_keras_vggface(
         scratch
 ):
     tem = Architecture.KERAS_VGGFACE.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+@skip_on_github
+def test_can_finetune_keras_vggface_resnet(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.KERAS_VGGFACE_RESNET.get_triplet_embedding_model()
     tem.model_dir = scratch
     y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
 

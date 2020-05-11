@@ -266,6 +266,7 @@ class Architecture(Enum):
     OPENFACE = 'OpenFace'
     ARCFACE = 'ArcFace'
     KERAS_VGGFACE = 'Keras_VGGFace'
+    KERAS_VGGFACE_RESNET = 'Keras_VGGFace_ResNet'
 
     def get_model(self):
         # TODO: unify cases
@@ -277,9 +278,10 @@ class Architecture(Enum):
             module_name = f'insightface.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
-        if self == self.KERAS_VGGFACE:
-            from keras_vggface.tmp import load_model
-            return load_model()
+        if self == self.KERAS_VGGFACE or self == self.KERAS_VGGFACE_RESNET:
+            module_name = f'keras_vggface.{self.value}'
+            module = importlib.import_module(module_name)
+            return module.load_model()
         if self == self.DUMMY:
             return DummyModel()
         raise ValueError("Unable to load base model")
