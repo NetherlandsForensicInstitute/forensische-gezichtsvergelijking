@@ -26,13 +26,15 @@ def augmenter(image):
 def main(architecture: str, tag: str):
     architecture: Architecture = Architecture[architecture.upper()]
     triplet_embedding_model = architecture.get_triplet_embedding_model()
+    tag = Tag(tag)
 
-    # Determine under which tag to save the fine-tuned weights.
-    try:
-        version = architecture.get_latest_version(tag) + 1
-    except ValueError:
-        version = 1
-    tag = Tag(tag, version)
+    # Determine under which tag to save the fine-tuned weights if none was
+    # explicitly specified.
+    if not tag.version:
+        try:
+            tag.version = architecture.get_latest_version(tag) + 1
+        except ValueError:
+            tag.version = 1
 
     try:
         triplet_embedding_model.train(DATASET.triplets,

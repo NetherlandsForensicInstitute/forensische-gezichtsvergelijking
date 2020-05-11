@@ -56,7 +56,7 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['lfw_sanity_check'],
     'all': {
         # Either specify a single dataset as `datasets`, in which case the
         # dataset is split into calibration and test pairs according to the
@@ -101,6 +101,10 @@ DATA = {
             'datasets': (LfwDevDataset(True), LfwDevDataset(False)),
             'fraction_test': None  # Can be omitted if `datasets` is a tuple.
         },
+        'lfw_enfsi': {
+            'datasets': (LfwDevDataset(True), EnfsiDataset(years=[2011, 2012, 2013, 2017])),
+            'fraction_test': None  # Can be omitted if `datasets` is a tuple.
+        },
         'forenface': {
             'datasets': ForenFaceDataset(),
             'fraction_test': .5,
@@ -114,7 +118,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['dummy'],
+    'current_set_up': ['vggface'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
@@ -127,7 +131,7 @@ SCORERS = {
         'fbdeepface': (Architecture.FBDEEPFACE, None),
         'vggface': (Architecture.VGGFACE, None),
         'arcface': (Architecture.ARCFACE, None),
-        'lfw_sanity_check': (Architecture.VGGFACE, 'lfw_resized_50')
+        'vggface_lfw_resized': (Architecture.VGGFACE, 'lfw_resized'),
     }
 }
 
