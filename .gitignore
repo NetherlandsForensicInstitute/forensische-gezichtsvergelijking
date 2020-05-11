@@ -18,5 +18,5 @@ __pycache__
 /resources/*
 .DS_Store
 
-/insightface/weights/*
+/insightface/weights
 **/**/__pycache__

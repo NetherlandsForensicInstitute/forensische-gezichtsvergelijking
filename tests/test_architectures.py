@@ -88,3 +88,43 @@ def test_resolution_facenet():
 @skip_on_github
 def test_embedding_size_facenet():
     assert Architecture.FACENET.embedding_size == 128
+
+
+@skip_on_github
+def test_resolution_arcface():
+    assert Architecture.ARCFACE.resolution == (112, 112)
+
+
+@skip_on_github
+def test_embedding_size_arcface():
+    assert Architecture.ARCFACE.embedding_size == 512
+
+
+@skip_on_github
+def test_resolution_lresnet():
+    assert Architecture.LRESNET.resolution == (112, 112)
+
+
+@skip_on_github
+def test_embedding_size_lresnet():
+    assert Architecture.LRESNET.embedding_size == 512
+
+
+@skip_on_github
+def test_resolution_ir50m1sm():
+    assert Architecture.IR50M1SM.resolution == (112, 112)
+
+
+@skip_on_github
+def test_embedding_size_ir50m1sm():
+    assert Architecture.IR50M1SM.embedding_size == 512
+
+
+@skip_on_github
+def test_resolution_ir50asia():
+    assert Architecture.IR50ASIA.resolution == (112, 112)
+
+
+@skip_on_github
+def test_embedding_size_ir50asia():
+    assert Architecture.IR50ASIA.embedding_size == 512
