@@ -1,7 +1,6 @@
 import hashlib
 import os
 import pickle
-from pathlib import Path
 from typing import List
 
 import cv2
@@ -60,11 +59,16 @@ def test_get_vggface_embedding_with_filesystem_caching(dummy_images, scratch):
     dummy_image.source = 'test'
     architecture = Architecture.VGGFACE
     embedding_model = architecture.get_embedding_model()
+
+    def md5(text: str) -> str:
+        return hashlib.md5(text.encode()).hexdigest()
+
     cache_path = os.path.join(
         scratch,
         str(embedding_model),
         dummy_image.source,
-        f'{hashlib.md5(dummy_image.path.encode()).hexdigest()}.obj'
+        md5(dummy_image.path),
+        f'{md5(f"{str(embedding_model)}{str(dummy_image)}{str(scratch)}")}.obj'
     )
     assert not os.path.exists(cache_path)
     embedding = embedding_model.embed(dummy_image, cache_dir=scratch)

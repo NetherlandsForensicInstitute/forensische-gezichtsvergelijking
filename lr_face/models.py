@@ -119,7 +119,8 @@ class EmbeddingModel:
                 cache_dir,
                 str(self).replace(':', '-'),  # Windows compatibility
                 image.source or '_',
-                f'{md5(image.path)}_{md5("".join(map(str, kwargs.values())))}'
+                md5(image.path),
+                f'{md5("".join(map(str, kwargs.values())))}.obj'
             )
 
             # If the embedding has been cached before, load and return it.
