@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -12,8 +11,8 @@ from lr_face.losses import TripletLoss
 from lr_face.models import TripletEmbeddingModel, EmbeddingModel, Architecture
 from lr_face.utils import fix_tensorflow_rtx
 from lr_face.versioning import Tag
+from tests.conftest import skip_on_github
 from tests.src.util import scratch_dir, get_tests_path
-from tests.test_architectures import skip_on_github
 
 fix_tensorflow_rtx()
 
@@ -178,11 +177,25 @@ def test_can_finetune_facenet(
     assert np.all(y_trained == y_restored)
 
 
+@skip_on_github
 def test_can_finetune_arcface(
         dummy_triplets,
         scratch
 ):
     tem = Architecture.ARCFACE.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+@skip_on_github
+def test_can_finetune_keras_vggface(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.KERAS_VGGFACE.get_triplet_embedding_model()
     tem.model_dir = scratch
     y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
 

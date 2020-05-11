@@ -265,6 +265,7 @@ class Architecture(Enum):
     FBDEEPFACE = 'FbDeepFace'
     OPENFACE = 'OpenFace'
     ARCFACE = 'ArcFace'
+    KERAS_VGGFACE = 'Keras_VGGFace'
 
     def get_model(self):
         # TODO: unify cases
@@ -276,6 +277,9 @@ class Architecture(Enum):
             module_name = f'insightface.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
+        if self == self.KERAS_VGGFACE:
+            from keras_vggface.tmp import load_model
+            return load_model()
         if self == self.DUMMY:
             return DummyModel()
         raise ValueError("Unable to load base model")

@@ -118,7 +118,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['vggface'],
+    'current_set_up': ['keras_vggface'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
@@ -130,6 +130,7 @@ SCORERS = {
         'facenet': (Architecture.FACENET, None),
         'fbdeepface': (Architecture.FBDEEPFACE, None),
         'vggface': (Architecture.VGGFACE, None),
+        'keras_vggface': (Architecture.KERAS_VGGFACE, None),
         'arcface': (Architecture.ARCFACE, None),
         'vggface_lfw_resized': (Architecture.VGGFACE, 'lfw_resized'),
     }

@@ -9,8 +9,8 @@ import pytest
 from lr_face.data import FaceImage, DummyFaceImage
 from lr_face.models import Architecture
 from lr_face.utils import fix_tensorflow_rtx
+from tests.conftest import skip_on_github
 from tests.src.util import scratch_dir
-from tests.test_architectures import skip_on_github
 
 fix_tensorflow_rtx()
 
