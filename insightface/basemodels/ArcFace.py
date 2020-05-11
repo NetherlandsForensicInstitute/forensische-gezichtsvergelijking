@@ -20,18 +20,19 @@ def loadModel():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     this_dir = os.path.dirname(__file__)
+    parent_dir = os.path.dirname(this_dir)
 
     # logger = tf.get_logger()
     # logger.disabled = True
     # logger.setLevel(logging.FATAL)
     # set_memory_growth()
 
-    cfg = load_yaml(os.path.join(this_dir, cfg_path))
+    cfg = load_yaml(os.path.join(parent_dir, cfg_path))
 
     model = ArcFaceModel(size=cfg['input_size'],
                          backbone_type=cfg['backbone_type'],
                          training=False)
-    model_dir = os.path.join(this_dir, 'checkpoints', cfg['sub_name'])
+    model_dir = os.path.join(parent_dir, 'weights', cfg['sub_name'])
     if not os.path.isdir(model_dir):
         download_model(model_dir)
 
