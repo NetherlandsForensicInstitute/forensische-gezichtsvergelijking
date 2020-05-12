@@ -18,7 +18,7 @@ from lr_face.utils import fix_tensorflow_rtx
 fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
-TIMES = 1
+TIMES = 10
 
 """ 
 New datasets can be added to 'all'.
@@ -109,7 +109,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['logit', 'logit_normalized', 'KDE', 'elub_KDE'],
+    'current_set_up': ['logit'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),
