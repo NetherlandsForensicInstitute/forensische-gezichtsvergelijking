@@ -120,6 +120,8 @@ class EmbeddingModel:
             # If the embedding has not been cached to disk yet: compute the
             # embedding, cache it afterwards and then return the result.
             embedding = self.model.predict(x)[0]
+            # Normalize embeddings for finetuning.
+            embedding = embedding / np.linalg.norm(embedding)
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, 'wb') as f:
                 pickle.dump(embedding, f)
