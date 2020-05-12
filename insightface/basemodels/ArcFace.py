@@ -21,18 +21,15 @@ def loadModel():
 
     this_dir = os.path.dirname(__file__)
     parent_dir = os.path.dirname(this_dir)
-
-    # logger = tf.get_logger()
-    # logger.disabled = True
-    # logger.setLevel(logging.FATAL)
-    # set_memory_growth()
-
     cfg = load_yaml(os.path.join(parent_dir, cfg_path))
 
     model = ArcFaceModel(size=cfg['input_size'],
                          backbone_type=cfg['backbone_type'],
                          training=False)
     model_dir = os.path.join(parent_dir, 'weights', cfg['sub_name'])
+    weights_dir = os.path.dirname(model_dir)
+    if not os.path.isdir(weights_dir):
+        os.mkdir(weights_dir)
     if not os.path.isdir(model_dir):
         download_model(model_dir)
 
@@ -52,23 +49,9 @@ def download_model(model_dir):
     url = 'https://drive.google.com/uc?id=1HasWQb86s4xSYy36YbmhRELg9LBmvhvt'
     print('Trained model will be downloaded...' + model_dir)
     zip_file = model_dir + '.zip'
-
-    # u = urllib.request.urlopen(url)
-    # data = u.read()
-    # u.close()
-
-    # with open(zip_file, "wb") as f :
-    #     f.write(data)
-    #     f.close()
-
     gdown.download(url, zip_file, quiet=False)
-
-    # opening the zip file in READ mode 
     with ZipFile(zip_file, 'r') as zip:
-        # printing all the contents of the zip file 
         zip.printdir()
-
-        # extracting all the files 
         print('Extracting all the files now...')
         zip.extractall(path=os.path.dirname(model_dir))
         print('Done!')

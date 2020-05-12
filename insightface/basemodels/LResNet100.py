@@ -65,12 +65,12 @@ def loadModel():
     this_dir = os.path.dirname(__file__)
     parent_dir = os.path.dirname(this_dir)
     weights_file = os.path.join(parent_dir, 'weights', 'lresnet100e_ir_keras.h5')
-    
+    weights_dir = os.path.dirname(weights_file)
+    if not os.path.isdir(weights_dir):
+        os.mkdir(weights_dir)
     if not os.path.isfile(weights_file):
         print("LResNet100.h5 will be downloaded...")
         url = 'https://drive.google.com/uc?id=1H37LER8mRRI4q_nxpS3uQz3DcGHkTrNU'
-        gdown.download(url,weights_file, quiet=False)
-        
+        gdown.download(url, weights_file, quiet=False)
     model.load_weights(weights_file)
-                       
     return model

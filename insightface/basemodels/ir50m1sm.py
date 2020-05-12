@@ -61,18 +61,16 @@ def loadModel():
     x = Flatten()(x)
     x = Dense(512, name="output_layer.3")(x)
     out = BatchNormalization(momentum=0.9, epsilon=1e-5, name="output_layer.4")(x)
-    
     model = Model(inp, out, name='ir50m1sm')
-    
     this_dir = os.path.dirname(__file__)
     parent_dir = os.path.dirname(this_dir)
     weights_file = os.path.join(parent_dir, 'weights', 'backbone_ir50_ms1m_keras.h5')
-    
+    weights_dir = os.path.dirname(weights_file)
+    if not os.path.isdir(weights_dir):
+        os.mkdir(weights_dir)
     if not os.path.isfile(weights_file):
         print("backbone_ir50_ms1m.h5 will be downloaded...")
         url = 'https://drive.google.com/uc?id=18MyyXQIwhR5I6gzipYMiJ9ywgvFWQMvI'
-        gdown.download(url,weights_file, quiet=False)
-    
+        gdown.download(url, weights_file, quiet=False)
     model.load_weights(weights_file)
-    
     return model
