@@ -5,7 +5,7 @@ from tensorflow.keras.layers import Lambda
 from keras_vggface.vggface import VGGFace
 
 
-def load_model():
+def loadModel():
     vgg_model = VGGFace(
         include_top=True, model='resnet50', input_shape=(224, 224, 3))
     embeddings = vgg_model.layers[-2].output

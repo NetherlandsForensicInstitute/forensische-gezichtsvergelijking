@@ -281,7 +281,7 @@ class Architecture(Enum):
         if self == self.KERAS_VGGFACE or self == self.KERAS_VGGFACE_RESNET:
             module_name = f'keras_vggface.{self.value}'
             module = importlib.import_module(module_name)
-            return module.load_model()
+            return module.loadModel()
         if self == self.DUMMY:
             return DummyModel()
         raise ValueError("Unable to load base model")
