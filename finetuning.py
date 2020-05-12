@@ -11,7 +11,7 @@ from lr_face.versioning import Tag
 
 fix_tensorflow_rtx()
 
-AUGMENT_RESOLUTION = (50, 50)
+AUGMENT_RESOLUTION = None
 DATASET = LfwDevDataset(training=True)
 OPTIMIZER = Adam(learning_rate=3e-5)
 LOSS = TripletLoss(alpha=.2)  # TODO: better value for alpha?
@@ -20,7 +20,10 @@ NUM_EPOCHS = 100  # TODO: make dynamic
 
 
 def augmenter(image):
-    return cv2.resize(image, AUGMENT_RESOLUTION)
+    if AUGMENT_RESOLUTION:
+        return cv2.resize(image, AUGMENT_RESOLUTION)
+    else:
+        return image
 
 
 def main(architecture: str, tag: str):
