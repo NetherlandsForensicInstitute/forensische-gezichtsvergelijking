@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import face_recognition
+
 import hashlib
 import importlib
 import math
@@ -32,6 +34,26 @@ class DummyModel(tf.keras.Sequential):
 
     def __init__(self):
         super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(100)])
+        
+        
+class FaceRecognition(tf.keras.Sequential):
+    """
+    A Face Recognition model that takes RGB images with dimensions 100x100 as 
+    input and outputs random embeddings with dimensionality 128. This keras 
+    model won't be used, but the functions will be called directly from the 
+    face_recognition library' 
+    """
+
+    def __init__(self):
+        super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(128)])
+    def predict (self, x):
+        embed = np.ones(128)
+        try:
+            embed = face_recognition.face_encodings(x)[0]
+        except IndexError:
+            print('no face found') #If no face found, predict returns a embeddings vector of ones.
+        return embed
+        
 
 
 class ScorerModel:
@@ -55,6 +77,20 @@ class ScorerModel:
         :return np.ndarray
         """
         scores = []
+        # if str(self.embedding_model) == 'face_recognition':
+        #     for pair in X:
+        #         score = 0.6
+                
+        #         try:
+        #             embedding1 = face_recognition.face_encodings(pair.first.get_image())[0]
+        #             embedding2 = face_recognition.face_encodings(pair.second.get_image())[0]
+        #             score = spatial.distance.cosine(embedding1, embedding2)
+        #         except IndexError:
+        #             print('no face found in ', pair)
+                    
+        #         scores.append([score, 1 - score])
+        #     return np.asarray(scores)
+       
         cache_dir = EMBEDDINGS_DIR
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
@@ -102,8 +138,11 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
-        x = image.get_image(self.resolution, normalize=True)
-        x = np.expand_dims(x, axis=0)
+        if self.name == 'face_recognition':
+            x = image.get_image()
+        else:            
+            x = image.get_image(self.resolution, normalize=True)
+            x = np.expand_dims(x, axis=0)
         if cache_dir:
             output_path = os.path.join(
                 cache_dir,
@@ -119,7 +158,7 @@ class EmbeddingModel:
 
             # If the embedding has not been cached to disk yet: compute the
             # embedding, cache it afterwards and then return the result.
-            embedding = self.model.predict(x)[0]
+            embedding = self.model.predict(x)[0] 
             # Normalize embeddings for finetuning.
             embedding = embedding / np.linalg.norm(embedding)
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -259,6 +298,7 @@ class Architecture(Enum):
     LRESNET = 'LResNet100'
     IR50M1SM = 'ir50m1sm'
     IR50ASIA = 'ir50asia'
+    FACERECOGNITION = 'face_recognition'
 
     @cache
     def get_model(self):
@@ -270,6 +310,8 @@ class Architecture(Enum):
         
         if self == self.DUMMY:
             return DummyModel()
+        if self == self.FACERECOGNITION:
+            return FaceRecognition()
         raise ValueError("Unable to load base model")
 
     def get_embedding_model(self,
@@ -367,4 +409,6 @@ class Architecture(Enum):
             return 'deepface'
         if self in insightface_models:
             return 'insightface'
+        if self == self.FACERECOGNITION:
+            return 'face-recognition'
         return None
