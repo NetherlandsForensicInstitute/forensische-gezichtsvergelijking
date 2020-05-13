@@ -29,6 +29,22 @@ def parser():
     return arg_parser
 
 
+def yaw_rename(yaw):
+    d = {"recht": "straight",
+         "licht gedraaid": "slightly_turned",
+         "ver gedraaid": "sideways" }
+    return d[yaw]
+
+
+def pitch_rename(pitch):
+    d = {"ver naar boven": "upwards",
+         "licht naar boven": "slightly_upwards",
+         "recht": "straight",
+         "licht naar onder": "slightly_downwards",
+         "ver naar onder": "downwards"}
+    return d[pitch]
+
+
 def parse_annotation(annotation_path):
     with open(annotation_path) as annotation_json:
         annotation = json.load(annotation_json)
@@ -45,10 +61,10 @@ def parse_annotation(annotation_path):
 
         for sub_task in annotation["completions"][0]["result"]:
             if sub_task["from_name"] == "yaw":
-                annotation_dict["yaw"] = sub_task["value"]["choices"][0]
+                annotation_dict["yaw"] = yaw_rename(sub_task["value"]["choices"][0])
 
             if sub_task["from_name"] == "pitch":
-                annotation_dict["pitch"] = sub_task["value"]["choices"][0]
+                annotation_dict["pitch"] = pitch_rename(sub_task["value"]["choices"][0])
 
             if sub_task["from_name"] == "overig":
                 other_choices = sub_task["value"]["choices"]

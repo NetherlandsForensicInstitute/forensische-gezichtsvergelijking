@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import os
 import random
+import json
 from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
@@ -43,8 +44,12 @@ class FaceImage:
     # annotation of the yaw (looking sideways) of the face. 0 for frontal, 4
     # for sideways, 1,2,3 for intermediate. -1 for unknown.
     yaw: int = -1
-    pitch: int = -1
-
+    pitch: str = ""
+    headgear: bool = None
+    glasses: bool = None
+    beard: bool = None
+    other_occlusions: bool = None
+    low_quality: bool = None
 
     @cache
     def get_image(
@@ -503,8 +508,11 @@ class EnfsiDataset(Dataset):
                     reference_id = self._create_reference_id(year, idx)
                     query_id = self._create_query_id(year, idx, same)
 
-                    #read in annotation dict
-                    with open
+                    #read in annotation dict for the reference image.
+                    # @todo: read in annotation
+                    annotation_path = os.path.join(folder, os.path.splitext(reference)[0] + ".json")
+                    with open(os.path.join(annotation_path)) as ann:
+                        annotation = json.load(ann)
 
                     # Create a record for the reference image.
                     path = os.path.join(folder, reference)
@@ -512,11 +520,22 @@ class EnfsiDataset(Dataset):
                         path,
                         reference_id,
                         source=str(self),
+                        yaw=annotation["yaw"],
+                        pitch=annotation["pitch"],
+                        headgear=annotation["headgear"],
+                        glasses=annotation["glasses"],
+                        beard=annotation["beard"],
+                        other_occlusions=annotation["other_occlusions"],
+                        low_quality=annotation["low_quality"],
                         meta={
                             'year': year,
                             'idx': idx
                         }
                     ))
+
+                    annotation_path = os.path.join(folder, os.path.splitext(query)[0] + ".json")
+                    with open(os.path.join(annotation_path)) as ann:
+                        annotation = json.load(ann)
 
                     # Create a record for the query image.
                     path = os.path.join(folder, query)
@@ -524,6 +543,13 @@ class EnfsiDataset(Dataset):
                         path,
                         query_id,
                         source=str(self),
+                        yaw=annotation["yaw"],
+                        pitch=annotation["pitch"],
+                        headgear=annotation["headgear"],
+                        glasses=annotation["glasses"],
+                        beard=annotation["beard"],
+                        other_occlusions=annotation["other_occlusions"],
+                        low_quality=annotation["low_quality"],
                         meta={
                             'year': year,
                             'idx': idx
