@@ -49,6 +49,8 @@ def parse_annotation(annotation_path):
     with open(annotation_path) as annotation_json:
         annotation = json.load(annotation_json)
 
+        path = re.search("(?<=gezichtsvergelijking[/\\\\]).*$", annotation["task_path"])
+
         # put default values in the dict
         annotation_dict = {"yaw": None,
                            "pitch": None,
@@ -57,7 +59,7 @@ def parse_annotation(annotation_path):
                            "beard": False,
                            "other_occlusions": False,
                            "low_quality": False,
-                           "path": os.path.join("resources", os.path.relpath(annotation["task_path"], "resources"))}
+                           "path": path.group(0)}
 
         for sub_task in annotation["completions"][0]["result"]:
             if sub_task["from_name"] == "yaw":
