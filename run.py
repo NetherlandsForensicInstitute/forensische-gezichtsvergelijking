@@ -10,16 +10,16 @@ from lr_face.evaluators import evaluate
 from lr_face.experiments import ExperimentalSetup, Experiment
 from lr_face.utils import (write_output,
                            parser_setup,
-                           process_dataframe,
                            create_dataframe)
 from params import TIMES
 
 
-def run(scorers, calibrators, data):
+def run(scorers, calibrators, data, params):
     experimental_setup = ExperimentalSetup(
         scorer_names=scorers,
         calibrator_names=calibrators,
         data_config_names=data,
+        param_names=params,
         num_repeats=TIMES
     )
     output_dir = os.path.join('output', experimental_setup.name)

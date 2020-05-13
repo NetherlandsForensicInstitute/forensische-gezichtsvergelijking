@@ -15,6 +15,7 @@ class Experiment:
     data_config: Dict[str, Any]
     scorer: ScorerModel
     calibrator: BaseEstimator
+    params: Dict[str, Any]
 
     def __str__(self):
         """
@@ -29,10 +30,12 @@ class Experiment:
                 data_values.append(str(v))
 
         data_str = '_'.join(data_values)
+        params_str = '_'.join(map(str, self.params.values()))
         return '_'.join(map(str, [
             self.scorer,
             self.calibrator,
             data_str,
+            params_str
         ])).replace(':', '-')  # Windows forbids ':'
 
     def get_calibration_and_test_pairs(self) -> Tuple[
@@ -68,10 +71,12 @@ class ExperimentalSetup:
                  scorer_names: List[str],
                  calibrator_names: List[str],
                  data_config_names: List[str],
+                 param_names: List[str],
                  num_repeats: int):
         self.scorers = self._get_scorers(scorer_names)
         self.calibrators = self._get_calibrators(calibrator_names)
         self.data_config = self._get_data_config(data_config_names)
+        self.params = self._get_params(param_names)
         self.num_repeats = num_repeats
         self.name = datetime.now().strftime("%Y-%m-%d %H %M %S")
         self.experiments = self.prepare_experiments()
@@ -86,11 +91,13 @@ class ExperimentalSetup:
         for scorer in self.scorers:
             for calibrator in self.calibrators:
                 for data_config in self.data_config:
-                    experiments.append(Experiment(
-                        data_config,
-                        scorer,
-                        calibrator
-                    ))
+                    for params in self.params:
+                        experiments.append(Experiment(
+                            data_config,
+                            scorer,
+                            calibrator,
+                            params
+                        ))
         return experiments * self.num_repeats
 
     def __iter__(self) -> Iterator[Experiment]:
@@ -140,6 +147,20 @@ class ExperimentalSetup:
         return [init_scorer(*SCORERS['all'][s]) for s in scorer_names]
 
     @staticmethod
+    def _get_params(param_names: Optional[List[str]] = None) \
+            -> List[Dict[str, Any]]:
+        """
+        Parses a list of PARAMS configuration names and returns the
+        corresponding PARAMS configurations. If no names are given, the ones
+        specified under `PARAMS['current_set_up']` are used.
+        :param param_names: List[str]
+        :return: List[Dict[str, Any]]
+        """
+        if not param_names:
+            param_names = PARAMS['current_set_up']
+        return [PARAMS['all'][key] for key in param_names]
+
+    @staticmethod
     def _get_data_config(data_config_names: Optional[List[str]] = None) \
             -> List[Dict[str, Any]]:
         """
@@ -153,6 +174,15 @@ class ExperimentalSetup:
         if not data_config_names:
             data_config_names = DATA['current_set_up']
         return [DATA['all'][key] for key in data_config_names]
+
+    @property
+    def params_keys(self) -> List[str]:
+        """
+        Returns all keys that need to be specified for a valid PARAMS
+        configuration.
+        :return: List[str]
+        """
+        return list(set(k for v in PARAMS['all'].values() for k in v.keys()))
 
     @property
     def data_keys(self) -> List[str]:

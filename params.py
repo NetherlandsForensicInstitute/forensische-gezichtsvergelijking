@@ -20,6 +20,19 @@ fix_tensorflow_rtx()
 """How often to repeat all experiments"""
 TIMES = 10
 
+"""
+Parameters to be used in an experiment, different/new sets can be added under 'all'.
+For the input of an experiment the 'current_set_up' list can be updated.
+"""
+PARAMS = {
+    'current_set_up': ['SET1'],
+    'all': {
+        'SET1': {
+        }
+    }
+}
+
+
 """ 
 New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.

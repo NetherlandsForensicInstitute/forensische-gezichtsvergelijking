@@ -42,6 +42,10 @@ def parser_setup():
                         help='Select the calibrator to be used. Codes can be found in \'params.py\',' +
                              'e.g.: KDE. Defaults to settings in \'current_set_up\'',
                         nargs='+')
+    parser.add_argument('--params', '-p',
+                        help='Select the parameter set(s) to be used. Codes can be found in \'params.py\',' +
+                             'e.g.: SET1. Defaults to settings in \'current_set_up\'',
+                        nargs='+')
     return parser
 
 
@@ -86,6 +90,8 @@ def create_dataframe(experimental_setup, results: List[Dict]) -> pd.DataFrame:
     df = pd.DataFrame({
         'scorers': [e.scorer for e in experimental_setup],
         'calibrators': [e.calibrator for e in experimental_setup],
+        **{k: [e.params[k] for e in experimental_setup]
+           for k in experimental_setup.params_keys},
         **{k: [e.data_config[k] for e in experimental_setup]
            for k in experimental_setup.data_keys}
     })
