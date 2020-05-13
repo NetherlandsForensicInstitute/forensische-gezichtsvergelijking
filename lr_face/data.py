@@ -43,6 +43,8 @@ class FaceImage:
     # annotation of the yaw (looking sideways) of the face. 0 for frontal, 4
     # for sideways, 1,2,3 for intermediate. -1 for unknown.
     yaw: int = -1
+    pitch: int = -1
+
 
     @cache
     def get_image(
@@ -500,6 +502,9 @@ class EnfsiDataset(Dataset):
                     query, reference = self._get_query_and_reference(year, idx)
                     reference_id = self._create_reference_id(year, idx)
                     query_id = self._create_query_id(year, idx, same)
+
+                    #read in annotation dict
+                    with open
 
                     # Create a record for the reference image.
                     path = os.path.join(folder, reference)
