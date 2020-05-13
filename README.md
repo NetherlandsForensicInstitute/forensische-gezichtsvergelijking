@@ -9,7 +9,7 @@ Research project to investigate algorithms that can supplement expert opinion in
 fork from the deepface github (https://github.com/serengil/deepface), containing the Facenet, FbDeepFace, OpenFace and VGGFace models
 
 ***insightface:***
-contains additional implemented models
+fork from https://github.com/peteryuX/arcface-tf2 (Arcface) and from https://github.com/shaoanlu/face_toolbox_keras (LResNet, Ir50m1sm, ir50asia)
 
 ***lr_face package:*** 
 scripts to initiate the data providers, experiment settings and evaluators
