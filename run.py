@@ -52,7 +52,26 @@ def perform_experiment(
 
     calibration_pairs, test_pairs = experiment.get_calibration_and_test_pairs()
     lr_system = CalibratedScorer(experiment.scorer, experiment.calibrator)
-    p = lr_system.scorer.predict_proba(calibration_pairs)
+    # p = lr_system.scorer.predict_proba(calibration_pairs)
+    p = []
+
+    import face_recognition
+    import numpy as np
+    for pair in calibration_pairs:
+        distance = 0.6
+        try:
+            encoding1 = face_recognition.face_encodings(pair.first.get_image())[0]
+
+            unknown_face_encoding = face_recognition.face_encodings(
+                pair.second.get_image())[0]
+
+            distance = face_recognition.face_distance(np.array([encoding1]),
+                                                     np.array([
+                                                         unknown_face_encoding]))[0]
+        except IndexError:
+            print('no face found in ', pair)
+        p.append([distance, 1-distance])
+    p=np.array(p)
     lr_system.calibrator.fit(
         X=p[:, 1],
         y=[int(pair.same_identity) for pair in calibration_pairs]

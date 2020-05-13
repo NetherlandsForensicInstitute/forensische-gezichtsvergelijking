@@ -19,7 +19,7 @@ fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 
-TIMES = 10
+TIMES = 1
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
@@ -56,7 +56,7 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['lfw_sanity_check'],
+    'current_set_up': ['enfsi'],
     'all': {
         # Either specify a single dataset as `datasets`, in which case the
         # dataset is split into calibration and test pairs according to the
@@ -73,7 +73,7 @@ DATA = {
         },
         'enfsi2011': {
             'datasets': EnfsiDataset(years=[2011]),
-            'fraction_test': .2,
+            'fraction_test': .5,
         },
         'enfsi2012': {
             'datasets': EnfsiDataset(years=[2012]),

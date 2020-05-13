@@ -160,7 +160,24 @@ def evaluate(lr_system: CalibratedScorer,
     Calculates a variety of evaluation metrics and plots data if
     `make_plots_and_save_as` is not None.
     """
-    scores = lr_system.scorer.predict_proba(test_pairs)[:, 1]
+    scores = []
+    import face_recognition
+    for pair in test_pairs:
+        try:
+            encoding1 = face_recognition.face_encodings(pair.first.get_image())[0]
+
+            unknown_face_encoding = face_recognition.face_encodings(
+                pair.second.get_image())[0]
+
+            distance = face_recognition.face_distance(np.array([encoding1]),
+                                                      np.array([
+                                                          unknown_face_encoding]))[0]
+            scores.append([distance, 1 - distance])
+        except IndexError:
+            print('no face found in ', pair)
+            scores.append([.6, .4])
+
+    scores=np.array(scores)[:,1]
     lr_predicted = lr_system.calibrator.transform(scores)
     y_test = [int(pair.same_identity) for pair in test_pairs]
 
