@@ -1,6 +1,5 @@
-import json
 import argparse
-import os
+import json
 import re
 from glob import glob
 
@@ -32,7 +31,7 @@ def parser():
 def yaw_rename(yaw):
     d = {"recht": "straight",
          "licht gedraaid": "slightly_turned",
-         "ver gedraaid": "sideways" }
+         "ver gedraaid": "sideways"}
     return d[yaw]
 
 
@@ -112,5 +111,3 @@ if __name__ == '__main__':
     pars = parser()
     args = pars.parse_args()
     run(**vars(args))
-
-
