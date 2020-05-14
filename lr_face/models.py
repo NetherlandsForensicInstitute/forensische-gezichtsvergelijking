@@ -34,26 +34,27 @@ class DummyModel(tf.keras.Sequential):
 
     def __init__(self):
         super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(100)])
-        
-        
+
+
 class FaceRecognition(tf.keras.Sequential):
     """
-    A Face Recognition model that takes RGB images with dimensions 100x100 as 
-    input and outputs random embeddings with dimensionality 128. This keras 
-    model won't be used, but the functions will be called directly from the 
-    face_recognition library' 
+    A Face Recognition model that takes RGB images with dimensions as
+    input and outputs random embeddings with dimensionality 128. This keras
+    model won't be used, but the functions will be called directly from the
+    face_recognition library. Resolution (100, 100) is not used.'
     """
 
     def __init__(self):
         super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(128)])
-    def predict (self, x):
+
+    def predict(self, x):
         embed = np.ones(128)
         try:
             embed = face_recognition.face_encodings(x)[0]
         except IndexError:
-            print('no face found') #If no face found, predict returns a embeddings vector of ones.
+            # If no face found, predict returns a embeddings vector of ones.
+            print('no face found')
         return embed
-        
 
 
 class ScorerModel:
@@ -77,20 +78,6 @@ class ScorerModel:
         :return np.ndarray
         """
         scores = []
-        # if str(self.embedding_model) == 'face_recognition':
-        #     for pair in X:
-        #         score = 0.6
-                
-        #         try:
-        #             embedding1 = face_recognition.face_encodings(pair.first.get_image())[0]
-        #             embedding2 = face_recognition.face_encodings(pair.second.get_image())[0]
-        #             score = spatial.distance.cosine(embedding1, embedding2)
-        #         except IndexError:
-        #             print('no face found in ', pair)
-                    
-        #         scores.append([score, 1 - score])
-        #     return np.asarray(scores)
-       
         cache_dir = EMBEDDINGS_DIR
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
@@ -138,9 +125,10 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
+        # For face_recognition model, RGB image is required.
         if self.name == 'face_recognition':
             x = image.get_image()
-        else:            
+        else:
             x = image.get_image(self.resolution, normalize=True)
             x = np.expand_dims(x, axis=0)
         if cache_dir:
@@ -158,7 +146,7 @@ class EmbeddingModel:
 
             # If the embedding has not been cached to disk yet: compute the
             # embedding, cache it afterwards and then return the result.
-            embedding = self.model.predict(x)[0] 
+            embedding = self.model.predict(x)[0]
             # Normalize embeddings for finetuning.
             embedding = embedding / np.linalg.norm(embedding)
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -307,7 +295,6 @@ class Architecture(Enum):
             module_name = f'{self.source}.basemodels.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
-        
         if self == self.DUMMY:
             return DummyModel()
         if self == self.FACERECOGNITION:
