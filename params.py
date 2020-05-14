@@ -113,11 +113,15 @@ SCORERS = {
         'fbdeepface': (Architecture.FBDEEPFACE, None),
         'vggface': (Architecture.VGGFACE, None),
         'arcface': (Architecture.ARCFACE, None),
+        'lresnet': (Architecture.LRESNET, None),
+        'ir50m1sm': (Architecture.IR50M1SM, None),
+        'ir50asia': (Architecture.IR50ASIA, None),
+        'lfw_sanity_check': (Architecture.VGGFACE, 'lfw_resized_50'),
         'vggface_lfw_resized': (Architecture.VGGFACE, 'lfw_resized'),
     }
 }
 
-""" 
+"""
 New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
