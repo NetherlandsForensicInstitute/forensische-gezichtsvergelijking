@@ -13,7 +13,7 @@ from typing import Tuple, List, Optional, Union
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
-from tensorflow.python.keras.layers import Flatten, Dense, Input
+from tensorflow.python.keras.layers import Flatten, Dense, Input, Lambda
 
 from lr_face.data import FaceImage, FacePair, FaceTriplet, to_array, Augmenter
 from lr_face.losses import TripletLoss
@@ -31,7 +31,12 @@ class DummyModel(tf.keras.Sequential):
     """
 
     def __init__(self):
-        super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(100)])
+        super().__init__([
+            Input(shape=(100, 100, 3)),
+            Flatten(),
+            Dense(100),
+            Lambda(lambda x: tf.math.l2_normalize(x, axis=1))
+        ])
 
 
 class ScorerModel:
@@ -102,14 +107,20 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
+        kwargs = locals()
         x = image.get_image(self.resolution, normalize=True)
         x = np.expand_dims(x, axis=0)
+
         if cache_dir:
+            def md5(text: str) -> str:
+                return hashlib.md5(text.encode()).hexdigest()
+
             output_path = os.path.join(
                 cache_dir,
                 str(self).replace(':', '-'),  # Windows compatibility
                 image.source or '_',
-                f'{hashlib.md5(image.path.encode()).hexdigest()}.obj'
+                md5(image.path),
+                f'{md5("".join(map(str, kwargs.values())))}.obj'
             )
 
             # If the embedding has been cached before, load and return it.
@@ -260,7 +271,6 @@ class Architecture(Enum):
     IR50M1SM = 'ir50m1sm'
     IR50ASIA = 'ir50asia'
 
-    @cache
     def get_model(self):
         #  unified cases
         if self.source in ['deepface', 'insightface']:

@@ -18,7 +18,6 @@ from lr_face.utils import fix_tensorflow_rtx
 fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
-
 TIMES = 10
 
 """
@@ -29,34 +28,17 @@ PARAMS = {
     'current_set_up': ['SET1'],
     'all': {
         'SET1': {
-            'fraction_training': 0.6,
-            'n_datapoints_test': 20,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': False,
-        },
-        'SET2': {
-            'fraction_training': 0.6,
-            'n_datapoints_test': 1000,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': False,
-        },
-        'calibrate_same1': {
-            'fraction_training': .5,
-            'n_datapoints_test': 30,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': [True, False],
-        },
-        'fraction1': {
-            'fraction_training': list(np.arange(0.1, 1.0, 0.1)),
-            'n_datapoints_test': 50,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': False
-        },
+        }
     }
 }
 
+
+""" 
+New datasets can be added to 'all'.
+For the input of an experiment the 'current_set_up' list can be updated.
+"""
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['lfw_sanity_check'],
     'all': {
         # Either specify a single dataset as `datasets`, in which case the
         # dataset is split into calibration and test pairs according to the
@@ -101,6 +83,10 @@ DATA = {
             'datasets': (LfwDevDataset(True), LfwDevDataset(False)),
             'fraction_test': None  # Can be omitted if `datasets` is a tuple.
         },
+        'lfw_enfsi': {
+            'datasets': (LfwDevDataset(True), EnfsiDataset(years=[2011, 2012, 2013, 2017])),
+            'fraction_test': None  # Can be omitted if `datasets` is a tuple.
+        },
         'forenface': {
             'datasets': ForenFaceDataset(),
             'fraction_test': .5,
@@ -114,8 +100,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['openface', 'facenet', 'fbdeepface', 'vggface',
-                        'arcface','lresnet', 'ir50m1sm', 'ir50asia'],
+    'current_set_up': ['vggface'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
@@ -131,7 +116,8 @@ SCORERS = {
         'lresnet': (Architecture.LRESNET, None),
         'ir50m1sm': (Architecture.IR50M1SM, None),
         'ir50asia': (Architecture.IR50ASIA, None),
-        'lfw_sanity_check': (Architecture.VGGFACE, 'lfw_resized_50')
+        'lfw_sanity_check': (Architecture.VGGFACE, 'lfw_resized_50'),
+        'vggface_lfw_resized': (Architecture.VGGFACE, 'lfw_resized'),
     }
 }
 

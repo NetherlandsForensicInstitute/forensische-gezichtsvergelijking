@@ -10,7 +10,6 @@ from lr_face.data import (FaceImage,
                           FacePair,
                           FaceTriplet,
                           DummyFaceImage,
-                          Dataset,
                           EnfsiDataset,
                           ForenFaceDataset,
                           LfwDataset,
@@ -18,6 +17,7 @@ from lr_face.data import (FaceImage,
                           make_triplets,
                           to_array,
                           split_by_identity)
+from tests.conftest import skip_on_github
 from tests.src.util import get_project_path, scratch_dir
 
 
@@ -37,17 +37,6 @@ def augmenter(image: np.ndarray) -> np.ndarray:
     Dummy augmenter that makes each image completely black
     """
     return np.zeros(image.shape)
-
-
-def skip_if_missing_dataset(dataset: Dataset):
-    if hasattr(dataset, 'RESOURCE_FOLDER'):
-        root = get_project_path(dataset.RESOURCE_FOLDER)
-        return pytest.mark.skipif(
-            not os.path.exists(root),
-            reason=f'{dataset} does not exist'
-        )
-    raise ValueError(
-        'Cannot check for missing dataset without `RESOURCE_FOLDER` attr')
 
 
 @pytest.fixture
@@ -137,12 +126,12 @@ def test_face_triplet_raises_exception_on_wrong_identities():
 # `LfwDataset` #
 ################
 
-@skip_if_missing_dataset(LfwDataset)
+@skip_on_github
 def test_lfw_dataset_has_correct_num_images(lfw):
     assert len(lfw.images) == 13233
 
 
-@skip_if_missing_dataset(LfwDataset)
+@skip_on_github
 def test_lfw_dataset_has_correct_num_pairs(lfw):
     assert len(lfw.pairs) == 6000
 
@@ -151,12 +140,12 @@ def test_lfw_dataset_has_correct_num_pairs(lfw):
 # `EnfsiDataset` #
 ##################
 
-@skip_if_missing_dataset(EnfsiDataset)
+@skip_on_github
 def test_enfsi_dataset_has_correct_num_images(enfsi_all):
     assert len(enfsi_all.images) == 270
 
 
-@skip_if_missing_dataset(EnfsiDataset)
+@skip_on_github
 def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
     assert len(enfsi_all.pairs) == 135
     assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.pairs])
@@ -166,9 +155,10 @@ def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
 # `ForenFace` #
 ###############
 
-@skip_if_missing_dataset(ForenFaceDataset)
+@skip_on_github
 def test_forenface_dataset_has_correct_num_images(forenface):
     assert len(forenface.images) == 2476
+
 
 ##################
 # `make_pairs()` #
@@ -278,12 +268,12 @@ def test_make_pairs_negative_only_large_n(dummy_images):
 # `EnfsiDataset` #
 ##################
 
-@skip_if_missing_dataset(EnfsiDataset)
+@skip_on_github
 def test_enfsi_dataset_has_correct_num_images(enfsi_all):
     assert len(enfsi_all.images) == 270
 
 
-@skip_if_missing_dataset(EnfsiDataset)
+@skip_on_github
 def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
     assert len(enfsi_all.pairs) == 135
     assert all([a.meta['idx'] == b.meta['idx'] for a, b in enfsi_all.pairs])
@@ -293,7 +283,7 @@ def test_enfsi_dataset_has_correct_num_pairs(enfsi_all):
 # `ForenFace` #
 ###############
 
-@skip_if_missing_dataset(ForenFaceDataset)
+@skip_on_github
 def test_forenface_dataset_has_correct_num_images(forenface):
     assert len(forenface.images) == 2476
 

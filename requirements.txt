@@ -16,5 +16,4 @@ tqdm>=4.30.0
 Pillow>=5.2.0
 opencv-python>=3.4.4
 tensorflow>=2.0.0
-bcolz==1.2.1
 PyYAML
