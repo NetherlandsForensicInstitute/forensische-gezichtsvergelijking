@@ -45,7 +45,8 @@ class FaceImage:
             self,
             resolution: Optional[Tuple[int, int]] = None,
             normalize: bool = False,
-            augmenter: Optional[Augmenter] = None
+            augmenter: Optional[Augmenter] = None,
+            RGB: bool = False
     ) -> np.ndarray:
         """
         Returns a 3D array of shape `(height, width, num_channels)`. Optionally
@@ -59,11 +60,14 @@ class FaceImage:
         :param augmenter: Optional[Augmenter]
         :return: np.ndarray
         """
+
         res = cv2.imread(self.path)
         if res is None:
             raise ValueError(f'Reading {self.path} resulted in None')
         if res.shape[-1] != 3:
             raise ValueError(f'Expected 3 channels, got {res.shape[-1]}')
+        if RGB:
+            res = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
         if augmenter:
             res = augmenter(res)
         if resolution:

@@ -48,7 +48,8 @@ class FaceRecognition(tf.keras.Sequential):
         super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(128)])
 
     def predict(self, x):
-        embed = np.ones(128)
+        embed = None
+        # embed = np.ones(128)
         try:
             embed = face_recognition.face_encodings(x)[0]
         except IndexError:
@@ -106,6 +107,7 @@ class EmbeddingModel:
         self.resolution = resolution
         self.model_dir = model_dir
         self.name = name
+        # self.source = source - added Andrea
         if tag:
             self.load_weights(tag)
 
@@ -126,11 +128,14 @@ class EmbeddingModel:
         :return: np.ndarray
         """
         # For face_recognition model, RGB image is required.
-        if self.name == 'face_recognition':
-            x = image.get_image()
-        else:
-            x = image.get_image(self.resolution, normalize=True)
-            x = np.expand_dims(x, axis=0)
+        # TODO : get image RGB for face-recognition model
+        # if self.source == 'face-recognition':
+           # x = image.get_image(RGB = True)
+        # elif self.source in ['deepface', 'insightface']:
+        x = image.get_image(self.resolution, normalize=True)
+        x = np.expand_dims(x, axis=0)
+        # else:
+        #     raise Exception(f'Unknown architecture {self.source}')
         if cache_dir:
             output_path = os.path.join(
                 cache_dir,
@@ -147,8 +152,6 @@ class EmbeddingModel:
             # If the embedding has not been cached to disk yet: compute the
             # embedding, cache it afterwards and then return the result.
             embedding = self.model.predict(x)[0]
-            # Normalize embeddings for finetuning.
-            embedding = embedding / np.linalg.norm(embedding)
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, 'wb') as f:
                 pickle.dump(embedding, f)
@@ -313,6 +316,7 @@ class Architecture(Enum):
             tag,
             self.resolution,
             self.model_dir,
+            # self.source, - added Andrea
             name=self.value
         )
 

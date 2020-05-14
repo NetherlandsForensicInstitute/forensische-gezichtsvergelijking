@@ -1,5 +1,6 @@
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import Model
+import tensorflow as tf
 import os
 import gdown
 
@@ -61,7 +62,8 @@ def loadModel():
     x = Flatten()(x)
     x = Dense(512, name="output_layer.3")(x)
     out = BatchNormalization(momentum=0.9, epsilon=1e-5, name="output_layer.4")(x)
-    model = Model(inp, out, name='ir50m1sm')
+    outn = Lambda(lambda x: tf.math.l2_normalize(x, axis=1))(out)
+    model = Model(inp, outn, name='ir50m1sm')
     this_dir = os.path.dirname(__file__)
     parent_dir = os.path.dirname(this_dir)
     weights_file = os.path.join(parent_dir, 'weights', 'backbone_ir50_ms1m_keras.h5')
