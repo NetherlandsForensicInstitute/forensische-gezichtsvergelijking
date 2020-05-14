@@ -22,7 +22,7 @@ Augmenter = Callable[[np.ndarray], np.ndarray]
 
 class Yaw(Enum):
     FRONTAL = "straight"
-    TURNED = "slighty_turned"
+    TURNED = "slightly_turned"
     PROFILE = "sideways"
 
 
