@@ -103,4 +103,12 @@ label-studio start annotations/<project-id>
 ```
 
 You can then start labeling at localhost:8200, your labels will be saved in the annotations/<project-id> folder. 
-(It might automatically open localhost:8200/start, remove the /start to start labeling in that case). 
+(It might automatically open localhost:8200/start, remove the /start to start labeling in that case).
+
+### Installing face_recognition module
+
+Before using [face_recognition model](https://github.com/ageitgey/face_recognition) in lr_face/models.py, installing face_recognition is needed. If using Ubuntu the steps are the following:
+
+1) Install cmake : <https://vitux.com/how-to-install-cmake-on-ubuntu-18-04/>.
+2) Install dlib for python through command line: $ pip install dlib.
+3) Install face recognition thorugh command line : $ pip install face_recognition
