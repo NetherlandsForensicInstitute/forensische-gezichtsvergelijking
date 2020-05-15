@@ -128,8 +128,9 @@ for i in range(n_plot_nrs):
 
 st.header('LR results')
 # get LR results, same as exp.results
-latest_lr_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
-    'lr_results.csv')])[-1]
+latest_lr_csv = os.path.join(output_plots, sorted([f for f in
+                                                            os.listdir(
+    os.path.join('output',output_plots)) if f.endswith('lr_results.csv')])[-1])
 
 def get_cllr_df(df_lrs):
     cllrs = []
@@ -157,7 +158,8 @@ def get_cllr_df(df_lrs):
                       round(cllr_results.cllr_min, 4)])
     return pd.DataFrame(cllrs, columns=['rater', 'group', 'cllr', 'cllr_min'])
 
-if len(latest_lr_csv) == 0 or latest_exp_csv[:19] != latest_lr_csv[:19]:
+
+if len(latest_lr_csv) == 0:
     st.markdown('No LR results available.')
 else:
     df_models = deepcopy(get_csv(latest_lr_csv))

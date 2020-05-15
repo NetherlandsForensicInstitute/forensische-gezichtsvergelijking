@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Iterator, Tuple, Optional, Union
 
 from sklearn.base import BaseEstimator
+from sklearn.model_selection import train_test_split
 
 from lr_face.data import Dataset, split_by_identity, make_pairs, FacePair
 from lr_face.models import ScorerModel
@@ -48,10 +49,14 @@ class Experiment:
         # identity into two disjoint sets and make pairs out of them.
         if isinstance(datasets, Dataset):
             test_size = self.data_config['fraction_test']
-            calibration_pairs, test_pairs = map(
-                make_pairs,
-                split_by_identity(datasets, test_size)
-            )
+            if datasets.pairs:
+                calibration_pairs, test_pairs = train_test_split(
+                    datasets.pairs, test_size=test_size)
+            else:
+                calibration_pairs, test_pairs = map(
+                    make_pairs,
+                    split_by_identity(datasets, test_size)
+                )
             return calibration_pairs, test_pairs
 
         # If `datasets` is already a tuple of `Dataset` instances, make pairs
@@ -59,7 +64,13 @@ class Experiment:
         if isinstance(datasets, tuple) \
                 and len(datasets) == 2 \
                 and all(isinstance(x, Dataset) for x in datasets):
-            return datasets[0].pairs, datasets[1].pairs
+            pairs_0 = datasets[0].pairs
+            if not pairs_0:
+                pairs_0 = make_pairs(datasets[0])
+            pairs_1 = datasets[1].pairs
+            if not pairs_1:
+                pairs_1 = make_pairs(datasets[1])
+            return pairs_0, pairs_1
 
         # In all other cases something was misconfigured, so raise an error.
         raise ValueError(
