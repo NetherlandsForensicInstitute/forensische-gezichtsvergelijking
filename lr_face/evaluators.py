@@ -34,6 +34,7 @@ def plot_performance_as_function_of_yaw(scores,
     """
     plots the scores as a function of the maximum yaw (=looking sideways) on
     the images, coloured by ground truth. calls plt.show() if show is True.
+    todo: Currently not working, because of changes in how the annotations are processed.
     """
 
     # give it a slight offset so both classes are visible
@@ -170,11 +171,11 @@ def evaluate(lr_system: CalibratedScorer,
             calibrator = calibrator.first_step_calibrator
 
 
-        plot_performance_as_function_of_yaw(
-            scores,
-            test_pairs,
-            y_test,
-            savefig=f'{make_plots_and_save_as} scores against yaw.png')
+        # plot_performance_as_function_of_yaw(
+        #     scores,
+        #     test_pairs,
+        #     y_test,
+        #     savefig=f'{make_plots_and_save_as} scores against yaw.png')
 
         plot_performance_as_function_of_resolution(
             scores,
