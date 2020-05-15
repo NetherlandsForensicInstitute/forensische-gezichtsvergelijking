@@ -131,6 +131,8 @@ class EmbeddingModel:
             # If the embedding has not been cached to disk yet: compute the
             # embedding, cache it afterwards and then return the result.
             embedding = self.model.predict(x)[0]
+            # Normalize embeddings for finetuning.
+            embedding = embedding / np.linalg.norm(embedding)
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, 'wb') as f:
                 pickle.dump(embedding, f)
@@ -267,15 +269,14 @@ class Architecture(Enum):
     ARCFACE = 'ArcFace'
     KERAS_VGGFACE = 'Keras_VGGFace'
     KERAS_VGGFACE_RESNET = 'Keras_VGGFace_ResNet'
+    LRESNET = 'LResNet100'
+    IR50M1SM = 'ir50m1sm'
+    IR50ASIA = 'ir50asia'
 
     def get_model(self):
-        # TODO: unify cases
-        if self.source == 'deepface':
-            module_name = f'deepface.basemodels.{self.value}'
-            module = importlib.import_module(module_name)
-            return module.loadModel()
-        elif self.source == 'insightface':
-            module_name = f'insightface.{self.value}'
+        #  unified cases
+        if self.source in ['deepface', 'insightface']:
+            module_name = f'{self.source}.basemodels.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
         if self == self.KERAS_VGGFACE or self == self.KERAS_VGGFACE_RESNET:
@@ -372,7 +373,10 @@ class Architecture(Enum):
                            self.FACENET,
                            self.FBDEEPFACE,
                            self.OPENFACE]
-        insightface_models = [self.ARCFACE]
+        insightface_models = [self.ARCFACE,
+                              self.LRESNET,
+                              self.IR50M1SM,
+                              self.IR50ASIA]
 
         if self in deepface_models:
             return 'deepface'

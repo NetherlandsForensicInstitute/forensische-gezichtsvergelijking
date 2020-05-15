@@ -208,11 +208,50 @@ def test_can_finetune_keras_vggface(
 
 
 @skip_on_github
+def test_can_finetune_lresnet(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.LRESNET.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+@skip_on_github
 def test_can_finetune_keras_vggface_resnet(
         dummy_triplets,
         scratch
 ):
     tem = Architecture.KERAS_VGGFACE_RESNET.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+@skip_on_github
+def test_can_finetune_ir50m1sm(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.IR50M1SM.get_triplet_embedding_model()
+    tem.model_dir = scratch
+    y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
+
+    assert not np.all(y_original == y_trained)
+    assert np.all(y_trained == y_restored)
+
+
+@skip_on_github
+def test_can_finetune_ir50asia(
+        dummy_triplets,
+        scratch
+):
+    tem = Architecture.IR50ASIA.get_triplet_embedding_model()
     tem.model_dir = scratch
     y_original, y_trained, y_restored = finetune_and_embed(tem, dummy_triplets)
 
