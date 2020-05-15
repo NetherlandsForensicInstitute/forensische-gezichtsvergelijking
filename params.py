@@ -131,6 +131,7 @@ SCORERS = {
         'fbdeepface': (Architecture.FBDEEPFACE, None),
         'vggface': (Architecture.VGGFACE, None),
         'keras_vggface': (Architecture.KERAS_VGGFACE, None),
+        'keras_vggface_resnet': (Architecture.KERAS_VGGFACE_RESNET, None),  # Don't use yet, terrible performance
         'arcface': (Architecture.ARCFACE, None),
         'vggface_lfw_resized': (Architecture.VGGFACE, 'lfw_resized'),
     }
