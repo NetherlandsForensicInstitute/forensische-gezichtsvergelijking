@@ -9,8 +9,8 @@ import cv2
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from keras.preprocessing import image
 from pandas import DataFrame
+from tensorflow.keras.preprocessing import image
 
 
 def write_output(df, experiment_name):

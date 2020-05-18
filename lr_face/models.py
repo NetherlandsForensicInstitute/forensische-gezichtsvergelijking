@@ -267,6 +267,8 @@ class Architecture(Enum):
     FBDEEPFACE = 'FbDeepFace'
     OPENFACE = 'OpenFace'
     ARCFACE = 'ArcFace'
+    KERAS_VGGFACE = 'Keras_VGGFace'
+    KERAS_VGGFACE_RESNET = 'Keras_VGGFace_ResNet'
     LRESNET = 'LResNet100'
     IR50M1SM = 'ir50m1sm'
     IR50ASIA = 'ir50asia'
@@ -277,7 +279,10 @@ class Architecture(Enum):
             module_name = f'{self.source}.basemodels.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
-        
+        if self == self.KERAS_VGGFACE or self == self.KERAS_VGGFACE_RESNET:
+            module_name = f'keras_vggface.{self.value}'
+            module = importlib.import_module(module_name)
+            return module.loadModel()
         if self == self.DUMMY:
             return DummyModel()
         raise ValueError("Unable to load base model")
