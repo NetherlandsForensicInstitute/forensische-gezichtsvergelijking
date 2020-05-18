@@ -22,7 +22,7 @@ Augmenter = Callable[[np.ndarray], np.ndarray]
 
 class Yaw(Enum):
     FRONTAL = "straight"
-    TURNED = "slightly_turned"
+    HALF_TURNED = "slightly_turned"
     PROFILE = "sideways"
 
 
@@ -56,6 +56,7 @@ class FaceImage:
     # metadata about the image can be stored.
     meta: Dict[str, Any] = None
 
+    # Defaults to none, which means there is no annotation available for the property.
     yaw: Yaw = None
     pitch: Pitch = None
     headgear: bool = None
@@ -431,7 +432,7 @@ class SCDataset(Dataset):
                     else:
                         yaw_code = int(name[5:])
                         if yaw_code == 1:
-                            yaw = Yaw.TURNED
+                            yaw = Yaw.HALF_TURNED
                         elif yaw_code in (3, 4):
                             yaw = Yaw.PROFILE
                         elif yaw_code == 2:
