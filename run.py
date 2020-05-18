@@ -10,7 +10,6 @@ from lr_face.evaluators import evaluate
 from lr_face.experiments import ExperimentalSetup, Experiment
 from lr_face.utils import (write_output,
                            parser_setup,
-                           process_dataframe,
                            create_dataframe)
 from params import TIMES
 
@@ -35,7 +34,6 @@ def run(scorers, calibrators, data, params):
         results.append(perform_experiment(experiment, make_plots_and_save_as))
 
     df = create_dataframe(experimental_setup, results)
-    df = process_dataframe(df)
     write_output(df, experimental_setup.name)
 
 
