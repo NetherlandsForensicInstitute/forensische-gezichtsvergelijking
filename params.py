@@ -38,7 +38,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['lfw_sanity_check'],
+    'current_set_up': ['enfsi'],
     'all': {
         # Either specify a single dataset as `datasets`, in which case the
         # dataset is split into calibration and test pairs according to the
