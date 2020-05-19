@@ -48,8 +48,8 @@ class FaceRecognition(tf.keras.Sequential):
         super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(128)])
 
     def predict(self, x):
-        embed = None
-        # embed = np.ones(128)
+        # embed = None
+        embed = np.ones(128)
         try:
             embed = face_recognition.face_encodings(x)[0]
         except IndexError:
@@ -127,13 +127,12 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
-        # For face_recognition model, RGB image is required.
-        # TODO : get image RGB for face-recognition model
-        # if self.source == 'face-recognition':
-           # x = image.get_image(RGB = True)
-        # elif self.source in ['deepface', 'insightface']:
-        x = image.get_image(self.resolution, normalize=True)
-        x = np.expand_dims(x, axis=0)
+        # For face_recognition model, RGB int32 image is required.
+        if self.name == 'face_recognition':
+            x = image.get_image(RGB=True, normalize=False)
+        else:
+            x = image.get_image(self.resolution, normalize=True)
+            x = np.expand_dims(x, axis=0)
         # else:
         #     raise Exception(f'Unknown architecture {self.source}')
         if cache_dir:

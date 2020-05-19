@@ -114,10 +114,10 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    # 'current_set_up': ['openface', 'facenet', 'fbdeepface', 'vggface',
-    #                     'arcface','lresnet', 'ir50m1sm', 'ir50asia',
-    #                     'face_recognition'],
-    'current_set_up': ['lresnet'],
+    'current_set_up': ['openface', 'facenet', 'fbdeepface', 'vggface',
+                        'arcface','lresnet', 'ir50m1sm', 'ir50asia',
+                        'face_recognition'],
+    # 'current_set_up': ['face_recognition'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
