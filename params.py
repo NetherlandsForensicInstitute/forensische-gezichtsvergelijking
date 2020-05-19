@@ -26,37 +26,15 @@ Parameters to be used in an experiment, different/new sets can be added under 'a
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
-    'current_set_up': ['SET1'],
+    'current_set_up': ['scenario_2'],
     'all': {
-        'SET1': {
-            'fraction_training': 0.6,
-            'n_datapoints_test': 20,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': False,
-        },
-        'SET2': {
-            'fraction_training': 0.6,
-            'n_datapoints_test': 1000,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': False,
-        },
-        'calibrate_same1': {
-            'fraction_training': .5,
-            'n_datapoints_test': 30,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': [True, False],
-        },
-        'fraction1': {
-            'fraction_training': list(np.arange(0.1, 1.0, 0.1)),
-            'n_datapoints_test': 50,
-            'transform_scorer_output': False,
-            'train_calibration_same_data': False
+        'scenario_2': {
         },
     }
 }
 
 DATA = {
-    'current_set_up': ['foren-enfsi'],
+    'current_set_up': ['enfsi'],
     'all': {
         # Either specify a single dataset as `datasets`, in which case the
         # dataset is split into calibration and test pairs according to the
@@ -68,48 +46,50 @@ DATA = {
             'fraction_test': .5,
         },
         'enfsi': {
-            'datasets': EnfsiDataset(years=[2011, 2012, 2013, 2017]),
-            'fraction_test': .2,
+            'calibration': (ForenFaceDataset(max_num_images=20),
+                            EnfsiDataset(years=[2011, 2012, 2013, 2017])),
+            'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
+            'calibration_filters': ['quality_score'],
         },
-        'enfsi2011': {
-            'datasets': EnfsiDataset(years=[2011]),
-            'fraction_test': .2,
-        },
-        'enfsi2012': {
-            'datasets': EnfsiDataset(years=[2012]),
-            'fraction_test': .2,
-        },
-        'enfsi2013': {
-            'datasets': EnfsiDataset(years=[2013]),
-            'fraction_test': .2,
-        },
-        'enfsi2017': {
-            'datasets': EnfsiDataset(years=[2017]),
-            'fraction_test': .2,
-        },
-        'lfw': {
-            'datasets': LfwDataset(),
-            'fraction_test': .9,
-        },
-        'SC': {
-            'datasets': SCDataset(image_types=['frontal',
-                                               'rotated',
-                                               'surveillance']),
-            'fraction_test': .9,
-        },
-        'lfw_sanity_check': {
-            'datasets': (LfwDevDataset(True), LfwDevDataset(False)),
-            'fraction_test': None  # Can be omitted if `datasets` is a tuple.
-        },
-        'forenface': {
-            'datasets': ForenFaceDataset(),
-            'fraction_test': .5,
-        },
-        'foren-enfsi': {
-            'datasets': (ForenFaceDataset(),
-                         EnfsiDataset(years=[2011, 2012,2013, 2017])),
-            'fraction_test': None,
-        }
+        # 'enfsi2011': {
+        #     'datasets': EnfsiDataset(years=[2011]),
+        #     'fraction_test': .2,
+        # },
+        # 'enfsi2012': {
+        #     'datasets': EnfsiDataset(years=[2012]),
+        #     'fraction_test': .2,
+        # },
+        # 'enfsi2013': {
+        #     'datasets': EnfsiDataset(years=[2013]),
+        #     'fraction_test': .2,
+        # },
+        # 'enfsi2017': {
+        #     'datasets': EnfsiDataset(years=[2017]),
+        #     'fraction_test': .2,
+        # },
+        # 'lfw': {
+        #     'datasets': LfwDataset(),
+        #     'fraction_test': .9,
+        # },
+        # 'SC': {
+        #     'datasets': SCDataset(image_types=['frontal',
+        #                                        'rotated',
+        #                                        'surveillance']),
+        #     'fraction_test': .9,
+        # },
+        # 'lfw_sanity_check': {
+        #     'datasets': (LfwDevDataset(True), LfwDevDataset(False)),
+        #     'fraction_test': None  # Can be omitted if `datasets` is a tuple.
+        # },
+        # 'forenface': {
+        #     'datasets': ForenFaceDataset(),
+        #     'fraction_test': .5,
+        # },
+        # 'foren-enfsi': {
+        #     'datasets': (ForenFaceDataset(),
+        #                  EnfsiDataset(years=[2011, 2012,2013, 2017])),
+        #     'fraction_test': None,
+        # }
     }
 }
 

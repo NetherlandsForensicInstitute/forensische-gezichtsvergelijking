@@ -10,7 +10,7 @@ import pickle
 import random
 import re
 from enum import Enum
-from typing import Tuple, List, Optional, Union
+from typing import Tuple, List, Optional, Union, Dict
 
 import numpy as np
 import tensorflow as tf
@@ -66,6 +66,16 @@ class ScorerModel:
 
     def __init__(self, embedding_model: EmbeddingModel):
         self.embedding_model = embedding_model
+
+    def predict_proba_per_category(self,
+                                   X_per_category: Dict[List[FacePair]]) \
+            -> Dict[np.ndarray]:
+        """
+        Predicts probabilities per category
+        """
+        return {category: self.predict_proba(X) for category,
+                                                    X in
+                X_per_category.items()}
 
     def predict_proba(self, X: List[FacePair]) -> np.ndarray:
         """
@@ -130,7 +140,7 @@ class EmbeddingModel:
         # For face_recognition model, RGB image is required.
         # TODO : get image RGB for face-recognition model
         # if self.source == 'face-recognition':
-           # x = image.get_image(RGB = True)
+        # x = image.get_image(RGB = True)
         # elif self.source in ['deepface', 'insightface']:
         x = image.get_image(self.resolution, normalize=True)
         x = np.expand_dims(x, axis=0)

@@ -76,6 +76,21 @@ class FaceImage:
             res = res / 255
         return res
 
+    @property
+    def quality_score(self):
+        """ returns a 'quality score', as the average of the top ten score
+        against a fixed set of 100 different source images"""
+        # TODO use facevacs or facerecognition.
+        from lr_face.models import Architecture
+        # Open question: should we use the model we are calibrating?
+        model = Architecture.VGGFACE.get_scorer_model(None)
+        scores = model.predict_proba(
+            [FacePair(self, image) for image in BENCHMARK_IMAGES])[:, 1]
+        return np.ceil(10 * np.mean(sorted(scores, reverse=True)[:10]))
+
+    def properties(self, filters) -> Tuple:
+        return tuple([self[prop] for prop in filters])
+
     def __post_init__(self):
         if not self.meta:
             self.meta = dict()
@@ -683,6 +698,48 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
     return res
 
 
+def make_pairs_from_two_lists(
+        data_first: List[FaceImage],
+        data_second: List[FaceImage],
+        n: Optional[int] = None) -> List[FacePair]:
+    """
+    Takes two list of `FaceImage` instances and pairs them up, each pair
+    having one image from the first, one from the seconds
+
+    Returns:
+        A list of `FacePair` instances.
+    """
+    images_first_by_identity = defaultdict(list)
+    for x in data_first:
+        images_first_by_identity[x.identity].append(x)
+
+    images_second_by_identity = defaultdict(list)
+    for x in data_second:
+        images_second_by_identity[x.identity].append(x)
+
+    res = []
+    for identity in set(images_first_by_identity.keys()).intersection(
+            set(images_second_by_identity.keys())):
+        for image_a in images_first_by_identity[identity]:
+            for image_b in images_second_by_identity[identity]:
+                res.append(FacePair(image_a, image_b))
+
+    # Loop over and unpack all positive pairs, then create matching
+    # negative pairs that contain at least one of the images from each
+    # positive pair and a randomly chosen other image with a different
+    # identity.
+    for first, second in res.copy():  # Copy, because we modify `res`.
+        identity = first.identity
+        negative_id = random.choice(
+            tuple(set(images_second_by_identity.keys()) - {identity}))
+        negative = random.choice(images_second_by_identity[negative_id])
+        res.append(FacePair(first, negative))
+
+    if n:
+        res = random.sample(res, min(len(res), n))
+    return res
+
+
 def make_triplets(data: Union[Dataset, List[FaceImage]]) -> List[FaceTriplet]:
     images_by_identity = defaultdict(list)
     for x in data:
@@ -820,3 +877,18 @@ def split_by_identity(
         data = data.images
     train_idx, test_idx = next(gss.split(data, groups=identities))
     return [data[idx] for idx in train_idx], [data[idx] for idx in test_idx]
+
+
+def get_benchmark_images():
+    """creates a fixed set of images to compute quality scores against.
+
+    The images are taken from LFW and increasingle reduced in resolution"""
+
+    # TODO save this as standalone set when we settle on what images to use?
+    data = LfwDevDataset(True)
+    # TODO resolution reduction?
+    images = data.images
+    return images[:10]
+
+
+BENCHMARK_IMAGES: List[FaceImage] = get_benchmark_images()

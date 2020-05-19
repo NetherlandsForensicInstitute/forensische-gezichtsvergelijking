@@ -50,14 +50,19 @@ def perform_experiment(
     - Evaluate test set
     """
 
-    calibration_pairs, test_pairs = experiment.get_calibration_and_test_pairs()
-    lr_system = CalibratedScorer(experiment.scorer, experiment.calibrator)
-    p = lr_system.scorer.predict_proba(calibration_pairs)
-    lr_system.calibrator.fit(
-        X=p[:, 1],
-        y=[int(pair.same_identity) for pair in calibration_pairs]
-    )
-    return evaluate(lr_system, test_pairs, make_plots_and_save_as)
+    calibration_pairs_per_category, test_pairs_per_category = \
+        experiment.get_calibration_and_test_pairs()
+    lr_systems = {}
+    for category, calibration_pairs in calibration_pairs_per_category.items():
+        lr_systems[category] = CalibratedScorer(experiment.scorer,
+                                        experiment.calibrator)
+        # TODO currently, calibration could contain test images
+        p = lr_systems[category].scorer.predict_proba(calibration_pairs)
+        lr_systems[category].calibrator.fit(
+            X=p[:, 1],
+            y=[int(pair.same_identity) for pair in calibration_pairs]
+        )
+    return evaluate(lr_systems, test_pairs_per_category, make_plots_and_save_as)
 
 
 if __name__ == '__main__':

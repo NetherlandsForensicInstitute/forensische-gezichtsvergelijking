@@ -256,7 +256,8 @@ def cache(func):
     return lru_cache(maxsize=None)(func)
 
 
-def save_predicted_lrs(lr_system,
+def save_predicted_lrs(scorer,
+                       calibrator,
                        test_pairs,
                        lr_predicted,
                        make_plots_and_save_as):
@@ -278,8 +279,8 @@ def save_predicted_lrs(lr_system,
                 and first.meta['idx'] == second.meta['idx']:
             pair_id = f"enfsi_{first.meta['year']}_" \
                       f"{first.meta['idx']}"
-            rows_to_write.append([lr_system.scorer,
-                                  lr_system.calibrator,
+            rows_to_write.append([scorer,
+                                  calibrator,
                                   experiment_id,
                                   pair_id,
                                   np.log10(lr)])

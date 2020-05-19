@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Dict, Any, Iterator, Tuple, Optional, Union
@@ -5,7 +6,8 @@ from typing import List, Dict, Any, Iterator, Tuple, Optional, Union
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import train_test_split
 
-from lr_face.data import Dataset, split_by_identity, make_pairs, FacePair
+from lr_face.data import Dataset, split_by_identity, make_pairs, FacePair, \
+    FaceImage, make_pairs_from_two_lists
 from lr_face.models import ScorerModel
 from lr_face.versioning import Tag
 from params import *
@@ -40,43 +42,48 @@ class Experiment:
         ])).replace(':', '-')  # Windows forbids ':'
 
     def get_calibration_and_test_pairs(self) -> Tuple[
-        List[FacePair],
-        List[FacePair]
+        Dict[Tuple, List[FacePair]],
+        Dict[Tuple, List[FacePair]]
     ]:
-        datasets = self.data_config['datasets']
+        assert isinstance(self.data_config['calibration'], tuple)
+        assert isinstance(self.data_config['test'], tuple)
 
-        # If `datasets` is a single `Dataset` instance, split its images by
-        # identity into two disjoint sets and make pairs out of them.
-        if isinstance(datasets, Dataset):
-            test_size = self.data_config['fraction_test']
-            if datasets.pairs:
-                calibration_pairs, test_pairs = train_test_split(
-                    datasets.pairs,
-                    test_size=test_size,
-                    stratify=[p.same_identity for p in datasets.pairs])
-            else:
-                calibration_pairs, test_pairs = map(
-                    make_pairs,
-                    split_by_identity(datasets, test_size)
-                )
-            return calibration_pairs, test_pairs
+        # get all images
+        calibration_images = []
+        for dataset in self.data_config['calibration']:
+            calibration_images += dataset.images
 
-        # If `datasets` is already a tuple of `Dataset` instances, make pairs
-        # for each individual dataset and return those.
-        if isinstance(datasets, tuple) \
-                and len(datasets) == 2 \
-                and all(isinstance(x, Dataset) for x in datasets):
-            calibration_pairs = datasets[0].pairs
-            if not calibration_pairs:
-                calibration_pairs = make_pairs(datasets[0])
-            test_pairs = datasets[1].pairs
-            if not test_pairs:
-                test_pairs = make_pairs(datasets[1])
-            return calibration_pairs, test_pairs
+        # filter the images per category
+        calibration_images_per_category = defaultdict(list)
+        for image in calibration_images:
+            calibration_images_per_category[
+                tuple(getattr(image, prop)
+                 for prop in self.data_config['calibration_filters'])]\
+                .append(image)
 
-        # In all other cases something was misconfigured, so raise an error.
-        raise ValueError(
-            f'Could not create calibration and test data from {str(datasets)}')
+        calibration_pairs_per_category = {}
+        for category_a, images_a in calibration_images_per_category.items():
+            for category_b, images_b in \
+                    calibration_images_per_category.items():
+                calibration_pairs_per_category[(category_a, category_b)] = \
+                    make_pairs_from_two_lists(images_a, images_b)
+
+        test_pairs = []
+        for dataset in self.data_config['test']:
+            test_pairs += dataset.pairs
+        test_pair_categories = [(
+            (getattr(pair.first, prop)
+                 for prop in self.data_config['calibration_filters']),
+            (getattr(pair.second, prop)
+                 for prop in self.data_config['calibration_filters']))
+            for pair in test_pairs]
+
+        test_pairs_per_category = defaultdict(list)
+        for category, pair in zip(test_pair_categories, test_pairs):
+            test_pairs_per_category[category].append(pair)
+
+        return calibration_pairs_per_category, test_pairs_per_category
+
 
 
 class ExperimentalSetup:

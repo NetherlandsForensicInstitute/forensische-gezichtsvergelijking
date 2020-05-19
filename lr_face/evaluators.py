@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -99,35 +99,46 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
             'accuracy' + label: accuracy_score(y, scores > .5)}
 
 
-def evaluate(lr_system: CalibratedScorer,
-             test_pairs: List[FacePair],
+def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
+             test_pairs_per_category: Dict[Tuple, List[FacePair]],
              make_plots_and_save_as: Optional[str]) -> Dict[str, float]:
     """
     Calculates a variety of evaluation metrics and plots data if
     `make_plots_and_save_as` is not None.
     """
-    scores = lr_system.scorer.predict_proba(test_pairs)[:, 1]
-    lr_predicted = lr_system.calibrator.transform(scores)
-    y_test = [int(pair.same_identity) for pair in test_pairs]
+
+    scores = []
+    lr_predicted = []
+    y_test = []
+    test_pairs = []
+    for category, pairs in test_pairs_per_category.items():
+        if category not in lr_systems:
+            raise ValueError(f'no calibration pairs for {category}')
+        scores += lr_systems[category].scorer.predict_proba(pairs)[:, 1]
+        lr_predicted += lr_systems[category].calibrator.transform(scores)
+        y_test += [int(pair.same_identity) for pair in pairs]
+        test_pairs += pairs
+        if make_plots_and_save_as:
+            calibrator = lr_systems[category].calibrator
+            if type(calibrator) == ELUBbounder:
+                calibrator = calibrator.first_step_calibrator
+            plot_score_distribution_and_calibrator_fit(
+                calibrator,
+                scores,
+                y_test,
+                savefig=f'{make_plots_and_save_as} {category} calibration.png'
+            )
+
+            # save last one (type should all be the same)
+            scorer = lr_systems[category].scorer
 
     if make_plots_and_save_as:
-        calibrator = lr_system.calibrator
-        if type(calibrator) == ELUBbounder:
-            calibrator = calibrator.first_step_calibrator
-
         plot_performance_as_function_of_resolution(
             scores,
             test_pairs,
             y_test,
             show_ratio=False,
             savefig=f'{make_plots_and_save_as} scores against resolution.png')
-
-        plot_score_distribution_and_calibrator_fit(
-            calibrator,
-            scores,
-            y_test,
-            savefig=f'{make_plots_and_save_as} calibration.png'
-        )
 
         plot_lr_distributions(
             np.log10(lr_predicted),
@@ -142,7 +153,8 @@ def evaluate(lr_system: CalibratedScorer,
         )
 
         save_predicted_lrs(
-            lr_system, test_pairs, lr_predicted, make_plots_and_save_as)
+            scorer, calibrator, test_pairs, lr_predicted,
+            make_plots_and_save_as)
 
     return calculate_metrics_dict(
         scores,
