@@ -260,7 +260,9 @@ def save_predicted_lrs(lr_system,
                        test_pairs,
                        lr_predicted,
                        make_plots_and_save_as):
-    output_file = f'{make_plots_and_save_as}_lr_results.csv'
+    output_file = os.path.join(
+        os.path.dirname(make_plots_and_save_as),
+        'lr_results.csv')
     experiment_id = os.path.split(make_plots_and_save_as)[-1]
 
     # TODO: dataset toevoegen als dit leesbaar is

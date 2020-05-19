@@ -56,7 +56,7 @@ PARAMS = {
 }
 
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['foren-enfsi'],
     'all': {
         # Either specify a single dataset as `datasets`, in which case the
         # dataset is split into calibration and test pairs according to the
@@ -104,6 +104,11 @@ DATA = {
         'forenface': {
             'datasets': ForenFaceDataset(),
             'fraction_test': .5,
+        },
+        'foren-enfsi': {
+            'datasets': (ForenFaceDataset(),
+                         EnfsiDataset(years=[2011, 2012,2013, 2017])),
+            'fraction_test': None,
         }
     }
 }
@@ -115,9 +120,8 @@ For the input of an experiment the 'current_set_up' list can be updated.
 
 SCORERS = {
     'current_set_up': ['openface', 'facenet', 'fbdeepface', 'vggface',
-                        'arcface','lresnet', 'ir50m1sm', 'ir50asia',
+                        'arcface', 'lresnet', 'ir50m1sm', 'ir50asia',
                         'face_recognition'],
-    # 'current_set_up': ['face_recognition'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
@@ -143,7 +147,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['logit'],
+    'current_set_up': ['isotonic'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),
