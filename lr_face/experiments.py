@@ -6,7 +6,6 @@ from sklearn.base import BaseEstimator
 
 from lr_face.data import Dataset, split_by_identity, make_pairs, FacePair
 from lr_face.models import ScorerModel
-from lr_face.utils import get_pairs
 from lr_face.versioning import Tag
 from params import *
 
@@ -195,3 +194,30 @@ class ExperimentalSetup:
         :return: List[str]
         """
         return list(set(k for v in DATA['all'].values() for k in v.keys()))
+
+
+def dataset_pairs(dataset):
+    """
+    Either get the predefined pairs or make new pairs of the dataset
+    """
+    pairs = dataset.pairs
+    if not pairs:
+        pairs = make_pairs(dataset)
+    return pairs
+
+
+def get_pairs(dataset):
+    """
+    Get pairs from a Dataset instance or combine pairs from multiple Datasets
+    """
+    pairs = []
+    if isinstance(dataset, tuple) \
+            and all(isinstance(x, Dataset) for x in dataset):
+        for data in dataset:
+            pairs.extend(dataset_pairs(data))
+    elif isinstance(dataset, Dataset):
+        pairs.extend(dataset_pairs(dataset))
+    else:
+        raise ValueError(
+            f'Could not create pairs from {str(dataset)}')
+    return pairs
