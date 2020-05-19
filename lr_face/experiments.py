@@ -51,7 +51,9 @@ class Experiment:
             test_size = self.data_config['fraction_test']
             if datasets.pairs:
                 calibration_pairs, test_pairs = train_test_split(
-                    datasets.pairs, test_size=test_size)
+                    datasets.pairs,
+                    test_size=test_size,
+                    stratify=[p.same_identity for p in datasets.pairs])
             else:
                 calibration_pairs, test_pairs = map(
                     make_pairs,
@@ -64,13 +66,13 @@ class Experiment:
         if isinstance(datasets, tuple) \
                 and len(datasets) == 2 \
                 and all(isinstance(x, Dataset) for x in datasets):
-            pairs_0 = datasets[0].pairs
-            if not pairs_0:
-                pairs_0 = make_pairs(datasets[0])
-            pairs_1 = datasets[1].pairs
-            if not pairs_1:
-                pairs_1 = make_pairs(datasets[1])
-            return pairs_0, pairs_1
+            calibration_pairs = datasets[0].pairs
+            if not calibration_pairs:
+                calibration_pairs = make_pairs(datasets[0])
+            test_pairs = datasets[1].pairs
+            if not test_pairs:
+                test_pairs = make_pairs(datasets[1])
+            return calibration_pairs, test_pairs
 
         # In all other cases something was misconfigured, so raise an error.
         raise ValueError(
