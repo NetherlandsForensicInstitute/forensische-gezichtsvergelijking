@@ -72,7 +72,7 @@ class FaceImage:
             res = augmenter(res)
         if resolution:
             res = cv2.resize(res, (resolution[1], resolution[0]))
-        if normalize:
+        if normalize and np.max(res) > 1:
             res = res / 255
         return res
 
