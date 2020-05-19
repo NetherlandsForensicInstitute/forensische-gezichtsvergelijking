@@ -1,4 +1,3 @@
-import numpy as np
 from lir import (LogitCalibrator,
                  NormalizedCalibrator,
                  ELUBbounder,
@@ -11,7 +10,8 @@ from lr_face.data import (TestDataset,
                           EnfsiDataset,
                           LfwDataset,
                           LfwDevDataset,
-                          SCDataset, ForenFaceDataset)
+                          SCDataset,
+                          ForenFaceDataset)
 from lr_face.models import Architecture
 from lr_face.utils import fix_tensorflow_rtx
 
@@ -32,19 +32,21 @@ PARAMS = {
     }
 }
 
-
 """ 
 New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
+Datasets input options:
+- 'datasets' : `Dataset` # The dataset is split into calibration and test pairs
+- 'datasets' : (`Dataset`, `Dataset`) # The first dataset is used for calibration, the second for testing
+- 'datasets' : ((`Dataset`, `Dataset`), `Dataset`) # The datasets in the first element of the outer tuple are combined 
+                                                     and used for calibration, the second element is used for testing.
+- 'datasets' : ((`Dataset`, `Dataset`), (`Dataset`, `Dataset`)) # The datasets in the both elements of the outer 
+                                                                  tuple are combined and used for calibration,
+                                                                  and testing respectively.
 """
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['foren_sc_enfsi'],
     'all': {
-        # Either specify a single dataset as `datasets`, in which case the
-        # dataset is split into calibration and test pairs according to the
-        # specified `fraction_test`, or specify a tuple of 2 datasets, in which
-        # case the pairs from the first dataset are used for calibration and
-        # the pairs from the second dataset are used for testing.
         'test': {
             'datasets': TestDataset(),
             'fraction_test': .5,
@@ -90,6 +92,11 @@ DATA = {
         'forenface': {
             'datasets': ForenFaceDataset(),
             'fraction_test': .5,
+        },
+        'foren_sc_enfsi': {
+            'datasets': ((ForenFaceDataset(), SCDataset(image_types=['frontal', 'rotated', 'surveillance'])),
+                         EnfsiDataset(years=[2011, 2012, 2013, 2017])),
+            'fraction_test': None
         }
     }
 }
@@ -98,7 +105,6 @@ DATA = {
 New models/scorers can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
-
 SCORERS = {
     'current_set_up': ['keras_vggface'],
     'all': {
@@ -113,7 +119,7 @@ SCORERS = {
         'fbdeepface': (Architecture.FBDEEPFACE, None),
         'vggface': (Architecture.VGGFACE, None),
         'keras_vggface': (Architecture.KERAS_VGGFACE, None),
-        'keras_vggface_resnet': (Architecture.KERAS_VGGFACE_RESNET, None),  # Don't use yet, terrible performance
+        'keras_vggface_resnet': (Architecture.KERAS_VGGFACE_RESNET, None),
         'arcface': (Architecture.ARCFACE, None),
         'lresnet': (Architecture.LRESNET, None),
         'ir50m1sm': (Architecture.IR50M1SM, None),

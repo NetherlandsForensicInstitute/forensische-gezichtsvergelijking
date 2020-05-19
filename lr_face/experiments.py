@@ -6,6 +6,7 @@ from sklearn.base import BaseEstimator
 
 from lr_face.data import Dataset, split_by_identity, make_pairs, FacePair
 from lr_face.models import ScorerModel
+from lr_face.utils import get_pairs
 from lr_face.versioning import Tag
 from params import *
 
@@ -54,12 +55,13 @@ class Experiment:
             )
             return calibration_pairs, test_pairs
 
-        # If `datasets` is already a tuple of `Dataset` instances, make pairs
+        # If `datasets` is a tuple, make pairs
         # for each individual dataset and return those.
         if isinstance(datasets, tuple) \
-                and len(datasets) == 2 \
-                and all(isinstance(x, Dataset) for x in datasets):
-            return datasets[0].pairs, datasets[1].pairs
+                and len(datasets) == 2:
+            calibration_pairs = get_pairs(datasets[0])
+            test_pairs = get_pairs(datasets[1])
+            return calibration_pairs, test_pairs
 
         # In all other cases something was misconfigured, so raise an error.
         raise ValueError(
