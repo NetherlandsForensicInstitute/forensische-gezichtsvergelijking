@@ -15,7 +15,7 @@ from typing import Tuple, List, Optional, Union
 import numpy as np
 import tensorflow as tf
 from scipy import spatial
-from tensorflow.python.keras.layers import Flatten, Dense, Input
+from tensorflow.python.keras.layers import Flatten, Dense, Input, Lambda
 
 from lr_face.data import FaceImage, FacePair, FaceTriplet, to_array, Augmenter
 from lr_face.losses import TripletLoss
@@ -33,7 +33,12 @@ class DummyModel(tf.keras.Sequential):
     """
 
     def __init__(self):
-        super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(100)])
+        super().__init__([
+            Input(shape=(100, 100, 3)),
+            Flatten(),
+            Dense(100),
+            Lambda(lambda x: tf.math.l2_normalize(x, axis=1))
+        ])
 
 
 class FaceRecognition():
@@ -130,20 +135,26 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
+
         # For face_recognition model, RGB int32 image is required.
         if self.name == 'face_recognition':
             x = image.get_image(RGB=True, normalize=False)
         else:
+            kwargs = locals()
             x = image.get_image(self.resolution, normalize=True)
             x = np.expand_dims(x, axis=0)
-        # else:
-        #     raise Exception(f'Unknown architecture {self.source}')
+       
+
         if cache_dir:
+            def md5(text: str) -> str:
+                return hashlib.md5(text.encode()).hexdigest()
+
             output_path = os.path.join(
                 cache_dir,
                 str(self).replace(':', '-'),  # Windows compatibility
                 image.source or '_',
-                f'{hashlib.md5(image.path.encode()).hexdigest()}.obj'
+                md5(image.path),
+                f'{md5("".join(map(str, kwargs.values())))}.obj'
             )
 
             # If the embedding has been cached before, load and return it.
@@ -288,18 +299,25 @@ class Architecture(Enum):
     FBDEEPFACE = 'FbDeepFace'
     OPENFACE = 'OpenFace'
     ARCFACE = 'ArcFace'
+    KERAS_VGGFACE = 'Keras_VGGFace'
+    KERAS_VGGFACE_RESNET = 'Keras_VGGFace_ResNet'
     LRESNET = 'LResNet100'
     IR50M1SM = 'ir50m1sm'
     IR50ASIA = 'ir50asia'
     FACERECOGNITION = 'face_recognition'
 
-    @cache
     def get_model(self):
         #  unified cases
         if self.source in ['deepface', 'insightface']:
             module_name = f'{self.source}.basemodels.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
+          
+        if self == self.KERAS_VGGFACE or self == self.KERAS_VGGFACE_RESNET:
+            module_name = f'keras_vggface.{self.value}'
+            module = importlib.import_module(module_name)
+            return module.loadModel()
+
         if self == self.DUMMY:
             return DummyModel()
         if self == self.FACERECOGNITION:

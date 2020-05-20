@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import csv
+import json
 import os
 import random
 from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
+from enum import Enum
 from itertools import islice
 from typing import Dict, Any, Tuple, List, Optional, Union, Iterator, Callable
 
@@ -16,6 +18,20 @@ from sklearn.model_selection import GroupShuffleSplit
 from lr_face.utils import cache
 
 Augmenter = Callable[[np.ndarray], np.ndarray]
+
+
+class Yaw(Enum):
+    FRONTAL = "straight"
+    HALF_TURNED = "slightly_turned"
+    PROFILE = "sideways"
+
+
+class Pitch(Enum):
+    UP = "upwards"
+    HALF_UP = "slightly_upwards"
+    FRONTAL = "straight"
+    HALF_DOWN = "slightly_downwards"
+    DOWN = "downwards"
 
 
 @dataclass
@@ -39,6 +55,15 @@ class FaceImage:
     # An optional miscellaneous dictionary where any potentially relevant
     # metadata about the image can be stored.
     meta: Dict[str, Any] = None
+
+    # Defaults to none, which means there is no annotation available for the property.
+    yaw: Yaw = None
+    pitch: Pitch = None
+    headgear: bool = None
+    glasses: bool = None
+    beard: bool = None
+    other_occlusions: bool = None
+    low_quality: bool = None
 
     @cache
     def get_image(
@@ -387,10 +412,10 @@ class SCDataset(Dataset):
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=Yaw.FRONTAL,
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose': 'frontal',
                             'cam': None,
                             'dist': None
                         }
@@ -404,14 +429,29 @@ class SCDataset(Dataset):
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     identity = filename[0:3]
-                    pose = name[4:]
+                    # we ignore information on left/right, just take the angle
+                    # 0 is frontal, 4 is sideways (1,2,3 intermediate steps)
+                    if name[4:] == 'frontal':
+                        yaw = Yaw.FRONTAL
+                    else:
+                        yaw_code = int(name[5:])
+                        if yaw_code == 1:
+                            yaw = Yaw.HALF_TURNED
+                        elif yaw_code in (3, 4):
+                            yaw = Yaw.PROFILE
+                        elif yaw_code == 2:
+                            # code 2 is inconsistent between turned and profile, so we ignore those
+                            continue
+                        else:
+                            raise ValueError("Code cannot be mapped")
+
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=yaw,
                         source=str(self),
                         meta={
                             'cropped': False,
-                            'pose': pose,
                             'cam': None,
                             'dist': None
                         }
@@ -420,7 +460,6 @@ class SCDataset(Dataset):
             elif image_type == 'surveillance':
                 folder = os.path.join(
                     self.RESOURCE_FOLDER, 'surveillance_cameras_all')
-
                 for filename in os.listdir(folder):
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
@@ -438,7 +477,6 @@ class SCDataset(Dataset):
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose': 'frontal',
                             'cam': cam,
                             'dist': dist
                         }
@@ -448,7 +486,6 @@ class SCDataset(Dataset):
                 raise ValueError(
                     f'Imagetype string value {image_type} is incorrect, should'
                     f'be one of frontal, rotated or surveillance')
-
         return data
 
 
@@ -498,17 +535,33 @@ class EnfsiDataset(Dataset):
                     reference_id = self._create_reference_id(year, idx)
                     query_id = self._create_query_id(year, idx, same)
 
+                    # read in annotation dict for the reference image.
+                    annotation_path = os.path.join(folder, os.path.splitext(reference)[0] + ".json")
+                    with open(os.path.join(annotation_path)) as ann:
+                        annotation = json.load(ann)
+
                     # Create a record for the reference image.
                     path = os.path.join(folder, reference)
                     data.append(FaceImage(
                         path,
                         reference_id,
                         source=str(self),
+                        yaw=Yaw(annotation["yaw"]),
+                        pitch=Pitch(annotation["pitch"]),
+                        headgear=annotation["headgear"],
+                        glasses=annotation["glasses"],
+                        beard=annotation["beard"],
+                        other_occlusions=annotation["other_occlusions"],
+                        low_quality=annotation["low_quality"],
                         meta={
                             'year': year,
                             'idx': idx
                         }
                     ))
+
+                    annotation_path = os.path.join(folder, os.path.splitext(query)[0] + ".json")
+                    with open(os.path.join(annotation_path)) as ann:
+                        annotation = json.load(ann)
 
                     # Create a record for the query image.
                     path = os.path.join(folder, query)
@@ -516,6 +569,13 @@ class EnfsiDataset(Dataset):
                         path,
                         query_id,
                         source=str(self),
+                        yaw=annotation["yaw"],
+                        pitch=annotation["pitch"],
+                        headgear=annotation["headgear"],
+                        glasses=annotation["glasses"],
+                        beard=annotation["beard"],
+                        other_occlusions=annotation["other_occlusions"],
+                        low_quality=annotation["low_quality"],
                         meta={
                             'year': year,
                             'idx': idx

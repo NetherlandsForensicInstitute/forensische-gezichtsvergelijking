@@ -35,5 +35,6 @@ RUN mkdir /root/.deepface/weights
 COPY finetuning.py /app/
 COPY lr_face /app/lr_face
 COPY deepface /app/deepface
+COPY keras_vggface /app/keras_vggface
 
 RUN apt-get clean && rm -rf /tmp/* /var/tmp/*
