@@ -36,16 +36,14 @@ class DummyModel(tf.keras.Sequential):
         super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(100)])
 
 
-class FaceRecognition(tf.keras.Sequential):
+class FaceRecognition():
     """
-    A Face Recognition model that takes RGB images with dimensions as
-    input and outputs random embeddings with dimensionality 128. This keras
-    model won't be used, but the functions will be called directly from the
-    face_recognition library. Resolution (100, 100) is not used.'
+    A Face Recognition model that takes RGB images with any size as
+    input and outputs embeddings with dimensionality 128.'
     """
 
     def __init__(self):
-        super().__init__([Input(shape=(100, 100, 3)), Flatten(), Dense(128)])
+        self.input_shape = (None, None)  # face_recognition accepts any size
 
     def predict(self, x):
         # embed = None
@@ -53,9 +51,8 @@ class FaceRecognition(tf.keras.Sequential):
         try:
             embed = face_recognition.face_encodings(x)[0]
         except IndexError:
-            # If no face found, predict returns a embeddings vector of ones.
             print('no face found')
-        return embed
+        return [embed]
 
 
 class ScorerModel:
@@ -79,12 +76,18 @@ class ScorerModel:
         :return np.ndarray
         """
         scores = []
+        rm_pair = []
         cache_dir = EMBEDDINGS_DIR
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
             embedding2 = self.embedding_model.embed(pair.second, cache_dir)
-            score = spatial.distance.cosine(embedding1, embedding2)
-            scores.append([score, 1 - score])
+            if embedding1 is not None and embedding2 is not None:
+                score = spatial.distance.cosine(embedding1, embedding2)
+                scores.append([score, 1 - score])                
+            else:
+                rm_pair.append(pair)  # Remove pairs in which face is not detected
+        X = [i for i in X if i not in rm_pair] 
+        # TODO : also remove files with no faces in truth.csv files.
         return np.asarray(scores)
 
     def __str__(self) -> str:
@@ -315,7 +318,6 @@ class Architecture(Enum):
             tag,
             self.resolution,
             self.model_dir,
-            # self.source, - added Andrea
             name=self.value
         )
 
