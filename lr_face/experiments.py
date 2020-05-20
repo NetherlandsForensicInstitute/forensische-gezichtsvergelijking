@@ -177,7 +177,6 @@ class ExperimentalSetup:
         Parses a list of PARAMS configuration names and returns the
         corresponding PARAMS configurations. If no names are given, the ones
         specified under `PARAMS['current_set_up']` are used.
-
         :param param_names: List[str]
         :return: List[Dict[str, Any]]
         """
@@ -205,7 +204,6 @@ class ExperimentalSetup:
         """
         Returns all keys that need to be specified for a valid PARAMS
         configuration.
-
         :return: List[str]
         """
         return list(set(k for v in PARAMS['all'].values() for k in v.keys()))

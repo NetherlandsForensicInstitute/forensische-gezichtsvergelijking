@@ -1,17 +1,10 @@
-from pathlib import Path
-
 import numpy as np
-import pytest
-import tensorflow as tf
 
 from lr_face.models import Architecture
+from lr_face.utils import fix_tensorflow_rtx
+from tests.conftest import skip_on_github
 
-
-def skip_on_github(func):
-    return pytest.mark.skipif(
-        str(Path.home()) == '/home/runner',
-        reason="Fails on Github because model weights don't exist"
-    )(func)
+fix_tensorflow_rtx()
 
 
 @skip_on_github
@@ -24,7 +17,7 @@ def test_get_embedding_models():
         architecture.get_embedding_model()
 
 
-@pytest.mark.skip(reason="Not all embedding models have been normalized yet")
+@skip_on_github
 def test_embedding_models_return_normalized_embeddings():
     """
     Tests whether the embedding model of each `Architecture` returns embeddings
@@ -88,6 +81,16 @@ def test_resolution_facenet():
 @skip_on_github
 def test_embedding_size_facenet():
     assert Architecture.FACENET.embedding_size == 128
+
+
+@skip_on_github
+def test_embedding_size_keras_vggface():
+    assert Architecture.KERAS_VGGFACE.embedding_size == 4096
+
+
+@skip_on_github
+def test_embedding_size_keras_vggface_resnet():
+    assert Architecture.KERAS_VGGFACE_RESNET.embedding_size == 2048
 
 
 @skip_on_github
