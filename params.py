@@ -28,7 +28,15 @@ For the input of an experiment the 'current_set_up' list can be updated.
 PARAMS = {
     'current_set_up': ['scenario_2'],
     'all': {
+        'scenario_1': {
+            'calibration_filters': [],
+        },
         'scenario_2': {
+            'calibration_filters': ['quality_score'],
+        },
+        'scenario_3': {
+            'calibration_filters': ['yaw', 'pitch', 'occlusion',
+                                    'resolution_bin'],
         },
     }
 }
@@ -41,15 +49,14 @@ DATA = {
         # specified `fraction_test`, or specify a tuple of 2 datasets, in which
         # case the pairs from the first dataset are used for calibration and
         # the pairs from the second dataset are used for testing.
-        'test': {
-            'datasets': TestDataset(),
-            'fraction_test': .5,
-        },
+        # 'test': {
+        #     'datasets': TestDataset(),
+        #     'fraction_test': .5,
+        # },
         'enfsi': {
             'calibration': (ForenFaceDataset(max_num_images=20),
                             EnfsiDataset(years=[2011, 2012, 2013, 2017])),
             'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
-            'calibration_filters': ['quality_score'],
         },
         # 'enfsi2011': {
         #     'datasets': EnfsiDataset(years=[2011]),
@@ -99,8 +106,8 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['openface', 'facenet', 'fbdeepface', 'vggface',
-                        'arcface', 'lresnet', 'ir50m1sm', 'ir50asia',
+    'current_set_up': [#'openface', 'facenet', 'fbdeepface', 'vggface',
+                        #'arcface', 'lresnet', 'ir50m1sm', 'ir50asia',
                         'face_recognition'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot

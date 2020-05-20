@@ -40,6 +40,19 @@ class FaceImage:
     # metadata about the image can be stored.
     meta: Dict[str, Any] = None
 
+    @property
+    def resolution_bin(self):
+        """
+        categorical version of original resolution of image
+        """
+        resolution = self.get_image().shape
+        m_pixels = np.prod(resolution) / 3  # divide by 3 for color channels
+        if m_pixels < 0.01:
+            return 'LOW'
+        if m_pixels < 0.1:
+            return 'MEDIUM'
+        return 'GOOD'
+
     @cache
     def get_image(
             self,
@@ -80,10 +93,9 @@ class FaceImage:
     def quality_score(self):
         """ returns a 'quality score', as the average of the top ten score
         against a fixed set of 100 different source images"""
-        # TODO use facevacs or facerecognition.
         from lr_face.models import Architecture
-        # Open question: should we use the model we are calibrating?
-        model = Architecture.VGGFACE.get_scorer_model(None)
+        # TODO Open question: should we use the model we are calibrating?
+        model = Architecture.FACERECOGNITION.get_scorer_model(None)
         scores = model.predict_proba(
             [FacePair(self, image) for image in BENCHMARK_IMAGES])[:, 1]
         return np.ceil(10 * np.mean(sorted(scores, reverse=True)[:10]))
@@ -730,10 +742,11 @@ def make_pairs_from_two_lists(
     # identity.
     for first, second in res.copy():  # Copy, because we modify `res`.
         identity = first.identity
-        negative_id = random.choice(
-            tuple(set(images_second_by_identity.keys()) - {identity}))
-        negative = random.choice(images_second_by_identity[negative_id])
-        res.append(FacePair(first, negative))
+        options = set(images_second_by_identity.keys()) - {identity}
+        if len(options) > 0:
+            negative_id = random.choice(tuple(options))
+            negative = random.choice(images_second_by_identity[negative_id])
+            res.append(FacePair(first, negative))
 
     if n:
         res = random.sample(res, min(len(res), n))
@@ -886,9 +899,9 @@ def get_benchmark_images():
 
     # TODO save this as standalone set when we settle on what images to use?
     data = LfwDevDataset(True)
-    # TODO resolution reduction?
+    # TODO resolution reduction? somewhat involved for FaceImages
     images = data.images
-    return images[:10]
+    return images[:100]
 
 
 BENCHMARK_IMAGES: List[FaceImage] = get_benchmark_images()

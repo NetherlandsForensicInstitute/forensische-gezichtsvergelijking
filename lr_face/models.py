@@ -55,7 +55,7 @@ class FaceRecognition(tf.keras.Sequential):
         except IndexError:
             # If no face found, predict returns a embeddings vector of ones.
             print('no face found')
-        return embed
+        return [embed]
 
 
 class ScorerModel:

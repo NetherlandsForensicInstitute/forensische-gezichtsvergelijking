@@ -107,16 +107,22 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
     `make_plots_and_save_as` is not None.
     """
 
-    scores = []
-    lr_predicted = []
+    scores = np.array([])
+    lr_predicted = np.array([])
     y_test = []
     test_pairs = []
     for category, pairs in test_pairs_per_category.items():
         if category not in lr_systems:
-            raise ValueError(f'no calibration pairs for {category}')
-        scores += lr_systems[category].scorer.predict_proba(pairs)[:, 1]
-        lr_predicted += lr_systems[category].calibrator.transform(scores)
-        y_test += [int(pair.same_identity) for pair in pairs]
+            print(f'skipping {pairs} for category {category}')
+            continue
+        category_scores = lr_systems[category].scorer.predict_proba(pairs)[
+                          :, 1]
+        scores = np.append(scores, category_scores)
+        lr_predicted = np.append(
+            lr_predicted,
+            lr_systems[category].calibrator.transform(category_scores))
+        category_y_test = [int(pair.same_identity) for pair in pairs]
+        y_test += category_y_test
         test_pairs += pairs
         if make_plots_and_save_as:
             calibrator = lr_systems[category].calibrator
@@ -124,9 +130,10 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
                 calibrator = calibrator.first_step_calibrator
             plot_score_distribution_and_calibrator_fit(
                 calibrator,
-                scores,
-                y_test,
-                savefig=f'{make_plots_and_save_as} {category} calibration.png'
+                category_scores,
+                category_y_test,
+                savefig=f'{make_plots_and_save_as} {category} '
+                        f'calibration.png'
             )
 
             # save last one (type should all be the same)

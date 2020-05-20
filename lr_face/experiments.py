@@ -37,7 +37,7 @@ class Experiment:
         return '_'.join(map(str, [
             self.scorer,
             self.calibrator,
-            data_str,
+            # data_str,
             params_str
         ])).replace(':', '-')  # Windows forbids ':'
 
@@ -57,25 +57,26 @@ class Experiment:
         calibration_images_per_category = defaultdict(list)
         for image in calibration_images:
             calibration_images_per_category[
-                tuple(getattr(image, prop)
-                 for prop in self.data_config['calibration_filters'])]\
+                self.get_values_for_categories(image)] \
                 .append(image)
 
         calibration_pairs_per_category = {}
         for category_a, images_a in calibration_images_per_category.items():
             for category_b, images_b in \
                     calibration_images_per_category.items():
-                calibration_pairs_per_category[(category_a, category_b)] = \
-                    make_pairs_from_two_lists(images_a, images_b)
+                pairs = make_pairs_from_two_lists(images_a, images_b)
+                # only add if there are both same and different source pairs
+                if 0 < np.sum([pair.same_identity for pair in pairs]) < \
+                        len(pairs):
+                    calibration_pairs_per_category[(category_a, category_b)] \
+                        = pairs
 
         test_pairs = []
         for dataset in self.data_config['test']:
             test_pairs += dataset.pairs
         test_pair_categories = [(
-            (getattr(pair.first, prop)
-                 for prop in self.data_config['calibration_filters']),
-            (getattr(pair.second, prop)
-                 for prop in self.data_config['calibration_filters']))
+            self.get_values_for_categories(pair.first),
+            self.get_values_for_categories(pair.second))
             for pair in test_pairs]
 
         test_pairs_per_category = defaultdict(list)
@@ -84,6 +85,9 @@ class Experiment:
 
         return calibration_pairs_per_category, test_pairs_per_category
 
+    def get_values_for_categories(self, image: FaceImage):
+        return tuple(getattr(image, prop)
+                     for prop in self.params['calibration_filters'])
 
 
 class ExperimentalSetup:

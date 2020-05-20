@@ -124,10 +124,6 @@ def process_dataframe(df):
         except (KeyError, AttributeError):
             df[new_column] = None
 
-    # Cast to string columns:
-    df['fraction_training'] = round(df['fraction_training'], 1).astype(str)
-    df['train_calibration_same_data'] = df[
-        'train_calibration_same_data'].astype(str)
 
     make_parameter_columns = [
         # old column name: parameter name (new column is [old column name]_[parameter name])
@@ -146,8 +142,6 @@ def process_dataframe(df):
     make_concatenated_columns = {
         # new column name: columns to concatenate
         'lr_system': ['scorer_name', 'calibrator_name'],
-        'distr': ['h1_name', 'h2_name'],
-        'samedata_scorer': ['scorer_name', 'train_calibration_same_data'],
         'weighted_scorer_label': ['scorer_name', 'scorers_class_weight'],
         'weighted_calibrator_label': ['calibrator_name',
                                       'calibrators_class_weight'],
