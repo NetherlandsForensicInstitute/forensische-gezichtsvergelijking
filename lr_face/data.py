@@ -303,7 +303,7 @@ class ForenFaceDataset(Dataset):
             # parse annotations in filename:
             # cx -> camera number
             # a = no hat, b = hat
-            annotation_code = os.path.splitext(path)[0][3:]
+            annotation_code = os.path.splitext(file)[0][3:]
             if annotation_code in ('lp', 'rp'):
                 yaw = Yaw.PROFILE
                 pitch = Pitch.FRONTAL
@@ -315,32 +315,32 @@ class ForenFaceDataset(Dataset):
                 headgear = False
                 low_quality = False
             elif annotation_code in ('a', 'f', 'c1a7', 'c2a3', 'c3a8', 'c3a16', 'c4a7', 'c4a12', 'c5a3'):
-                yaw = Yaw.PROFILE
-                pitch = Pitch.PROFILE
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.FRONTAL
                 headgear = False
                 low_quality = False
             elif annotation_code in ('c1b7', 'c2b3', 'c3b8', 'c3b16', 'c4b7', 'c4b12', 'c5b3'):
-                yaw = Yaw.PROFILE
-                pitch = Pitch.PROFILE
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.FRONTAL
                 headgear = True
                 low_quality = False
             elif annotation_code in ('c3a3', 'c4a2'):
-                yaw = Yaw.PROFILE
-                pitch = Pitch.PROFILE
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.FRONTAL
                 headgear = False
                 low_quality = True
             elif annotation_code in ('c3b3', 'c4b2'):
-                yaw = Yaw.PROFILE
-                pitch = Pitch.PROFILE
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.FRONTAL
                 headgear = True
                 low_quality = True
             elif annotation_code == 'c6a3':
-                yaw = Yaw.PROFILE
+                yaw = Yaw.FRONTAL
                 pitch = Pitch.HALF_DOWN
                 headgear = False
                 low_quality = False
             elif annotation_code == 'c6b3':
-                yaw = Yaw.PROFILE
+                yaw = Yaw.FRONTAL
                 pitch = Pitch.HALF_DOWN
                 headgear = True
                 low_quality = False
