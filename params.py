@@ -46,61 +46,39 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['dev'],
     'all': {
-        # Either specify a single dataset as `datasets`, in which case the
-        # dataset is split into calibration and test pairs according to the
-        # specified `fraction_test`, or specify a tuple of 2 datasets, in which
-        # case the pairs from the first dataset are used for calibration and
-        # the pairs from the second dataset are used for testing.
-        # 'test': {
-        #     'datasets': TestDataset(),
-        #     'fraction_test': .5,
-        # },
+        # specify both calibration and test as a tuple of datasets
+        'test': {
+            'calibration': (TestDataset(),),
+            'test': (TestDataset(),),
+        },
+        'dev': {
+            'calibration': (EnfsiDataset(years=[2011, 2012]),),
+            'test': (EnfsiDataset(years=[2011, 2012]),),
+        },
         'enfsi': {
-            'calibration': (ForenFaceDataset(max_num_images=20),
+            'calibration': (ForenFaceDataset(),
                             EnfsiDataset(years=[2011, 2012, 2013, 2017])),
             'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
-        # 'enfsi2011': {
-        #     'datasets': EnfsiDataset(years=[2011]),
-        #     'fraction_test': .2,
-        # },
-        # 'enfsi2012': {
-        #     'datasets': EnfsiDataset(years=[2012]),
-        #     'fraction_test': .2,
-        # },
-        # 'enfsi2013': {
-        #     'datasets': EnfsiDataset(years=[2013]),
-        #     'fraction_test': .2,
-        # },
-        # 'enfsi2017': {
-        #     'datasets': EnfsiDataset(years=[2017]),
-        #     'fraction_test': .2,
-        # },
-        # 'lfw': {
-        #     'datasets': LfwDataset(),
-        #     'fraction_test': .9,
-        # },
-        # 'SC': {
-        #     'datasets': SCDataset(image_types=['frontal',
-        #                                        'rotated',
-        #                                        'surveillance']),
-        #     'fraction_test': .9,
-        # },
-        # 'lfw_sanity_check': {
-        #     'datasets': (LfwDevDataset(True), LfwDevDataset(False)),
-        #     'fraction_test': None  # Can be omitted if `datasets` is a tuple.
-        # },
-        # 'forenface': {
-        #     'datasets': ForenFaceDataset(),
-        #     'fraction_test': .5,
-        # },
-        # 'foren-enfsi': {
-        #     'datasets': (ForenFaceDataset(),
-        #                  EnfsiDataset(years=[2011, 2012,2013, 2017])),
-        #     'fraction_test': None,
-        # }
+        'lfw': {
+            'calibration': (LfwDataset(),),
+            'test': (LfwDataset(),),
+        },
+        'SC': {
+            'calibration': (SCDataset(image_types=['frontal',
+                                               'rotated',
+                                               'surveillance']),),
+            'test': (SCDataset(image_types=['frontal',
+                                               'rotated',
+                                               'surveillance']),),
+        },
+        'lfw_sanity_check': {
+            'calibration': (LfwDevDataset(True), ),
+            'test': (LfwDevDataset(False),),
+            'fraction_test': None  # Can be omitted if `datasets` is a tuple.
+        },
     }
 }
 
@@ -141,7 +119,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['isotonic'],
+    'current_set_up': ['logit'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

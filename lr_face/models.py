@@ -149,8 +149,6 @@ class EmbeddingModel:
         else:
             x = image.get_image(self.resolution, normalize=True)
             x = np.expand_dims(x, axis=0)
-        x = image.get_image(self.resolution, normalize=True)
-        x = np.expand_dims(x, axis=0)
 
         if cache_dir:
             def md5(text: str) -> str:
