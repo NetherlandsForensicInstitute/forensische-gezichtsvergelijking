@@ -49,7 +49,9 @@ def perform_experiment(
     """
 
     calibration_pairs_per_category, test_pairs_per_category = \
-        experiment.get_calibration_and_test_pairs()
+        experiment.get_calibration_and_test_pairs_from_file()
+        # experiment.get_calibration_and_test_pairs()
+    #
     lr_systems = {}
     for category, calibration_pairs in calibration_pairs_per_category.items():
         lr_systems[category] = CalibratedScorer(experiment.scorer,

@@ -25,7 +25,7 @@ Parameters to be used in an experiment, different/new sets can be added under 'a
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
-    'current_set_up': ['scenario_2'],
+    'current_set_up': ['scenario_1'],
     'all': {
         'scenario_1': {
             'calibration_filters': [],
@@ -46,7 +46,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['dev'],
+    'current_set_up': ['enfsi'],
     'all': {
         # specify both calibration and test as a tuple of datasets
         'test': {
@@ -59,6 +59,9 @@ DATA = {
         },
         'enfsi': {
             'calibration': (ForenFaceDataset(),
+                            SCDataset(image_types=['frontal',
+                                               'rotated',
+                                               'surveillance']),
                             EnfsiDataset(years=[2011, 2012, 2013, 2017])),
             'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
