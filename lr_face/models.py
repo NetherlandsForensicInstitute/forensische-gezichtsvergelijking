@@ -75,9 +75,8 @@ class ScorerModel:
         """
         Predicts probabilities per category
         """
-        return {category: self.predict_proba(X) for category,
-                                                    X in
-                X_per_category.items()}
+        return {category: self.predict_proba(X)
+                for category, X in X_per_category.items()}
 
     def predict_proba(self, X: List[FacePair]) -> np.ndarray:
         """

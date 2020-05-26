@@ -79,7 +79,6 @@ DATA = {
         'lfw_sanity_check': {
             'calibration': (LfwDevDataset(True),),
             'test': (LfwDevDataset(False),),
-            'fraction_test': None  # Can be omitted if `datasets` is a tuple.
         },
     }
 }

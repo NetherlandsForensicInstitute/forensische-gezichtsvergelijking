@@ -32,12 +32,10 @@ class Experiment:
             else:
                 data_values.append(str(v))
 
-        data_str = '_'.join(data_values)
         params_str = '_'.join(map(str, self.params.values()))
         return '_'.join(map(str, [
             self.scorer,
             self.calibrator,
-            # data_str,
             params_str
         ])).replace(':', '-')  # Windows forbids ':'
 
