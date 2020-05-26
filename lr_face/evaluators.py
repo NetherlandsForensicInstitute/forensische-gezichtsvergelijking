@@ -7,6 +7,7 @@ from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, \
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 from lr_face.data import FacePair
+from lr_face.experiments import Experiment
 from lr_face.utils import save_predicted_lrs
 
 
@@ -154,7 +155,8 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
             'accuracy' + label: accuracy_score(y, scores > .5)}
 
 
-def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
+def evaluate(experiment: Experiment,
+             lr_systems: Dict[Tuple, CalibratedScorer],
              test_pairs_per_category: Dict[Tuple, List[FacePair]],
              make_plots_and_save_as: Optional[str]) -> Dict[str, float]:
     """
@@ -170,8 +172,10 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
         if category not in lr_systems:
             print(f'skipping {pairs} for category {category}')
             continue
-        category_scores = lr_systems[category].scorer.predict_proba(pairs)[
-                          :, 1]
+        if lr_systems[category].scorer == 'Facevacs':
+            category_scores = experiment.get_scores_from_file('results_test_pairs.txt', pairs)
+        else:
+            category_scores = lr_systems[category].scorer.predict_proba(pairs)[:, 1]
         scores = np.append(scores, category_scores)
         lr_predicted = np.append(
             lr_predicted,

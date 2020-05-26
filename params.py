@@ -18,7 +18,7 @@ fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 TIMES = 1
-FROM_FILE = True
+PAIRS_FROM_FILE = True
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
@@ -90,7 +90,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['face_recognition'],
+    'current_set_up': ['facevacs'],
 
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
@@ -99,6 +99,7 @@ SCORERS = {
         # e.g. 'my_tag:2'. If no version is specified, the latest version is
         # used by default.
         'dummy': (Architecture.DUMMY, None),
+        'facevacs': (Architecture.FACEVACS, None),
         'openface': (Architecture.OPENFACE, None),
         'facenet': (Architecture.FACENET, None),
         'fbdeepface': (Architecture.FBDEEPFACE, None),

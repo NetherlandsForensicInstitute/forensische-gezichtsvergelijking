@@ -11,7 +11,7 @@ from lr_face.experiments import ExperimentalSetup, Experiment
 from lr_face.utils import (write_output,
                            parser_setup,
                            create_dataframe)
-from params import TIMES, FROM_FILE
+from params import TIMES, PAIRS_FROM_FILE
 
 
 def run(scorers, calibrators, data, params):
@@ -31,7 +31,7 @@ def run(scorers, calibrators, data, params):
         make_plots_and_save_as = None
         if i < len(experimental_setup) / TIMES:
             make_plots_and_save_as = os.path.join(output_dir, str(experiment))
-        results.append(perform_experiment(experiment, make_plots_and_save_as, from_file=FROM_FILE))
+        results.append(perform_experiment(experiment, make_plots_and_save_as, pairs_from_file=PAIRS_FROM_FILE))
 
     df = create_dataframe(experimental_setup, results)
     write_output(df, experimental_setup.name)
@@ -40,7 +40,7 @@ def run(scorers, calibrators, data, params):
 def perform_experiment(
         experiment: Experiment,
         make_plots_and_save_as: Optional[str],
-        from_file: bool = False
+        pairs_from_file: bool = False
 ) -> Dict[str, float]:
     """
     Function to run a single experiment with pipeline:
@@ -48,7 +48,7 @@ def perform_experiment(
     - Fit calibrator on calibrator data
     - Evaluate test set
     """
-    if from_file:
+    if pairs_from_file:
         calibration_pairs_per_category, test_pairs_per_category = \
             experiment.get_calibration_and_test_pairs_from_file()
     else:
@@ -60,12 +60,15 @@ def perform_experiment(
         lr_systems[category] = CalibratedScorer(experiment.scorer,
                                         experiment.calibrator)
         # TODO currently, calibration could contain test images
-        p = lr_systems[category].scorer.predict_proba(calibration_pairs)
+        if experiment.scorer == 'Facevacs':
+            p = experiment.get_scores_from_file('results_cal_pairs.txt', calibration_pairs)
+        else:
+            p = lr_systems[category].scorer.predict_proba(calibration_pairs)
         lr_systems[category].calibrator.fit(
             X=p[:, 1],
             y=[int(pair.same_identity) for pair in calibration_pairs]
         )
-    return evaluate(lr_systems, test_pairs_per_category, make_plots_and_save_as)
+    return evaluate(experiment, lr_systems, test_pairs_per_category, make_plots_and_save_as)
 
 
 if __name__ == '__main__':

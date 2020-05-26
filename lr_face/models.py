@@ -302,6 +302,7 @@ class Architecture(Enum):
     ```
     """
     DUMMY = 'Dummy'
+    FACEVACS = 'Facevacs'
     VGGFACE = 'VGGFace'
     FACENET = 'Facenet'
     FBDEEPFACE = 'FbDeepFace'
@@ -326,7 +327,7 @@ class Architecture(Enum):
             module = importlib.import_module(module_name)
             return module.loadModel()
 
-        if self == self.DUMMY:
+        if self == self.DUMMY or self == self.FACEVACS:
             return DummyModel()
 
         if self == self.FACERECOGNITION:

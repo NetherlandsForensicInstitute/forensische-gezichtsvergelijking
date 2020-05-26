@@ -41,6 +41,25 @@ class Experiment:
             params_str
         ])).replace(':', '-')  # Windows forbids ':'
 
+    @staticmethod
+    def get_scores_from_file(filename, pairs):
+        with open(filename, 'r') as f:
+            pairs_from_file = f.read().splitlines()
+            pairs_from_file = [pair.split(';') for pair in pairs_from_file]
+
+        pairs_from_file_dict = dict()
+        for pair in pairs_from_file:
+            pairs_from_file_dict[
+                f'{pair[0]}_{pair[1]}'] = float(pair[2])
+            pairs_from_file_dict[
+                f'{pair[1]}_{pair[0]}'] = float(pair[2])
+
+        p = []
+        for pair in pairs:
+            match = pairs_from_file_dict.get(f'{pair.first.path}_{pair.second.path}')
+            p.append(match)
+        return p
+
     def get_pairs_from_file(self, filename, cal_or_test):
         with open(filename, 'r') as f:
             pairs_from_file = f.read().splitlines()
