@@ -72,7 +72,8 @@ class FaceImage:
         categorical version of original resolution of image
         """
         resolution = self.get_image().shape
-        m_pixels = np.prod(resolution) / 3  # divide by 3 for color channels
+        m_pixels = np.prod(resolution) / 10**6 / 3  # divide by 3 for color
+        # channels
         if m_pixels < 0.01:
             return 'LOW'
         if m_pixels < 0.1:
@@ -126,9 +127,6 @@ class FaceImage:
         scores = model.predict_proba(
             [FacePair(self, image) for image in BENCHMARK_IMAGES])[:, 1]
         return np.ceil(10 * np.mean(sorted(scores, reverse=True)[:10]))
-
-    def properties(self, filters) -> Tuple:
-        return tuple([self[prop] for prop in filters])
 
     def __post_init__(self):
         if not self.meta:
@@ -718,7 +716,7 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
     for x in data:
         images_by_identity[x.identity].append(x)
 
-    res = []
+    result = []
     identities = set(images_by_identity.keys())
 
     # First we handle the case when `same` is False, meaning we don't have to
@@ -734,12 +732,12 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
                 for image in images:
                     for negative_id in identities - {identity}:
                         for negative in images_by_identity[negative_id]:
-                            res.append(FacePair(image, negative))
+                            result.append(FacePair(image, negative))
         else:
             # If `n` is not omitted we simply create `n` random negative pairs.
             for _ in range(n):
                 a, b = random.sample(identities, 2)
-                res.append(
+                result.append(
                     FacePair(
                         random.choice(images_by_identity[a]),
                         random.choice(images_by_identity[b])
@@ -752,7 +750,7 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
         for identity, images in images_by_identity.items():
             for i, image in enumerate(images):
                 for positive in images[i + 1:]:
-                    res.append(FacePair(image, positive))
+                    result.append(FacePair(image, positive))
 
         # If `same` is omitted (None), it means we need to generate an equal
         # number of negative pairs.
@@ -761,15 +759,15 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
             # negative pairs that contain at least one of the images from each
             # positive pair and a randomly chosen other image with a different
             # identity.
-            for first, second in res.copy():  # Copy, because we modify `res`.
+            for first, second in result.copy():  # Copy, because we modify `result`.
                 identity = first.identity
                 negative_id = random.choice(tuple(identities - {identity}))
                 negative = random.choice(images_by_identity[negative_id])
-                res.append(FacePair(random.choice([first, second]), negative))
+                result.append(FacePair(random.choice([first, second]), negative))
 
         if n:
-            res = random.sample(res, min(len(res), n))
-    return res
+            result = random.sample(result, min(len(result), n))
+    return result
 
 
 def make_pairs_from_two_lists(
