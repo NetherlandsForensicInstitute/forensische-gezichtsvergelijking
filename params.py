@@ -1,4 +1,3 @@
-import numpy as np
 from lir import (LogitCalibrator,
                  NormalizedCalibrator,
                  ELUBbounder,
@@ -18,7 +17,8 @@ from lr_face.utils import fix_tensorflow_rtx
 fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
-TIMES = 10
+TIMES = 1
+FROM_FILE = True
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
@@ -40,7 +40,6 @@ PARAMS = {
     }
 }
 
-
 """ 
 New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
@@ -60,8 +59,8 @@ DATA = {
         'enfsi': {
             'calibration': (ForenFaceDataset(),
                             SCDataset(image_types=['frontal',
-                                               'rotated',
-                                               'surveillance']),
+                                                   'rotated',
+                                                   'surveillance']),
                             EnfsiDataset(years=[2011, 2012, 2013, 2017])),
             'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
@@ -71,14 +70,14 @@ DATA = {
         },
         'SC': {
             'calibration': (SCDataset(image_types=['frontal',
-                                               'rotated',
-                                               'surveillance']),),
+                                                   'rotated',
+                                                   'surveillance']),),
             'test': (SCDataset(image_types=['frontal',
-                                               'rotated',
-                                               'surveillance']),),
+                                            'rotated',
+                                            'surveillance']),),
         },
         'lfw_sanity_check': {
-            'calibration': (LfwDevDataset(True), ),
+            'calibration': (LfwDevDataset(True),),
             'test': (LfwDevDataset(False),),
             'fraction_test': None  # Can be omitted if `datasets` is a tuple.
         },

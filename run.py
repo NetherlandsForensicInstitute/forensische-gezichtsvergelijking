@@ -11,7 +11,7 @@ from lr_face.experiments import ExperimentalSetup, Experiment
 from lr_face.utils import (write_output,
                            parser_setup,
                            create_dataframe)
-from params import TIMES
+from params import TIMES, FROM_FILE
 
 
 def run(scorers, calibrators, data, params):
@@ -31,7 +31,7 @@ def run(scorers, calibrators, data, params):
         make_plots_and_save_as = None
         if i < len(experimental_setup) / TIMES:
             make_plots_and_save_as = os.path.join(output_dir, str(experiment))
-        results.append(perform_experiment(experiment, make_plots_and_save_as))
+        results.append(perform_experiment(experiment, make_plots_and_save_as, from_file=FROM_FILE))
 
     df = create_dataframe(experimental_setup, results)
     write_output(df, experimental_setup.name)
@@ -39,7 +39,8 @@ def run(scorers, calibrators, data, params):
 
 def perform_experiment(
         experiment: Experiment,
-        make_plots_and_save_as: Optional[str]
+        make_plots_and_save_as: Optional[str],
+        from_file: bool = False
 ) -> Dict[str, float]:
     """
     Function to run a single experiment with pipeline:
@@ -47,11 +48,13 @@ def perform_experiment(
     - Fit calibrator on calibrator data
     - Evaluate test set
     """
+    if from_file:
+        calibration_pairs_per_category, test_pairs_per_category = \
+            experiment.get_calibration_and_test_pairs_from_file()
+    else:
+        calibration_pairs_per_category, test_pairs_per_category = \
+            experiment.get_calibration_and_test_pairs()
 
-    calibration_pairs_per_category, test_pairs_per_category = \
-        experiment.get_calibration_and_test_pairs_from_file()
-        # experiment.get_calibration_and_test_pairs()
-    #
     lr_systems = {}
     for category, calibration_pairs in calibration_pairs_per_category.items():
         lr_systems[category] = CalibratedScorer(experiment.scorer,
