@@ -2,8 +2,7 @@ from typing import Dict, Optional, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, \
-    plot_score_distribution_and_calibrator_fit
+from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 from lr_face.data import FacePair
@@ -155,6 +154,33 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
             'accuracy' + label: accuracy_score(y, scores > .5)}
 
 
+# TODO put here temporarily until a new version of lir comes out
+def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=None, show=None):
+    """
+    plots the distributions of scores calculated by the (fitted) lr_system, as well as the fitted score distributions/
+    score-to-posterior map
+    (Note - for ELUBbounder calibrator is the firststepcalibrator)
+    """
+    plt.figure(figsize=(10, 10), dpi=100)
+    x = np.arange(0, 1, .01)
+    calibrator.transform(x)
+    if len(set(y)) == 2:
+        points0, points1 = Xy_to_Xn(scores, y)
+        plt.hist(points0, bins=20, alpha=.25, density=True, label='class 0')
+        plt.hist(points1, bins=20, alpha=.25, density=True, label='class 1')
+        plt.plot(x, calibrator.p1, label='fit class 1')
+        plt.plot(x, calibrator.p0, label='fit class 0')
+    else:
+        plt.hist(scores, bins=20, alpha=.25, density=True, label='class x')
+        plt.plot(x, calibrator.p1, label='fit class 1')
+        plt.plot(x, calibrator.p0, label='fit class 0')
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
+
 def evaluate(experiment: Experiment,
              lr_systems: Dict[Tuple, CalibratedScorer],
              test_pairs_per_category: Dict[Tuple, List[FacePair]],
@@ -199,7 +225,6 @@ def evaluate(experiment: Experiment,
             scorer = lr_systems[category].scorer
 
     if make_plots_and_save_as:
-
         # plot_performance_as_function_of_yaw(
         #     scores,
         #     test_pairs,

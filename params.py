@@ -18,7 +18,7 @@ fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 TIMES = 1
-PAIRS_FROM_FILE = True
+PAIRS_FROM_FILE = False
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.

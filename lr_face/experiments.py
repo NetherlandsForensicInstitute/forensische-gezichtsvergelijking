@@ -131,9 +131,9 @@ class Experiment:
                             len(pairs):
                         calibration_pairs_per_category[(category_a, category_b)] \
                             = pairs
-                    for pair in pairs:
-                        all_calibration_pairs.add((pair.first.path, pair.second.path))
-                        f.write(pair.first.path + ';' + pair.second.path + '\n')
+                        for pair in pairs:
+                            all_calibration_pairs.add((pair.first.path, pair.second.path))
+                            f.write(pair.first.path + ';' + pair.second.path + '\n')
 
         test_pairs = []
         for dataset in self.data_config['test']:

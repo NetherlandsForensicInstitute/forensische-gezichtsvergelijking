@@ -70,6 +70,9 @@ def perform_experiment(
             p = experiment.get_scores_from_file('results_cal_pairs.txt', calibration_pairs)
         else:
             p = lr_systems[category].scorer.predict_proba(calibration_pairs)
+        trala = [int(pair.same_identity) for pair in calibration_pairs]
+        import numpy as np
+        print(len(trala), np.sum(trala))
         lr_systems[category].calibrator.fit(
             X=p[:, 1],
             y=[int(pair.same_identity) for pair in calibration_pairs]
