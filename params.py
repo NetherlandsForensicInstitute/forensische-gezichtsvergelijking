@@ -38,7 +38,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['forenface'],
     'all': {
         # Either specify a single dataset as `datasets`, in which case the
         # dataset is split into calibration and test pairs according to the
@@ -100,7 +100,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['keras_vggface'],
+    'current_set_up': ['vggface'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
