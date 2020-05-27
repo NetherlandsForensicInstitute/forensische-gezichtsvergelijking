@@ -1,4 +1,3 @@
-import numpy as np
 from lir import (LogitCalibrator,
                  NormalizedCalibrator,
                  ELUBbounder,
@@ -107,8 +106,8 @@ For the input of an experiment the 'current_set_up' list can be updated.
 SCORERS = {
 
     'current_set_up': ['openface', 'facenet', 'fbdeepface', 'vggface',
-                        'arcface', 'lresnet', 'ir50m1sm', 'ir50asia',
-                        'face_recognition', 'keras_vggface'],
+                       'arcface', 'lresnet', 'ir50m1sm', 'ir50asia',
+                       'face_recognition', 'keras_vggface'],
 
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
