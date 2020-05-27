@@ -55,6 +55,7 @@ def run(input_folder, output_folder, recursive):
             face, rotation, face_found, original_res = \
                 functions.detectFace(path)
             if os.path.splitext(path)[-1] == '.bmp':
+                # Changing the path to let cv2 save the image as jpg
                 base, ext = os.path.splitext(path)
                 path = base + '.jpg'
             output_path = os.path.join(output_folder, path)
@@ -70,7 +71,7 @@ def run(input_folder, output_folder, recursive):
             pass
     for folder in meta:
         with open(os.path.join(folder, "meta.txt"), "w") as file:
-            file.write('file; rotation; face found; original resolution\n')
+            file.write('fgile; rotation; face found; original resolution\n')
             file.writelines(';'.join(map(str, line)) + '\n' for line in
                             sorted(meta[folder], key=lambda x: x[0]))
 
