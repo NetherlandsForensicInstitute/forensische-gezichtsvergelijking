@@ -137,10 +137,10 @@ class EmbeddingModel:
         """
 
         # For face_recognition model, RGB int32 image is required.
+        kwargs = locals()
         if self.name == 'face_recognition':
             x = image.get_image(RGB=True, normalize=False)
         else:
-            kwargs = locals()
             x = image.get_image(self.resolution, normalize=True)
             x = np.expand_dims(x, axis=0)
        
