@@ -94,12 +94,13 @@ class Experiment:
         assert isinstance(self.data_config['calibration'], tuple)
         assert isinstance(self.data_config['test'], tuple)
 
-        calibration_pairs = self.get_pairs_from_file('cal_pairs.txt', 'calibration')
-        test_pairs = self.get_pairs_from_file('test_pairs.txt', 'test')
+        calibration_pairs = self.get_pairs_from_file(f'cal_pairs_{self.params["calibration_filters"]}.txt',
+                                                     'calibration')
+        test_pairs = self.get_pairs_from_file(f'test_pairs_{self.params["calibration_filters"]}.txt', 'test')
 
         return calibration_pairs, test_pairs
 
-    def get_calibration_and_test_pairs(self) -> Tuple[
+    def get_calibration_and_test_pairs(self, all_calibration_pairs, all_test_pairs) -> Tuple[
         Dict[Tuple, List[FacePair]],
         Dict[Tuple, List[FacePair]]
     ]:
@@ -120,7 +121,7 @@ class Experiment:
 
         calibration_pairs_per_category = {}
 
-        with open('cal_pairs.txt', 'w') as f:
+        with open(f'cal_pairs_{self.params["calibration_filters"]}.txt', 'w') as f:
             for category_a, images_a in calibration_images_per_category.items():
                 for category_b, images_b in \
                         calibration_images_per_category.items():
@@ -130,9 +131,9 @@ class Experiment:
                             len(pairs):
                         calibration_pairs_per_category[(category_a, category_b)] \
                             = pairs
-                    for pair in [(pair.first.path, pair.second.path) for pair in
-                                 pairs]:
-                        f.write(pair[0] + ';' + pair[1] + '\n')
+                    for pair in pairs:
+                        all_calibration_pairs.add((pair.first.path, pair.second.path))
+                        f.write(pair.first.path + ';' + pair.second.path + '\n')
 
         test_pairs = []
         for dataset in self.data_config['test']:
@@ -146,10 +147,10 @@ class Experiment:
         for category, pair in zip(test_pair_categories, test_pairs):
             test_pairs_per_category[category].append(pair)
 
-        with open('test_pairs.txt', 'w') as f:
-            for pair in [(pair.first.path, pair.second.path) for pair in
-                         test_pairs]:
-                f.write(pair[0] + ';' + pair[1] + '\n')
+        with open(f'test_pairs_{self.params["calibration_filters"]}.txt', 'w') as f:
+            for pair in test_pairs:
+                all_test_pairs.add((pair.first.path, pair.second.path))
+                f.write(pair.first.path + ';' + pair.second.path + '\n')
 
         return calibration_pairs_per_category, test_pairs_per_category
 

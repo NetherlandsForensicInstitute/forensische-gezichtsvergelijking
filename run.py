@@ -10,7 +10,7 @@ from lr_face.evaluators import evaluate
 from lr_face.experiments import ExperimentalSetup, Experiment
 from lr_face.utils import (write_output,
                            parser_setup,
-                           create_dataframe)
+                           create_dataframe, write_all_pairs_to_file)
 from params import TIMES, PAIRS_FROM_FILE
 
 
@@ -26,13 +26,17 @@ def run(scorers, calibrators, data, params):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     results = []
+    all_calibration_pairs = set()
+    all_test_pairs = set()
     for i, experiment in enumerate(tqdm(experimental_setup)):
         # Make plots for the first round only.
         make_plots_and_save_as = None
         if i < len(experimental_setup) / TIMES:
             make_plots_and_save_as = os.path.join(output_dir, str(experiment))
-        results.append(perform_experiment(experiment, make_plots_and_save_as, pairs_from_file=PAIRS_FROM_FILE))
+        results.append(perform_experiment(experiment, make_plots_and_save_as, all_calibration_pairs, all_test_pairs,
+                                          pairs_from_file=PAIRS_FROM_FILE))
 
+    write_all_pairs_to_file(all_calibration_pairs, all_test_pairs)
     df = create_dataframe(experimental_setup, results)
     write_output(df, experimental_setup.name)
 
@@ -40,6 +44,8 @@ def run(scorers, calibrators, data, params):
 def perform_experiment(
         experiment: Experiment,
         make_plots_and_save_as: Optional[str],
+        all_calibration_pairs: set,
+        all_test_pairs: set,
         pairs_from_file: bool = False
 ) -> Dict[str, float]:
     """
@@ -53,12 +59,12 @@ def perform_experiment(
             experiment.get_calibration_and_test_pairs_from_file()
     else:
         calibration_pairs_per_category, test_pairs_per_category = \
-            experiment.get_calibration_and_test_pairs()
+            experiment.get_calibration_and_test_pairs(all_calibration_pairs, all_test_pairs)
 
     lr_systems = {}
     for category, calibration_pairs in calibration_pairs_per_category.items():
         lr_systems[category] = CalibratedScorer(experiment.scorer,
-                                        experiment.calibrator)
+                                                experiment.calibrator)
         # TODO currently, calibration could contain test images
         if experiment.scorer == 'Facevacs':
             p = experiment.get_scores_from_file('results_cal_pairs.txt', calibration_pairs)

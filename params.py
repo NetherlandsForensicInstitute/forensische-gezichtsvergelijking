@@ -25,7 +25,7 @@ Parameters to be used in an experiment, different/new sets can be added under 'a
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
-    'current_set_up': ['scenario_1'],
+    'current_set_up': ['scenario_1', 'scenario_2', 'scenario_3'],
     'all': {
         'scenario_1': {
             'calibration_filters': [],
@@ -34,7 +34,7 @@ PARAMS = {
             'calibration_filters': ['quality_score'],
         },
         'scenario_3': {
-            'calibration_filters': ['yaw', 'pitch', 'occlusion',
+            'calibration_filters': ['yaw', 'pitch', 'other_occlusions',
                                     'resolution_bin'],
         },
     }
@@ -45,7 +45,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['enfsi'],
+    'current_set_up': ['dev'],
     'all': {
         # specify both calibration and test as a tuple of datasets
         'test': {
@@ -89,8 +89,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['facevacs'],
-
+    'current_set_up': ['face_recognition', 'facevacs'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.

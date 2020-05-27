@@ -86,6 +86,15 @@ def parse_object_string(obj_string, name_only=False):
     return obj_dict
 
 
+def write_all_pairs_to_file(all_calibration_pairs, all_test_pairs):
+    with open('cal_pairs_all.txt', 'w') as f:
+        for pair in all_calibration_pairs:
+            f.write(pair[0] + ';' + pair[1] + '\n')
+    with open('test_pairs_all.txt', 'w') as f:
+        for pair in all_test_pairs:
+            f.write(pair[0] + ';' + pair[1] + '\n')
+
+
 def create_dataframe(experimental_setup, results: List[Dict]) -> pd.DataFrame:
     df = pd.DataFrame({
         'scorers': [e.scorer for e in experimental_setup],
