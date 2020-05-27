@@ -4,6 +4,7 @@ from collections import defaultdict
 from glob import glob
 
 import cv2
+from tqdm import tqdm
 
 from deepface.commons import functions
 
@@ -41,7 +42,7 @@ def parser():
 
 def is_image(file):
     _, ext = os.path.splitext(file)
-    return ext.lower() in {'.jpg', '.jpeg', '.png'}
+    return ext.lower() in {'.jpg', '.jpeg', '.png', '.bmp'}
 
 
 def run(input_folder, output_folder, recursive):
@@ -49,10 +50,13 @@ def run(input_folder, output_folder, recursive):
                  recursive=True) if recursive else glob(input_folder + '/*')
     paths = filter(is_image, paths)
     meta = defaultdict(list)
-    for path in paths:
+    for path in tqdm(paths):
         try:
             face, rotation, face_found, original_res = \
                 functions.detectFace(path)
+            if os.path.splitext(path)[-1] == '.bmp':
+                base, ext = os.path.splitext(path)
+                path = base + '.jpg'
             output_path = os.path.join(output_folder, path)
             dir_path, file_name = os.path.split(output_path)
             if not os.path.exists(dir_path):
@@ -61,7 +65,7 @@ def run(input_folder, output_folder, recursive):
             # save meta info per folder
             meta[dir_path].append(
                 [file_name, round(rotation, 2), face_found, original_res])
-        except ValueError as e:
+        except (ValueError, ZeroDivisionError) as e:
             print(e)
             pass
     for folder in meta:
