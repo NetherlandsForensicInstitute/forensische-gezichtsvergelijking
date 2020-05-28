@@ -90,21 +90,8 @@ class ScorerModel:
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
             embedding2 = self.embedding_model.embed(pair.second, cache_dir)
-<<<<<<< HEAD
-            if embedding1 is None or embedding2 is None:
-                # Remove pairs in which face is not detected
-                rm_pair.append(pair)
-=======
-            if embedding1 is not None and embedding2 is not None:
-                score = np.linalg.norm(embedding1 - embedding2)
-                scores.append([score, 1 - score])                
->>>>>>> 1bb2f2ca2e0283beb00f19827838958ddc4f1974
-            else:
-                score = spatial.distance.cosine(embedding1, embedding2)
-                scores.append([score, 1 - score])
-
-        # X = [i for i in X if i not in rm_pair]
-        # TODO : also remove files with no faces in truth.csv files.
+            score = np.linalg.norm(embedding1 - embedding2)
+            scores.append([score, 1 - score])
         return np.asarray(scores)
 
     def __str__(self) -> str:
@@ -155,11 +142,7 @@ class EmbeddingModel:
         else:
             x = image.get_image(self.resolution, normalize=True)
             x = np.expand_dims(x, axis=0)
-<<<<<<< HEAD
-=======
-       
 
->>>>>>> 1bb2f2ca2e0283beb00f19827838958ddc4f1974
         if cache_dir:
             def md5(text: str) -> str:
                 return hashlib.md5(text.encode()).hexdigest()
@@ -327,7 +310,7 @@ class Architecture(Enum):
             module_name = f'{self.source}.basemodels.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
-          
+
         if self == self.KERAS_VGGFACE or self == self.KERAS_VGGFACE_RESNET:
             module_name = f'keras_vggface.{self.value}'
             module = importlib.import_module(module_name)
