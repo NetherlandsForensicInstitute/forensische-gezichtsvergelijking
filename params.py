@@ -34,8 +34,7 @@ PARAMS = {
             'calibration_filters': ['quality_score'],
         },
         'scenario_3': {
-            'calibration_filters': ['yaw', 'pitch', 'other_occlusions',
-                                    'resolution_bin'],
+            'calibration_filters': ['yaw', 'pitch', 'other_occlusions', 'resolution_bin'],
         },
     }
 }
@@ -45,7 +44,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['dev'],
+    'current_set_up': ['forenface_enfsi_sc'],
     'all': {
         # specify both calibration and test as a tuple of datasets
         'test': {
@@ -56,12 +55,17 @@ DATA = {
             'calibration': (EnfsiDataset(years=[2011, 2012]),),
             'test': (EnfsiDataset(years=[2011, 2012]),),
         },
-        'enfsi': {
+        'forenface_enfsi_sc': {
             'calibration': (ForenFaceDataset(),
+                            EnfsiDataset(years=[2011, 2012, 2013, 2017]),
                             SCDataset(image_types=['frontal',
                                                    'rotated',
-                                                   'surveillance']),
-                            EnfsiDataset(years=[2011, 2012, 2013, 2017])),
+                                                   'surveillance'])
+                            ),
+            'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
+        },
+        'enfsi': {
+            'calibration': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
             'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
         'lfw': {

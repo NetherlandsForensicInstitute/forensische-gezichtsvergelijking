@@ -95,13 +95,8 @@ class ScorerModel:
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
             embedding2 = self.embedding_model.embed(pair.second, cache_dir)
-            if embedding1 is not None and embedding2 is not None:
-                score = spatial.distance.cosine(embedding1, embedding2)
-                scores.append([score, 1 - score])                
-            else:
-                rm_pair.append(pair)  # Remove pairs in which face is not detected
-        X = [i for i in X if i not in rm_pair] 
-        # TODO : also remove files with no faces in truth.csv files.
+            score = np.linalg.norm(embedding1 - embedding2)
+            scores.append([score, 1 - score])                
         return np.asarray(scores)
 
     def __str__(self) -> str:
@@ -146,6 +141,7 @@ class EmbeddingModel:
         """
         kwargs = locals()
         # For face_recognition model, RGB int32 image is required.
+        kwargs = locals()
         if self.name == 'face_recognition':
             x = image.get_image(RGB=True, normalize=False)
         else:
