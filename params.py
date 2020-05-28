@@ -95,7 +95,6 @@ For the input of an experiment the 'current_set_up' list can be updated.
 
 SCORERS = {
     'current_set_up': ['face_recognition'],
-
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
