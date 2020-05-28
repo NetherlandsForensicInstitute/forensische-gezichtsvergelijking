@@ -44,6 +44,10 @@ If you run into problems with connection timeouts or proxies, try the following 
 pip install -i https://pypi.org/simple -r requirements.txt
 ```
 
+cmake is needed for the the face_recognition library (more specifically, for pip install dlib):
+
+apt-get install cmake
+
 ---
 ## Overview
 ### Finetuning models
@@ -134,4 +138,5 @@ label-studio start annotations/<project-id>
 ```
 
 You can then start labeling at localhost:8200, your labels will be saved in the annotations/<project-id> folder. 
-(It might automatically open localhost:8200/start, remove the /start to start labeling in that case). 
+(It might automatically open localhost:8200/start, remove the /start to start labeling in that case).
+

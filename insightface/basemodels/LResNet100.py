@@ -1,5 +1,6 @@
 from tensorflow.keras.layers import * # changed tensorflow 2.0
 from tensorflow.keras.models import Model
+import tensorflow as tf
 import os
 import gdown
 
@@ -60,8 +61,9 @@ def loadModel():
     flat = Flatten()(permute)
     pre_fc1 = Dense(512, name="pre_fc1")(flat)
     fc1 = batchnorm(pre_fc1, name="fc1")
+    outn = Lambda(lambda x: tf.math.l2_normalize(x, axis=1))(fc1)
     
-    model = Model(inp, fc1, name="LResNet100E_IR")
+    model = Model(inp, outn, name="LResNet100E_IR")
     this_dir = os.path.dirname(__file__)
     parent_dir = os.path.dirname(this_dir)
     weights_file = os.path.join(parent_dir, 'weights', 'lresnet100e_ir_keras.h5')

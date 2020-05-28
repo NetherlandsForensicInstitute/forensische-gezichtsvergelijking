@@ -128,8 +128,7 @@ for i in range(n_plot_nrs):
 
 st.header('LR results')
 # get LR results, same as exp.results
-latest_lr_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
-    'lr_results.csv')])[-1]
+lr_csv = os.path.join(output_plots, 'lr_results.csv')
 
 def get_cllr_df(df_lrs):
     cllrs = []
@@ -157,10 +156,11 @@ def get_cllr_df(df_lrs):
                       round(cllr_results.cllr_min, 4)])
     return pd.DataFrame(cllrs, columns=['rater', 'group', 'cllr', 'cllr_min'])
 
-if len(latest_lr_csv) == 0 or latest_exp_csv[:19] != latest_lr_csv[:19]:
+
+if len(lr_csv) == 0:
     st.markdown('No LR results available.')
 else:
-    df_models = deepcopy(get_csv(latest_lr_csv))
+    df_models = deepcopy(get_csv(lr_csv))
     df_models['model'] = df_models.apply(
         lambda row: f'{row.scorers}_{row.calibrators}_{row.experiment_id}',
         axis=1)
@@ -214,7 +214,7 @@ else:
     set_scorers = list(set(df_models['scorers']))
 
     st.subheader('General information')
-    st.markdown(f'latest LR csv: {latest_lr_csv}')
+    st.markdown(f'latest LR csv: {lr_csv}')
     st.markdown(f'scorers: {set_scorers}')
     st.markdown(f'calibrators: {set_calibrators}')
 

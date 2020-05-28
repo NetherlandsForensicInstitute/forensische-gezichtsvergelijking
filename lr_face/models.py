@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import face_recognition
+
 import hashlib
 import importlib
 import math
@@ -39,6 +41,25 @@ class DummyModel(tf.keras.Sequential):
         ])
 
 
+class FaceRecognition():
+    """
+    A Face Recognition model that takes RGB images with any size as
+    input and outputs embeddings with dimensionality 128.'
+    """
+
+    def __init__(self):
+        self.input_shape = (None, None)  # face_recognition accepts any size
+
+    def predict(self, x):
+        # embed = None
+        embed = np.ones(128)
+        try:
+            embed = face_recognition.face_encodings(x)[0]
+        except IndexError:
+            print('no face found')
+        return [embed]
+
+
 class ScorerModel:
     """
     A wrapper around an `EmbeddingModel` that converts the embeddings of image
@@ -60,12 +81,13 @@ class ScorerModel:
         :return np.ndarray
         """
         scores = []
+        rm_pair = []
         cache_dir = EMBEDDINGS_DIR
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
             embedding2 = self.embedding_model.embed(pair.second, cache_dir)
-            score = spatial.distance.cosine(embedding1, embedding2)
-            scores.append([score, 1 - score])
+            score = np.linalg.norm(embedding1 - embedding2)
+            scores.append([score, 1 - score])                
         return np.asarray(scores)
 
     def __str__(self) -> str:
@@ -88,6 +110,7 @@ class EmbeddingModel:
         self.resolution = resolution
         self.model_dir = model_dir
         self.name = name
+        # self.source = source - added Andrea
         if tag:
             self.load_weights(tag)
 
@@ -107,9 +130,15 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
+
+        # For face_recognition model, RGB int32 image is required.
         kwargs = locals()
-        x = image.get_image(self.resolution, normalize=True)
-        x = np.expand_dims(x, axis=0)
+        if self.name == 'face_recognition':
+            x = image.get_image(RGB=True, normalize=False)
+        else:
+            x = image.get_image(self.resolution, normalize=True)
+            x = np.expand_dims(x, axis=0)
+       
 
         if cache_dir:
             def md5(text: str) -> str:
@@ -131,8 +160,6 @@ class EmbeddingModel:
             # If the embedding has not been cached to disk yet: compute the
             # embedding, cache it afterwards and then return the result.
             embedding = self.model.predict(x)[0]
-            # Normalize embeddings for finetuning.
-            embedding = embedding / np.linalg.norm(embedding)
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, 'wb') as f:
                 pickle.dump(embedding, f)
@@ -272,6 +299,7 @@ class Architecture(Enum):
     LRESNET = 'LResNet100'
     IR50M1SM = 'ir50m1sm'
     IR50ASIA = 'ir50asia'
+    FACERECOGNITION = 'face_recognition'
 
     def get_model(self):
         #  unified cases
@@ -279,12 +307,16 @@ class Architecture(Enum):
             module_name = f'{self.source}.basemodels.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
+          
         if self == self.KERAS_VGGFACE or self == self.KERAS_VGGFACE_RESNET:
             module_name = f'keras_vggface.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
+
         if self == self.DUMMY:
             return DummyModel()
+        if self == self.FACERECOGNITION:
+            return FaceRecognition()
         raise ValueError("Unable to load base model")
 
     def get_embedding_model(self,
@@ -382,4 +414,6 @@ class Architecture(Enum):
             return 'deepface'
         if self in insightface_models:
             return 'insightface'
+        if self == self.FACERECOGNITION:
+            return 'face-recognition'
         return None

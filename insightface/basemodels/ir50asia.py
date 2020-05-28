@@ -1,5 +1,6 @@
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import Model
+import tensorflow as tf
 import os
 import gdown
 
@@ -61,8 +62,9 @@ def loadModel():
     x = Flatten()(x)
     x = Dense(512, name="output_layer.3")(x)
     out = BatchNormalization(momentum=0.9, epsilon=1e-5, name="output_layer.4")(x)
+    outn = Lambda(lambda x: tf.math.l2_normalize(x, axis=1))(out)
     
-    model = Model(inp, out, name="IR50asia")
+    model = Model(inp, outn, name="IR50asia")
     
     this_dir = os.path.dirname(__file__)
     parent_dir = os.path.dirname(this_dir)
