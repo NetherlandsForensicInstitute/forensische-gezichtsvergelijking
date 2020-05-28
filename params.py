@@ -1,4 +1,3 @@
-import numpy as np
 from lir import (LogitCalibrator,
                  NormalizedCalibrator,
                  ELUBbounder,
