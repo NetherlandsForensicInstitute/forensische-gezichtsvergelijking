@@ -18,14 +18,14 @@ from lr_face.utils import fix_tensorflow_rtx
 fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
-TIMES = 10
+TIMES = 1
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
-    'current_set_up': ['scenario_2'],
+    'current_set_up': ['scenario_1', 'scenario_2', 'scenario_3'],
     'all': {
         'scenario_1': {
             'calibration_filters': [],
@@ -34,8 +34,7 @@ PARAMS = {
             'calibration_filters': ['quality_score'],
         },
         'scenario_3': {
-            'calibration_filters': ['yaw', 'pitch', 'occlusion',
-                                    'resolution_bin'],
+            'calibration_filters': ['yaw', 'pitch', 'other_occlusions', 'resolution_bin'],
         },
     }
 }
@@ -46,7 +45,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['dev'],
+    'current_set_up': ['forenface_enfsi_sc'],
     'all': {
         # specify both calibration and test as a tuple of datasets
         'test': {
@@ -57,9 +56,17 @@ DATA = {
             'calibration': (EnfsiDataset(years=[2011, 2012]),),
             'test': (EnfsiDataset(years=[2011, 2012]),),
         },
-        'enfsi': {
+        'forenface_enfsi_sc': {
             'calibration': (ForenFaceDataset(),
-                            EnfsiDataset(years=[2011, 2012, 2013, 2017])),
+                            EnfsiDataset(years=[2011, 2012, 2013, 2017]),
+                            SCDataset(image_types=['frontal',
+                                                   'rotated',
+                                                   'surveillance'])
+                            ),
+            'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
+        },
+        'enfsi': {
+            'calibration': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
             'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
         'lfw': {

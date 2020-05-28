@@ -596,8 +596,8 @@ class EnfsiDataset(Dataset):
                         path,
                         query_id,
                         source=str(self),
-                        yaw=annotation["yaw"],
-                        pitch=annotation["pitch"],
+                        yaw=Yaw(annotation["yaw"]),
+                        pitch=Pitch(annotation["pitch"]),
                         headgear=annotation["headgear"],
                         glasses=annotation["glasses"],
                         beard=annotation["beard"],
@@ -794,7 +794,8 @@ def make_pairs_from_two_lists(
             set(images_second_by_identity.keys())):
         for image_a in images_first_by_identity[identity]:
             for image_b in images_second_by_identity[identity]:
-                res.append(FacePair(image_a, image_b))
+                if image_a != image_b:
+                    res.append(FacePair(image_a, image_b))
 
     # Loop over and unpack all positive pairs, then create matching
     # negative pairs that contain at least one of the images from each

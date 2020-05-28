@@ -212,8 +212,8 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
                 calibrator,
                 category_scores,
                 category_y_test,
-                savefig=f'{make_plots_and_save_as} {category} '
-                        f'calibration.png'
+                savefig=f'{make_plots_and_save_as} {[str(c).split(":")[0] for cat in category for c in cat]} '
+                        f'calibration' + '.png'
             )
 
             # save last one (type should all be the same)
