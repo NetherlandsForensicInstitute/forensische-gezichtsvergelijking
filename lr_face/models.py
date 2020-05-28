@@ -139,7 +139,7 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
-        kwargs = locals()
+
         # For face_recognition model, RGB int32 image is required.
         kwargs = locals()
         if self.name == 'face_recognition':
@@ -323,7 +323,7 @@ class Architecture(Enum):
 
         if self == self.DUMMY:
             return DummyModel()
-
+          
         if self == self.FACERECOGNITION:
             return FaceRecognition()
 
