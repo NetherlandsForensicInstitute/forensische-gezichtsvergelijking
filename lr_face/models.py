@@ -10,7 +10,7 @@ import pickle
 import random
 import re
 from enum import Enum
-from typing import Tuple, List, Optional, Union
+from typing import Tuple, List, Optional, Union, Dict
 
 import numpy as np
 import tensorflow as tf
@@ -68,6 +68,15 @@ class ScorerModel:
 
     def __init__(self, embedding_model: EmbeddingModel):
         self.embedding_model = embedding_model
+
+    def predict_proba_per_category(self,
+                                   X_per_category: Dict[List[FacePair]]) \
+            -> Dict[np.ndarray]:
+        """
+        Predicts probabilities per category
+        """
+        return {category: self.predict_proba(X)
+                for category, X in X_per_category.items()}
 
     def predict_proba(self, X: List[FacePair]) -> np.ndarray:
         """
@@ -138,7 +147,6 @@ class EmbeddingModel:
         else:
             x = image.get_image(self.resolution, normalize=True)
             x = np.expand_dims(x, axis=0)
-       
 
         if cache_dir:
             def md5(text: str) -> str:
@@ -307,7 +315,7 @@ class Architecture(Enum):
             module_name = f'{self.source}.basemodels.{self.value}'
             module = importlib.import_module(module_name)
             return module.loadModel()
-          
+
         if self == self.KERAS_VGGFACE or self == self.KERAS_VGGFACE_RESNET:
             module_name = f'keras_vggface.{self.value}'
             module = importlib.import_module(module_name)
@@ -315,8 +323,10 @@ class Architecture(Enum):
 
         if self == self.DUMMY:
             return DummyModel()
+          
         if self == self.FACERECOGNITION:
             return FaceRecognition()
+
         raise ValueError("Unable to load base model")
 
     def get_embedding_model(self,

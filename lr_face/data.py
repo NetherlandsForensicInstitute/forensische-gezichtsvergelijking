@@ -56,7 +56,8 @@ class FaceImage:
     # metadata about the image can be stored.
     meta: Dict[str, Any] = None
 
-    # Defaults to none, which means there is no annotation available for the property.
+    # Defaults to none, which means there is no annotation available
+    # for the property.
     yaw: Yaw = None
     pitch: Pitch = None
     headgear: bool = None
@@ -64,6 +65,21 @@ class FaceImage:
     beard: bool = None
     other_occlusions: bool = None
     low_quality: bool = None
+
+    @property
+    def resolution_bin(self):
+        """
+        categorical version of original resolution of image
+        """
+        resolution = self.get_image().shape
+        m_pixels = np.prod(resolution) / 10**6 / 3  # divide by 3 for color
+        # channels
+        if m_pixels < 0.01:
+            return 'LOW'
+        if m_pixels < 0.1:
+            return 'MEDIUM'
+        return 'GOOD'
+
 
     @cache
     def get_image(
@@ -100,6 +116,17 @@ class FaceImage:
         if normalize and np.max(res) > 1:
             res = res / 255
         return res
+
+    @property
+    def quality_score(self):
+        """ returns a 'quality score', as the average of the top ten score
+        against a fixed set of 100 different source images"""
+        from lr_face.models import Architecture
+        # TODO Open question: should we use the model we are calibrating?
+        model = Architecture.FACERECOGNITION.get_scorer_model(None)
+        scores = model.predict_proba(
+            [FacePair(self, image) for image in BENCHMARK_IMAGES])[:, 1]
+        return np.ceil(10 * np.mean(sorted(scores, reverse=True)[:10]))
 
     def __post_init__(self):
         if not self.meta:
@@ -627,8 +654,8 @@ class EnfsiDataset(Dataset):
                         path,
                         query_id,
                         source=str(self),
-                        yaw=annotation["yaw"],
-                        pitch=annotation["pitch"],
+                        yaw=Yaw(annotation["yaw"]),
+                        pitch=Pitch(annotation["pitch"]),
                         headgear=annotation["headgear"],
                         glasses=annotation["glasses"],
                         beard=annotation["beard"],
@@ -747,7 +774,7 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
     for x in data:
         images_by_identity[x.identity].append(x)
 
-    res = []
+    result = []
     identities = set(images_by_identity.keys())
 
     # First we handle the case when `same` is False, meaning we don't have to
@@ -763,12 +790,12 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
                 for image in images:
                     for negative_id in identities - {identity}:
                         for negative in images_by_identity[negative_id]:
-                            res.append(FacePair(image, negative))
+                            result.append(FacePair(image, negative))
         else:
             # If `n` is not omitted we simply create `n` random negative pairs.
             for _ in range(n):
                 a, b = random.sample(identities, 2)
-                res.append(
+                result.append(
                     FacePair(
                         random.choice(images_by_identity[a]),
                         random.choice(images_by_identity[b])
@@ -781,7 +808,7 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
         for identity, images in images_by_identity.items():
             for i, image in enumerate(images):
                 for positive in images[i + 1:]:
-                    res.append(FacePair(image, positive))
+                    result.append(FacePair(image, positive))
 
         # If `same` is omitted (None), it means we need to generate an equal
         # number of negative pairs.
@@ -790,14 +817,58 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
             # negative pairs that contain at least one of the images from each
             # positive pair and a randomly chosen other image with a different
             # identity.
-            for first, second in res.copy():  # Copy, because we modify `res`.
+            for first, second in result.copy():  # Copy, because we modify `result`.
                 identity = first.identity
                 negative_id = random.choice(tuple(identities - {identity}))
                 negative = random.choice(images_by_identity[negative_id])
-                res.append(FacePair(random.choice([first, second]), negative))
+                result.append(FacePair(random.choice([first, second]), negative))
 
         if n:
-            res = random.sample(res, min(len(res), n))
+            result = random.sample(result, min(len(result), n))
+    return result
+
+
+def make_pairs_from_two_lists(
+        data_first: List[FaceImage],
+        data_second: List[FaceImage],
+        n: Optional[int] = None) -> List[FacePair]:
+    """
+    Takes two list of `FaceImage` instances and pairs them up, each pair
+    having one image from the first, one from the seconds
+
+    Returns:
+        A list of `FacePair` instances.
+    """
+    images_first_by_identity = defaultdict(list)
+    for x in data_first:
+        images_first_by_identity[x.identity].append(x)
+
+    images_second_by_identity = defaultdict(list)
+    for x in data_second:
+        images_second_by_identity[x.identity].append(x)
+
+    res = []
+    for identity in set(images_first_by_identity.keys()).intersection(
+            set(images_second_by_identity.keys())):
+        for image_a in images_first_by_identity[identity]:
+            for image_b in images_second_by_identity[identity]:
+                if image_a != image_b:
+                    res.append(FacePair(image_a, image_b))
+
+    # Loop over and unpack all positive pairs, then create matching
+    # negative pairs that contain at least one of the images from each
+    # positive pair and a randomly chosen other image with a different
+    # identity.
+    for first, second in res.copy():  # Copy, because we modify `res`.
+        identity = first.identity
+        options = set(images_second_by_identity.keys()) - {identity}
+        if len(options) > 0:
+            negative_id = random.choice(tuple(options))
+            negative = random.choice(images_second_by_identity[negative_id])
+            res.append(FacePair(first, negative))
+
+    if n:
+        res = random.sample(res, min(len(res), n))
     return res
 
 
@@ -938,3 +1009,18 @@ def split_by_identity(
         data = data.images
     train_idx, test_idx = next(gss.split(data, groups=identities))
     return [data[idx] for idx in train_idx], [data[idx] for idx in test_idx]
+
+
+def get_benchmark_images():
+    """creates a fixed set of images to compute quality scores against.
+
+    The images are taken from LFW and increasingle reduced in resolution"""
+
+    # TODO save this as standalone set when we settle on what images to use?
+    data = LfwDevDataset(True)
+    # TODO resolution reduction? somewhat involved for FaceImages
+    images = data.images
+    return images[:100]
+
+
+BENCHMARK_IMAGES: List[FaceImage] = get_benchmark_images()

@@ -17,17 +17,24 @@ from lr_face.utils import fix_tensorflow_rtx
 fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
-TIMES = 10
+TIMES = 1
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
-    'current_set_up': ['SET1'],
+    'current_set_up': ['scenario_1', 'scenario_2', 'scenario_3'],
     'all': {
-        'SET1': {
-        }
+        'scenario_1': {
+            'calibration_filters': [],
+        },
+        'scenario_2': {
+            'calibration_filters': ['quality_score'],
+        },
+        'scenario_3': {
+            'calibration_filters': ['yaw', 'pitch', 'other_occlusions', 'resolution_bin'],
+        },
     }
 }
 
@@ -37,66 +44,46 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-
-    'current_set_up': ['forenface'],
-
+    'current_set_up': ['forenface_enfsi_sc'],
     'all': {
-        # Either specify a single dataset as `datasets`, in which case the
-        # dataset is split into calibration and test pairs according to the
-        # specified `fraction_test`, or specify a tuple of 2 datasets, in which
-        # case the pairs from the first dataset are used for calibration and
-        # the pairs from the second dataset are used for testing.
+        # specify both calibration and test as a tuple of datasets
         'test': {
-            'datasets': TestDataset(),
-            'fraction_test': .5,
+            'calibration': (TestDataset(),),
+            'test': (TestDataset(),),
+        },
+        'dev': {
+            'calibration': (EnfsiDataset(years=[2011, 2012]),),
+            'test': (EnfsiDataset(years=[2011, 2012]),),
+        },
+        'forenface_enfsi_sc': {
+            'calibration': (ForenFaceDataset(),
+                            EnfsiDataset(years=[2011, 2012, 2013, 2017]),
+                            SCDataset(image_types=['frontal',
+                                                   'rotated',
+                                                   'surveillance'])
+                            ),
+            'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
         'enfsi': {
-            'datasets': EnfsiDataset(years=[2011, 2012, 2013, 2017]),
-            'fraction_test': .2,
-        },
-        'enfsi2011': {
-            'datasets': EnfsiDataset(years=[2011]),
-            'fraction_test': .2,
-        },
-        'enfsi2012': {
-            'datasets': EnfsiDataset(years=[2012]),
-            'fraction_test': .2,
-        },
-        'enfsi2013': {
-            'datasets': EnfsiDataset(years=[2013]),
-            'fraction_test': .2,
-        },
-        'enfsi2017': {
-            'datasets': EnfsiDataset(years=[2017]),
-            'fraction_test': .2,
+            'calibration': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
+            'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
         'lfw': {
-            'datasets': LfwDataset(),
-            'fraction_test': .9,
+            'calibration': (LfwDataset(),),
+            'test': (LfwDataset(),),
         },
         'SC': {
-            'datasets': SCDataset(image_types=['frontal',
+            'calibration': (SCDataset(image_types=['frontal',
                                                'rotated',
-                                               'surveillance']),
-            'fraction_test': .9,
+                                               'surveillance']),),
+            'test': (SCDataset(image_types=['frontal',
+                                               'rotated',
+                                               'surveillance']),),
         },
         'lfw_sanity_check': {
-            'datasets': (LfwDevDataset(True), LfwDevDataset(False)),
-            'fraction_test': None  # Can be omitted if `datasets` is a tuple.
+            'calibration': (LfwDevDataset(True), ),
+            'test': (LfwDevDataset(False),),
         },
-        'lfw_enfsi': {
-            'datasets': (LfwDevDataset(True), EnfsiDataset(years=[2011, 2012, 2013, 2017])),
-            'fraction_test': None  # Can be omitted if `datasets` is a tuple.
-        },
-        'forenface': {
-            'datasets': ForenFaceDataset(),
-            'fraction_test': .5,
-        },
-        'foren-enfsi': {
-            'datasets': (ForenFaceDataset(),
-                         EnfsiDataset(years=[2011, 2012,2013, 2017])),
-            'fraction_test': None,
-        }
     }
 }
 
@@ -106,9 +93,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-
-    'current_set_up': ['vggface'],
-
+    'current_set_up': ['face_recognition'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
@@ -137,7 +122,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['isotonic'],
+    'current_set_up': ['logit'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),
