@@ -3,10 +3,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Dict, Any, Iterator, Tuple, Optional, Union
 
+import numpy as np
 from sklearn.base import BaseEstimator
-from sklearn.model_selection import train_test_split
 
-from lr_face.data import Dataset, split_by_identity, make_pairs, FacePair, \
+from lr_face.data import FacePair, \
     FaceImage, make_pairs_from_two_lists
 from lr_face.models import ScorerModel
 from lr_face.versioning import Tag
