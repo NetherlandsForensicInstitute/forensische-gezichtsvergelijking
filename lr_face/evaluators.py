@@ -35,10 +35,18 @@ def plot_performance_as_function_of_yaw(scores,
     the images, coloured by ground truth. calls plt.show() if show is True.
     todo: Currently not working, because of changes in how the annotations are processed.
     """
+    for_yaws = [None] * len(test_pairs)
+    for i in range(len(test_pairs)):
+        if (str(test_pairs[i].first.yaw) == 'Yaw.PROFILE') | (str(test_pairs[i].second.yaw) == 'Yaw.PROFILE'):
+            for_yaws[i] = 2
+        elif (str(test_pairs[i].first.yaw) == 'Yaw.HALF_TURNED') | (str(test_pairs[i].second.yaw) == 'Yaw.HALF_TURNED'):
+            for_yaws[i] = 1
+        else:
+            for_yaws[i] = 0
 
     # give it a slight offset so both classes are visible
-    yaws = [max(pair.first.yaw, pair.second.yaw) - 0.1 + 0.2 * int(y) for
-            pair, y in zip(test_pairs, y_test)]
+    yaws = [pair - 0.1 + 0.2 * int(y) for
+            pair, y in zip(for_yaws, y_test)]
     label = 'yaw (0=frontal)'
     plot_performance_as_a_function_of_x(
         properties=yaws,
@@ -221,11 +229,11 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
 
     if make_plots_and_save_as:
 
-        # plot_performance_as_function_of_yaw(
-        #     scores,
-        #     test_pairs,
-        #     y_test,
-        #     savefig=f'{make_plots_and_save_as} scores against yaw.png')
+        plot_performance_as_function_of_yaw(
+            scores,
+            test_pairs,
+            y_test,
+            savefig=f'{make_plots_and_save_as} scores against yaw.png')
 
         plot_performance_as_function_of_resolution(
             scores,

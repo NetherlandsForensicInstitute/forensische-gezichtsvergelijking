@@ -17,6 +17,7 @@ __pycache__
 /scratch
 /annotations
 /resources/*
+/resizedeepface/*
 .DS_Store
 
 /insightface/weights

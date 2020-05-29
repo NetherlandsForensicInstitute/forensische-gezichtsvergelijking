@@ -44,7 +44,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['forenface_enfsi_sc'],
+    'current_set_up': ['enfsi'],
     'all': {
         # specify both calibration and test as a tuple of datasets
         'test': {
