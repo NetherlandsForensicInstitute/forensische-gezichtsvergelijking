@@ -45,8 +45,11 @@ pip install -i https://pypi.org/simple -r requirements.txt
 ```
 
 cmake is needed for the the face_recognition library (more specifically, for pip install dlib):
+```bash
+sudo apt-get install cmake
+sudo apt-get install python3.7-dev
+```
 
-apt-get install cmake
 
 ---
 ## Overview
