@@ -45,8 +45,11 @@ pip install -i https://pypi.org/simple -r requirements.txt
 ```
 
 cmake is needed for the the face_recognition library (more specifically, for pip install dlib):
+```bash
+sudo apt-get install cmake
+sudo apt-get install python3.7-dev
+```
 
-apt-get install cmake
 
 ---
 ## Overview
@@ -139,4 +142,5 @@ label-studio start annotations/<project-id>
 
 You can then start labeling at localhost:8200, your labels will be saved in the annotations/<project-id> folder. 
 (It might automatically open localhost:8200/start, remove the /start to start labeling in that case).
+
 

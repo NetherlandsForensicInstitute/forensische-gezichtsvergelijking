@@ -54,18 +54,20 @@ latest_exp_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
 df_exp = deepcopy(get_csv(latest_exp_csv))
 set_calibrators = list(set(df_exp['calibrators']))
 set_scorers = list(set(df_exp['scorers']))
-set_data = list(set(df_exp['datasets']))
+set_calibration_data = list(set(df_exp['calibration']))
+set_test_data = list(set(df_exp['test']))
 
 st.header('General information')
 st.markdown(f'latest csv: {latest_exp_csv}')
 st.markdown(f'no of experiments: {len(df_exp)}')
-st.markdown(f'data: {set_data}')
+st.markdown(f'calibration data: {set_calibration_data}')
+st.markdown(f'test data: {set_test_data}')
 st.markdown(f'scorers: {set_scorers}')
 st.markdown(f'calibrators: {set_calibrators}')
 
 # show dataframe, option to select columns
-defaultcols = ['index', 'scorers', 'calibrators', 'datasets', 'cllr',
-               'auc', 'accuracy']
+defaultcols = ['index', 'scorers', 'calibrators', 'calibration', 'test',
+               'cllr', 'auc', 'accuracy']
 cols = st.multiselect("Select columns", df_exp.columns.tolist(),
                       default=defaultcols)
 st.dataframe(df_exp[cols])
@@ -75,19 +77,23 @@ st.header('Select scorer, calibrator and dataset:')
 calibrators = st.multiselect("Calibrator", set_calibrators,
                              default=set_calibrators)
 scorers = st.multiselect("Scorer", set_scorers, default=set_scorers)
-data = st.multiselect("Data", set_data, default=set_data)
+cal_data = st.multiselect("Calibration data",
+                          set_calibration_data, default=set_calibration_data)
+test_data = st.multiselect("Test data", set_test_data, default=set_test_data)
 
 st.dataframe(df_exp.loc[df_exp['calibrators'].isin(calibrators) &
                         df_exp['scorers'].isin(scorers) &
-                        df_exp['datasets'].isin(data)][cols])
+                        df_exp['test'].isin(test_data) &
+                        df_exp['calibration'].isin(cal_data)][cols])
 
 if research_question == 'train_calibrate_same_data':
 
-    st.header('Metrics for each combination of dataset, scorer and '
+    st.header('Metrics for each combination of calibration dataset, scorer '
+              'and '
               'calibrator:')
     for metric in ('cllr', 'auc', 'accuracy'):
         st.altair_chart(alt.Chart(df_exp, width=40).mark_boxplot().encode(
-            x='datasets',
+            x='calibration',
             y=alt.Y(metric,
                     scale=alt.Scale(domain=[0, 1.2])
                     ),

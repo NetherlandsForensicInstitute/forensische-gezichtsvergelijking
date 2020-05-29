@@ -2,8 +2,7 @@ from typing import Dict, Optional, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder, \
-    plot_score_distribution_and_calibrator_fit
+from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 from lr_face.data import FacePair
@@ -154,22 +153,73 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
             'accuracy' + label: accuracy_score(y, scores > .5)}
 
 
-def evaluate(lr_system: CalibratedScorer,
-             test_pairs: List[FacePair],
+#TODO put here temporarily until a new version of lir comes out
+def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=None, show=None):
+    """
+    plots the distributions of scores calculated by the (fitted) lr_system, as well as the fitted score distributions/
+    score-to-posterior map
+    (Note - for ELUBbounder calibrator is the firststepcalibrator)
+    """
+    plt.figure(figsize=(10, 10), dpi=100)
+    x = np.arange(0, 1, .01)
+    calibrator.transform(x)
+    if len(set(y))==2:
+        points0, points1 = Xy_to_Xn(scores, y)
+        plt.hist(points0, bins=20, alpha=.25, density=True, label='class 0')
+        plt.hist(points1, bins=20, alpha=.25, density=True, label='class 1')
+        plt.plot(x, calibrator.p1, label='fit class 1')
+        plt.plot(x, calibrator.p0, label='fit class 0')
+    else:
+        plt.hist(scores, bins=20, alpha=.25, density=True, label='class x')
+        plt.plot(x, calibrator.p1, label='fit class 1')
+        plt.plot(x, calibrator.p0, label='fit class 0')
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
+def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
+             test_pairs_per_category: Dict[Tuple, List[FacePair]],
              make_plots_and_save_as: Optional[str]) -> Dict[str, float]:
     """
     Calculates a variety of evaluation metrics and plots data if
     `make_plots_and_save_as` is not None.
     """
-    scores = lr_system.scorer.predict_proba(test_pairs)[:, 1]
-    lr_predicted = lr_system.calibrator.transform(scores)
-    y_test = [int(pair.same_identity) for pair in test_pairs]
+
+    scores = np.array([])
+    lr_predicted = np.array([])
+    y_test = []
+    test_pairs = []
+    for category, pairs in test_pairs_per_category.items():
+        if category not in lr_systems:
+            print(f'skipping {pairs} for category {category}')
+            continue
+        category_scores = lr_systems[category].scorer.predict_proba(pairs)[
+                          :, 1]
+        scores = np.append(scores, category_scores)
+        lr_predicted = np.append(
+            lr_predicted,
+            lr_systems[category].calibrator.transform(category_scores))
+        category_y_test = [int(pair.same_identity) for pair in pairs]
+        y_test += category_y_test
+        test_pairs += pairs
+        if make_plots_and_save_as:
+            calibrator = lr_systems[category].calibrator
+            if type(calibrator) == ELUBbounder:
+                calibrator = calibrator.first_step_calibrator
+            plot_score_distribution_and_calibrator_fit(
+                calibrator,
+                category_scores,
+                category_y_test,
+                savefig=f'{make_plots_and_save_as} {[str(c).split(":")[0] for cat in category for c in cat]} '
+                        f'calibration' + '.png'
+            )
+
+            # save last one (type should all be the same)
+            scorer = lr_systems[category].scorer
 
     if make_plots_and_save_as:
-        calibrator = lr_system.calibrator
-        if type(calibrator) == ELUBbounder:
-            calibrator = calibrator.first_step_calibrator
-
 
         # plot_performance_as_function_of_yaw(
         #     scores,
@@ -184,13 +234,6 @@ def evaluate(lr_system: CalibratedScorer,
             show_ratio=False,
             savefig=f'{make_plots_and_save_as} scores against resolution.png')
 
-        plot_score_distribution_and_calibrator_fit(
-            calibrator,
-            scores,
-            y_test,
-            savefig=f'{make_plots_and_save_as} calibration.png'
-        )
-
         plot_lr_distributions(
             np.log10(lr_predicted),
             y_test,
@@ -204,7 +247,8 @@ def evaluate(lr_system: CalibratedScorer,
         )
 
         save_predicted_lrs(
-            lr_system, test_pairs, lr_predicted, make_plots_and_save_as)
+            scorer, calibrator, test_pairs, lr_predicted,
+            make_plots_and_save_as)
 
     return calculate_metrics_dict(
         scores,
