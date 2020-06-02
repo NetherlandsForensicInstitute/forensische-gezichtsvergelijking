@@ -321,7 +321,7 @@ class Architecture(Enum):
             module = importlib.import_module(module_name)
             return module.loadModel()
 
-        if self == self.DUMMY or self == self.FACEVACS:
+        if self == self.DUMMY or self == self.FACEVACS: # Facevacs scores come from file, so uses dummy
             return DummyModel()
 
         if self == self.FACERECOGNITION:
