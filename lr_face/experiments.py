@@ -75,7 +75,8 @@ class Experiment:
         for pair_in_file in pairs_from_file:
             first = image_path_dict[pair_in_file[0]]
             second = image_path_dict[pair_in_file[1]]
-            pairs.append(FacePair(first, second))
+            if isinstance(first, FaceImage) and isinstance(second, FaceImage):
+                pairs.append(FacePair(first, second))
         pair_categories = [(
             self.get_values_for_categories(pair.first),
             self.get_values_for_categories(pair.second))

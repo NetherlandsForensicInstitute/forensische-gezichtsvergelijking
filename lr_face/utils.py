@@ -250,3 +250,10 @@ def get_enfsi_lrs():
         df_enfsi = df_enfsi.append(df_temp)
 
     return df_enfsi.replace('-', 0)
+
+
+def get_valid_scores(p, calibration_pairs):
+    mask = p[:, 1] != -1
+    p_valid = p[mask]
+    calibration_pairs_valid = np.array(calibration_pairs)[mask]
+    return p_valid, calibration_pairs_valid

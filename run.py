@@ -10,7 +10,7 @@ from lr_face.evaluators import evaluate
 from lr_face.experiments import ExperimentalSetup, Experiment
 from lr_face.utils import (write_output,
                            parser_setup,
-                           create_dataframe, write_all_pairs_to_file)
+                           create_dataframe, write_all_pairs_to_file, get_valid_scores)
 from params import TIMES, PAIRS_FROM_FILE
 
 
@@ -70,9 +70,11 @@ def perform_experiment(
             p = experiment.get_scores_from_file('results_cal_pairs.txt', calibration_pairs)
         else:
             p = lr_systems[category].scorer.predict_proba(calibration_pairs)
+        # Remove invalid scores (-1) where no face was found on one of the images in the pair
+        p_valid, calibration_pairs_valid = get_valid_scores(p, calibration_pairs)
         lr_systems[category].calibrator.fit(
-            X=p[:, 1],
-            y=[int(pair.same_identity) for pair in calibration_pairs]
+            X=p_valid[:, 1],
+            y=[int(pair.same_identity) for pair in calibration_pairs_valid]
         )
     return evaluate(experiment, lr_systems, test_pairs_per_category, make_plots_and_save_as)
 
