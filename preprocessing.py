@@ -52,7 +52,6 @@ def run(input_folder, output_folder, recursive):
     paths = filter(is_image, paths)
     meta = defaultdict(list)
     for path in paths:
-        print(path)
         try:
             face, rotation, face_found, original_res = \
                 functions.detectFace(path)
@@ -76,14 +75,9 @@ def run(input_folder, output_folder, recursive):
 
 
 def find_face2(path):
-    # image = face_recognition.load_image_file(path)
-    image = cv2.imread(path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = face_recognition.load_image_file(path)
     face_locations = face_recognition.face_locations(image)
-    if len(face_locations) > 0:
-        return True
-    else:
-        return False
+    return bool(face_locations)
 
 
 if __name__ == '__main__':

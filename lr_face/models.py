@@ -85,7 +85,6 @@ class ScorerModel:
         :return np.ndarray
         """
         scores = []
-        rm_pair = []
         cache_dir = EMBEDDINGS_DIR
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
@@ -93,11 +92,9 @@ class ScorerModel:
             if embedding1 is None or embedding2 is None:
                 # If face was not detected, score = -1
                 score = -1
-                scores.append([score, 1 - score])
             else:
-                score = spatial.distance.cosine(embedding1, embedding2)
-                scores.append([score, 1 - score])
-            # score = np.linalg.norm(embedding1 - embedding2)
+                score = np.linalg.norm(embedding1 - embedding2)
+                # score = spatial.distance.cosine(embedding1, embedding2)
             scores.append([score, 1 - score])
         return np.asarray(scores)
 
