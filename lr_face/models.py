@@ -139,7 +139,6 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
-
         # For face_recognition model, RGB int32 image is required.
         kwargs = locals()
         if self.name == 'face_recognition':
@@ -297,6 +296,7 @@ class Architecture(Enum):
     ```
     """
     DUMMY = 'Dummy'
+    FACEVACS = 'Facevacs'
     VGGFACE = 'VGGFace'
     FACENET = 'Facenet'
     FBDEEPFACE = 'FbDeepFace'
@@ -321,9 +321,9 @@ class Architecture(Enum):
             module = importlib.import_module(module_name)
             return module.loadModel()
 
-        if self == self.DUMMY:
+        if self == self.DUMMY or self == self.FACEVACS: # Facevacs scores come from file, so uses dummy
             return DummyModel()
-          
+
         if self == self.FACERECOGNITION:
             return FaceRecognition()
 

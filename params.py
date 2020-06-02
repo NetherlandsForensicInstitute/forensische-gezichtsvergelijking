@@ -18,6 +18,7 @@ fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 TIMES = 1
+PAIRS_FROM_FILE = False
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
@@ -37,7 +38,6 @@ PARAMS = {
         },
     }
 }
-
 
 """ 
 New datasets can be added to 'all'.
@@ -74,14 +74,14 @@ DATA = {
         },
         'SC': {
             'calibration': (SCDataset(image_types=['frontal',
-                                               'rotated',
-                                               'surveillance']),),
+                                                   'rotated',
+                                                   'surveillance']),),
             'test': (SCDataset(image_types=['frontal',
-                                               'rotated',
-                                               'surveillance']),),
+                                            'rotated',
+                                            'surveillance']),),
         },
         'lfw_sanity_check': {
-            'calibration': (LfwDevDataset(True), ),
+            'calibration': (LfwDevDataset(True),),
             'test': (LfwDevDataset(False),),
         },
     }
@@ -101,6 +101,7 @@ SCORERS = {
         # e.g. 'my_tag:2'. If no version is specified, the latest version is
         # used by default.
         'dummy': (Architecture.DUMMY, None),
+        'facevacs': (Architecture.FACEVACS, None),
         'openface': (Architecture.OPENFACE, None),
         'facenet': (Architecture.FACENET, None),
         'fbdeepface': (Architecture.FBDEEPFACE, None),

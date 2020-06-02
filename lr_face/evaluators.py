@@ -6,6 +6,7 @@ from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 from lr_face.data import FacePair
+from lr_face.experiments import Experiment
 from lr_face.utils import save_predicted_lrs
 
 
@@ -153,7 +154,7 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
             'accuracy' + label: accuracy_score(y, scores > .5)}
 
 
-#TODO put here temporarily until a new version of lir comes out
+# TODO put here temporarily until a new version of lir comes out
 def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=None, show=None):
     """
     plots the distributions of scores calculated by the (fitted) lr_system, as well as the fitted score distributions/
@@ -163,7 +164,7 @@ def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=No
     plt.figure(figsize=(10, 10), dpi=100)
     x = np.arange(0, 1, .01)
     calibrator.transform(x)
-    if len(set(y))==2:
+    if len(set(y)) == 2:
         points0, points1 = Xy_to_Xn(scores, y)
         plt.hist(points0, bins=20, alpha=.25, density=True, label='class 0')
         plt.hist(points1, bins=20, alpha=.25, density=True, label='class 1')
@@ -179,7 +180,9 @@ def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=No
     if show or savefig is None:
         plt.show()
 
-def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
+
+def evaluate(experiment: Experiment,
+             lr_systems: Dict[Tuple, CalibratedScorer],
              test_pairs_per_category: Dict[Tuple, List[FacePair]],
              make_plots_and_save_as: Optional[str]) -> Dict[str, float]:
     """
@@ -195,8 +198,10 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
         if category not in lr_systems:
             print(f'skipping {pairs} for category {category}')
             continue
-        category_scores = lr_systems[category].scorer.predict_proba(pairs)[
-                          :, 1]
+        if lr_systems[category].scorer == 'Facevacs':
+            category_scores = experiment.get_scores_from_file('results_test_pairs.txt', pairs)
+        else:
+            category_scores = lr_systems[category].scorer.predict_proba(pairs)[:, 1]
         scores = np.append(scores, category_scores)
         lr_predicted = np.append(
             lr_predicted,
@@ -220,7 +225,6 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
             scorer = lr_systems[category].scorer
 
     if make_plots_and_save_as:
-
         # plot_performance_as_function_of_yaw(
         #     scores,
         #     test_pairs,
