@@ -52,6 +52,7 @@ _max_width_()
 latest_exp_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
     'experiments_results.csv')])[-1]
 df_exp = deepcopy(get_csv(latest_exp_csv))
+df_exp
 set_calibrators = list(set(df_exp['calibrators']))
 set_scorers = list(set(df_exp['scorers']))
 set_calibration_data = list(set(df_exp['calibration']))

@@ -25,7 +25,7 @@ Parameters to be used in an experiment, different/new sets can be added under 'a
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
-    'current_set_up': ['scenario_3'],
+    'current_set_up': ['scenario_1', 'scenario_3'],
     'all': {
         'scenario_1': {
             'calibration_filters': [],
@@ -102,7 +102,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['facevacs'],
+    'current_set_up': ['facevacs', 'face_recognition'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
@@ -132,7 +132,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['logit', 'isotonic', 'KDE'],
+    'current_set_up': ['logit'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

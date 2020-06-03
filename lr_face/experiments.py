@@ -1,6 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from typing import List, Dict, Any, Iterator, Tuple, Optional, Union
 
 import numpy as np
@@ -11,7 +12,6 @@ from lr_face.data import FacePair, \
 from lr_face.models import ScorerModel
 from lr_face.versioning import Tag
 from params import *
-
 
 @dataclass
 class Experiment:
@@ -40,7 +40,8 @@ class Experiment:
         ])).replace(':', '-')  # Windows forbids ':'
 
     @staticmethod
-    def get_scores_from_file(filename, pairs):
+    @lru_cache(maxsize=None)
+    def get_scores_from_file(filename, pair_paths):
         with open(filename, 'r') as f:
             pairs_from_file = f.read().splitlines()
             pairs_from_file = [pair.split(';') for pair in pairs_from_file]
@@ -58,8 +59,8 @@ class Experiment:
                 f'{pair[1]}_{pair[0]}'] = res
 
         p = []
-        for pair in pairs:
-            match = pairs_from_file_dict.get(f'{pair.first.path}_{pair.second.path}')
+        for pair_path in pair_paths:
+            match = pairs_from_file_dict.get(f'{pair_path[0]}_{pair_path[1]}')
             if not match:
                 match = -1
             p.append([1-match, match])
