@@ -203,10 +203,10 @@ def evaluate(experiment: Experiment,
             print(f'skipping {pairs} for category {category}')
             continue
         if lr_systems[category].scorer.embedding_model.name == 'Facevacs':
-            category_scores = np.array(experiment.get_scores_from_file('results_test_pairs.txt', pairs))[:, 1]
+            category_scores = np.array(experiment.get_scores_from_file('results_test_pairs.txt', pairs))
         else:
             category_scores = lr_systems[category].scorer.predict_proba(pairs)
-        category_scores_valid, pairs_valid = get_valid_scores(category_scores, pairs)
+        category_scores_valid, pairs_valid = get_valid_scores(category_scores[:, 1], pairs)
         scores = np.append(scores, category_scores_valid)
         number_of_scores += len(category_scores)
         lr_predicted = np.append(

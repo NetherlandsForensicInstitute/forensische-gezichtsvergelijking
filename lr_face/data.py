@@ -212,7 +212,8 @@ class DummyFaceImage(FaceImage):
             self,
             resolution: Optional[Tuple[int, int]] = None,
             normalize: bool = False,
-            augmenter: Optional[Augmenter] = None
+            augmenter: Optional[Augmenter] = None,
+            RGB: bool = False
     ) -> np.ndarray:
         """
         Since dummy instances don't have a real path, we override the
@@ -223,6 +224,8 @@ class DummyFaceImage(FaceImage):
         image = np.random.random(size=(*resolution, 3))
         if augmenter:
             image = augmenter(image)
+        if RGB:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, (resolution[1], resolution[0]))
         if normalize:
             image = image / 255

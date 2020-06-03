@@ -97,7 +97,7 @@ if research_question == 'train_calibrate_same_data':
             y=alt.Y(metric,
                     scale=alt.Scale(domain=[0, 1.2])
                     ),
-            row=alt.Row('calibrator_name', header=alt.Header(labelAngle=-90)),
+            row=alt.Row('calibrators', header=alt.Header(labelAngle=-90)),
             column=alt.Column('scorers')
         ).interactive())
 

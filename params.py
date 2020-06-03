@@ -55,6 +55,15 @@ DATA = {
             'calibration': (EnfsiDataset(years=[2011, 2012]),),
             'test': (EnfsiDataset(years=[2011, 2012]),),
         },
+        'forenface_enfsi_sc_dev': {
+            'calibration': (ForenFaceDataset(max_num_images=10),
+                            EnfsiDataset(years=[2011]),
+                            # SCDataset(image_types=['frontal',
+                            #                        'rotated',
+                            #                        'surveillance'])
+                            ),
+            'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
+        },
         'forenface_enfsi_sc': {
             'calibration': (ForenFaceDataset(),
                             EnfsiDataset(years=[2011, 2012, 2013, 2017]),
@@ -123,7 +132,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['logit'],
+    'current_set_up': ['logit', 'isotonic', 'kde'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

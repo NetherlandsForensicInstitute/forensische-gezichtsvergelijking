@@ -73,6 +73,7 @@ def perform_experiment(
         else:
             print('Hey I"m cheating')
             p = lr_systems[category].scorer.predict_proba(calibration_pairs)
+        assert len(p[0]) == 2
         # Remove invalid scores (-1) where no face was found on one of the images in the pair
         p_valid, calibration_pairs_valid = get_valid_scores(p[:, 1], calibration_pairs)
         y_cal = [int(pair.same_identity) for pair in calibration_pairs_valid]
