@@ -148,12 +148,14 @@ def calculate_metrics_dict(number_of_scores, scores, y, lr_predicted, cal_fracti
     Calculates metrics for an lr system given the predicted LRs.
     """
     X1, X2 = Xy_to_Xn(lr_predicted, y)
-
-    return {'cllr' + label: round(calculate_cllr(X1, X2).cllr, 4),
-            'auc' + label: roc_auc_score(y, scores),
-            'accuracy' + label: accuracy_score(y, scores > .5),
-            'cal_fraction_valid' + label: cal_fraction_valid,
-            'test_fraction_valid' + label: len(scores)/number_of_scores}
+    results = {'cllr' + label: round(calculate_cllr(X1, X2).cllr, 4),
+                'auc' + label: roc_auc_score(y, scores),
+                'accuracy' + label: accuracy_score(y, scores > .5),
+                'cal_fraction_valid' + label: np.mean(list(cal_fraction_valid.values())),
+                'test_fraction_valid' + label: len(scores)/number_of_scores}
+    for key, value in cal_fraction_valid.items():
+        results[f'cal_fraction_{key}'] = value
+    return results
 
 
 # TODO put here temporarily until a new version of lir comes out
@@ -187,7 +189,7 @@ def evaluate(experiment: Experiment,
              lr_systems: Dict[Tuple, CalibratedScorer],
              test_pairs_per_category: Dict[Tuple, List[FacePair]],
              make_plots_and_save_as: Optional[str],
-             cal_fraction_valid: float) -> Dict[str, float]:
+             cal_fraction_valid: Dict[Tuple, float]) -> Dict[str, float]:
     """
     Calculates a variety of evaluation metrics and plots data if
     `make_plots_and_save_as` is not None.
@@ -229,7 +231,9 @@ def evaluate(experiment: Experiment,
             # save last one (type should all be the same)
             scorer = lr_systems[category].scorer
 
+    lr_predicted = np.nan_to_num(lr_predicted, posinf=10e5)
     if make_plots_and_save_as:
+
         # plot_performance_as_function_of_yaw(
         #     scores,
         #     test_pairs,
