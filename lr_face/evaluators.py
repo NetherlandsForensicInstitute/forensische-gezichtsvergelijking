@@ -2,11 +2,11 @@ from typing import Dict, Optional, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-from lr_face.data import FacePair, Yaw
-from lr_face.utils import save_predicted_lrs
 from lr_face.data import FacePair
 from lr_face.experiments import Experiment
 from lr_face.utils import save_predicted_lrs, get_valid_scores
@@ -36,29 +36,22 @@ def plot_performance_as_function_of_yaw(scores,
     """
     plots the scores as a function of the maximum yaw (=looking sideways) on
     the images, coloured by ground truth. calls plt.show() if show is True.
-    todo: Currently not working, because of changes in how the annotations are processed.
     """
-    for_yaws = []
+    df_yaws = pd.DataFrame(columns=['pair_id', 'y_test', 'yaw_first', 'yaw_second', 'score'])
     for i, test_pair in enumerate(test_pairs):
-        if (test_pair.first.yaw == Yaw.PROFILE) | (test_pair.second.yaw == Yaw.PROFILE):
-            for_yaws.append(2)
-        elif (test_pair.first.yaw == Yaw.HALF_TURNED) | (test_pair.second.yaw == Yaw.HALF_TURNED):
-            for_yaws.append(1)
-        else:
-            for_yaws.append(0)
+        df_yaws = df_yaws.append(dict(pair_id=i,
+                                      y_test=y_test[i],
+                                      yaw_first=test_pair.first.yaw.value,
+                                      yaw_second=test_pair.second.yaw.value,
+                                      score=scores[i]),
+                                 ignore_index=True)
 
-    # give it a slight offset so both classes are visible
-    yaws = [pair - 0.1 + 0.2 * int(y) for
-            pair, y in zip(for_yaws, y_test)]
-    label = 'yaw (0=frontal)'
-    plot_performance_as_a_function_of_x(
-        properties=yaws,
-        scores=scores,
-        y_test=y_test,
-        x_label=label,
-        savefig=savefig,
-        show=show,
-        bins=[(i - .5, i + .5) for i in range(5)])
+    sns.catplot(x="yaw_second", y="score", row='yaw_first', hue='y_test', kind="swarm", data=df_yaws)
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
 
 
 def plot_performance_as_function_of_resolution(scores,
@@ -159,10 +152,10 @@ def calculate_metrics_dict(number_of_scores, scores, y, lr_predicted, cal_fracti
     """
     X1, X2 = Xy_to_Xn(lr_predicted, y)
     results = {'cllr' + label: round(calculate_cllr(X1, X2).cllr, 4),
-                'auc' + label: roc_auc_score(y, scores),
-                'accuracy' + label: accuracy_score(y, scores > .5),
-                'cal_fraction_valid' + label: np.mean(list(cal_fraction_valid.values())),
-                'test_fraction_valid' + label: len(scores)/number_of_scores}
+               'auc' + label: roc_auc_score(y, scores),
+               'accuracy' + label: accuracy_score(y, scores > .5),
+               'cal_fraction_valid' + label: np.mean(list(cal_fraction_valid.values())),
+               'test_fraction_valid' + label: len(scores) / number_of_scores}
     for key, value in cal_fraction_valid.items():
         results[f'cal_fraction_{key}'] = value
     return results
@@ -193,7 +186,6 @@ def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=No
         plt.close()
     if show or savefig is None:
         plt.show()
-
 
 
 def evaluate(experiment: Experiment,
@@ -283,4 +275,3 @@ def evaluate(experiment: Experiment,
         cal_fraction_valid=cal_fraction_valid,
         label=''
     )
-
