@@ -18,7 +18,7 @@ fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 TIMES = 1
-PAIRS_FROM_FILE = False
+PAIRS_FROM_FILE = True  # Only change to False if you want to generate new pair files instead of reading them from file
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
@@ -44,7 +44,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['forenface_enfsi_sc'],
+    'current_set_up': ['forenface_enfsi_sc_dev'],
     'all': {
         # specify both calibration and test as a tuple of datasets
         'test': {
@@ -54,6 +54,11 @@ DATA = {
         'dev': {
             'calibration': (EnfsiDataset(years=[2011, 2012]),),
             'test': (EnfsiDataset(years=[2011, 2012]),),
+        },
+        'forenface_enfsi_sc_dev': {
+            'calibration': (ForenFaceDataset(max_num_images=10),
+                            EnfsiDataset(years=[2011]),),
+            'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
         'forenface_enfsi_sc': {
             'calibration': (ForenFaceDataset(),
@@ -93,7 +98,7 @@ For the input of an experiment the 'current_set_up' list can be updated.
 """
 
 SCORERS = {
-    'current_set_up': ['face_recognition'],
+    'current_set_up': ['facevacs', 'face_recognition'],
     'all': {
         # We apply lazy loading to the scorer models since they take up a lot
         # of memory. Each setup has type `Tuple[Architecture, Optional[str]]`.
@@ -123,7 +128,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['logit'],
+    'current_set_up': ['logit', 'KDE', 'isotonic'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

@@ -1,6 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from typing import List, Dict, Any, Iterator, Tuple, Optional, Union
 
 import numpy as np
@@ -11,7 +12,6 @@ from lr_face.data import FacePair, \
 from lr_face.models import ScorerModel
 from lr_face.versioning import Tag
 from params import *
-
 
 @dataclass
 class Experiment:
@@ -40,22 +40,30 @@ class Experiment:
         ])).replace(':', '-')  # Windows forbids ':'
 
     @staticmethod
-    def get_scores_from_file(filename, pairs):
+    @lru_cache(maxsize=None)
+    def get_scores_from_file(filename, pair_paths):
         with open(filename, 'r') as f:
             pairs_from_file = f.read().splitlines()
             pairs_from_file = [pair.split(';') for pair in pairs_from_file]
 
         pairs_from_file_dict = dict()
         for pair in pairs_from_file:
+            if len(pair) != 3:
+                print(f'some issue with results file: {pair}')
+                res = -1
+            else:
+                res = float(pair[2])
             pairs_from_file_dict[
-                f'{pair[0]}_{pair[1]}'] = float(pair[2])
+                f'{pair[0]}_{pair[1]}'] = res
             pairs_from_file_dict[
-                f'{pair[1]}_{pair[0]}'] = float(pair[2])
+                f'{pair[1]}_{pair[0]}'] = res
 
         p = []
-        for pair in pairs:
-            match = pairs_from_file_dict.get(f'{pair.first.path}_{pair.second.path}')
-            p.append(match)
+        for pair_path in pair_paths:
+            match = pairs_from_file_dict.get(f'{pair_path[0]}_{pair_path[1]}')
+            if not match:
+                match = -1
+            p.append([1-match, match])
         return p
 
     def get_pairs_from_file(self, filename, cal_or_test):
@@ -75,7 +83,10 @@ class Experiment:
         for pair_in_file in pairs_from_file:
             first = image_path_dict[pair_in_file[0]]
             second = image_path_dict[pair_in_file[1]]
-            pairs.append(FacePair(first, second))
+            if isinstance(first, FaceImage) and isinstance(second, FaceImage):
+                pairs.append(FacePair(first, second))
+            else:
+                print(f'Could not find {pair_in_file[0]} and/or {pair_in_file[1]} image in dataset images.')
         pair_categories = [(
             self.get_values_for_categories(pair.first),
             self.get_values_for_categories(pair.second))

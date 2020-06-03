@@ -148,7 +148,6 @@ class EmbeddingModel:
         :param cache_dir: Optional[str]
         :return: np.ndarray
         """
-
         # For face_recognition model, RGB int32 image is required.
         kwargs = locals()
         if self.name == 'face_recognition':

@@ -52,6 +52,7 @@ _max_width_()
 latest_exp_csv = sorted([f for f in (os.listdir('output')) if f.endswith(
     'experiments_results.csv')])[-1]
 df_exp = deepcopy(get_csv(latest_exp_csv))
+df_exp
 set_calibrators = list(set(df_exp['calibrators']))
 set_scorers = list(set(df_exp['scorers']))
 set_calibration_data = list(set(df_exp['calibration']))
@@ -97,7 +98,7 @@ if research_question == 'train_calibrate_same_data':
             y=alt.Y(metric,
                     scale=alt.Scale(domain=[0, 1.2])
                     ),
-            row=alt.Row('calibrator_name', header=alt.Header(labelAngle=-90)),
+            row=alt.Row('calibrators', header=alt.Header(labelAngle=-90)),
             column=alt.Column('scorers')
         ).interactive())
 
