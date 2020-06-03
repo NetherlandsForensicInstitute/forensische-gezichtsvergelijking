@@ -3,6 +3,7 @@ import os
 from typing import Dict, Optional
 
 import confidence
+import numpy as np
 from lir import CalibratedScorer
 from tqdm import tqdm
 
@@ -66,17 +67,27 @@ def perform_experiment(
         lr_systems[category] = CalibratedScorer(experiment.scorer,
                                                 experiment.calibrator)
         # TODO currently, calibration could contain test images
-        if experiment.scorer == 'Facevacs':
-            p = experiment.get_scores_from_file('results_cal_pairs.txt', calibration_pairs)
+        if experiment.scorer.embedding_model.name == 'Facevacs':
+            print('Facevacs is working')
+            p = np.array(experiment.get_scores_from_file('results_cal_pairs.txt', calibration_pairs))
         else:
+            print('Hey I"m cheating')
             p = lr_systems[category].scorer.predict_proba(calibration_pairs)
         # Remove invalid scores (-1) where no face was found on one of the images in the pair
-        p_valid, calibration_pairs_valid = get_valid_scores(p, calibration_pairs)
-        lr_systems[category].calibrator.fit(
-            X=p_valid[:, 1],
-            y=[int(pair.same_identity) for pair in calibration_pairs_valid]
-        )
-    return evaluate(experiment, lr_systems, test_pairs_per_category, make_plots_and_save_as)
+        p_valid, calibration_pairs_valid = get_valid_scores(p[:, 1], calibration_pairs)
+        y_cal = [int(pair.same_identity) for pair in calibration_pairs_valid]
+        if 0 < np.sum(y_cal) < len(calibration_pairs_valid):
+            lr_systems[category].calibrator.fit(
+                X=p_valid,
+                y= y_cal
+            )
+        else:
+            del lr_systems[category]
+    return evaluate(experiment=experiment,
+                    lr_systems=lr_systems,
+                    test_pairs_per_category=test_pairs_per_category,
+                    make_plots_and_save_as=make_plots_and_save_as,
+                    cal_fraction_valid=len(calibration_pairs_valid) / len(calibration_pairs))
 
 
 if __name__ == '__main__':
