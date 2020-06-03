@@ -57,11 +57,7 @@ DATA = {
         },
         'forenface_enfsi_sc_dev': {
             'calibration': (ForenFaceDataset(max_num_images=10),
-                            EnfsiDataset(years=[2011]),
-                            # SCDataset(image_types=['frontal',
-                            #                        'rotated',
-                            #                        'surveillance'])
-                            ),
+                            EnfsiDataset(years=[2011]),),
             'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
         'forenface_enfsi_sc': {
