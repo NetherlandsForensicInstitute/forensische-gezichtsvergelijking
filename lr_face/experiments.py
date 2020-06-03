@@ -1,11 +1,13 @@
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Dict, Any, Iterator, Tuple, Optional, Union
 
+import numpy as np
 from sklearn.base import BaseEstimator
-from sklearn.model_selection import train_test_split
 
-from lr_face.data import Dataset, split_by_identity, make_pairs, FacePair
+from lr_face.data import FacePair, \
+    FaceImage, make_pairs_from_two_lists
 from lr_face.models import ScorerModel
 from lr_face.versioning import Tag
 from params import *
@@ -30,53 +32,131 @@ class Experiment:
             else:
                 data_values.append(str(v))
 
-        data_str = '_'.join(data_values)
         params_str = '_'.join(map(str, self.params.values()))
         return '_'.join(map(str, [
             self.scorer,
             self.calibrator,
-            data_str,
             params_str
         ])).replace(':', '-')  # Windows forbids ':'
 
-    def get_calibration_and_test_pairs(self) -> Tuple[
-        List[FacePair],
-        List[FacePair]
+    @staticmethod
+    def get_scores_from_file(filename, pairs):
+        with open(filename, 'r') as f:
+            pairs_from_file = f.read().splitlines()
+            pairs_from_file = [pair.split(';') for pair in pairs_from_file]
+
+        pairs_from_file_dict = dict()
+        for pair in pairs_from_file:
+            pairs_from_file_dict[
+                f'{pair[0]}_{pair[1]}'] = float(pair[2])
+            pairs_from_file_dict[
+                f'{pair[1]}_{pair[0]}'] = float(pair[2])
+
+        p = []
+        for pair in pairs:
+            match = pairs_from_file_dict.get(f'{pair.first.path}_{pair.second.path}')
+            p.append(match)
+        return p
+
+    def get_pairs_from_file(self, filename, cal_or_test):
+        with open(filename, 'r') as f:
+            pairs_from_file = f.read().splitlines()
+            pairs_from_file = [pair.split(';') for pair in pairs_from_file]
+
+        # get all images
+        images = list()
+        image_path_dict = defaultdict(list)
+        for dataset in self.data_config[cal_or_test]:
+            images += dataset.images
+        for image in images:
+            image_path_dict[image.path] = image
+
+        pairs = []
+        for pair_in_file in pairs_from_file:
+            first = image_path_dict[pair_in_file[0]]
+            second = image_path_dict[pair_in_file[1]]
+            pairs.append(FacePair(first, second))
+        pair_categories = [(
+            self.get_values_for_categories(pair.first),
+            self.get_values_for_categories(pair.second))
+            for pair in pairs]
+
+        pairs_per_category = defaultdict(list)
+        for category, pair in zip(pair_categories, pairs):
+            pairs_per_category[category].append(pair)
+
+        return pairs_per_category
+
+    def get_calibration_and_test_pairs_from_file(self) -> Tuple[
+        Dict[Tuple, List[FacePair]],
+        Dict[Tuple, List[FacePair]]
     ]:
-        datasets = self.data_config['datasets']
+        assert isinstance(self.data_config['calibration'], tuple)
+        assert isinstance(self.data_config['test'], tuple)
 
-        # If `datasets` is a single `Dataset` instance, split its images by
-        # identity into two disjoint sets and make pairs out of them.
-        if isinstance(datasets, Dataset):
-            test_size = self.data_config['fraction_test']
-            if datasets.pairs:
-                calibration_pairs, test_pairs = train_test_split(
-                    datasets.pairs,
-                    test_size=test_size,
-                    stratify=[p.same_identity for p in datasets.pairs])
-            else:
-                calibration_pairs, test_pairs = map(
-                    make_pairs,
-                    split_by_identity(datasets, test_size)
-                )
-            return calibration_pairs, test_pairs
+        calibration_pairs = self.get_pairs_from_file(f'cal_pairs_{self.params["calibration_filters"]}.txt',
+                                                     'calibration')
+        test_pairs = self.get_pairs_from_file(f'test_pairs_{self.params["calibration_filters"]}.txt', 'test')
 
-        # If `datasets` is already a tuple of `Dataset` instances, make pairs
-        # for each individual dataset and return those.
-        if isinstance(datasets, tuple) \
-                and len(datasets) == 2 \
-                and all(isinstance(x, Dataset) for x in datasets):
-            calibration_pairs = datasets[0].pairs
-            if not calibration_pairs:
-                calibration_pairs = make_pairs(datasets[0])
-            test_pairs = datasets[1].pairs
-            if not test_pairs:
-                test_pairs = make_pairs(datasets[1])
-            return calibration_pairs, test_pairs
+        return calibration_pairs, test_pairs
 
-        # In all other cases something was misconfigured, so raise an error.
-        raise ValueError(
-            f'Could not create calibration and test data from {str(datasets)}')
+    def get_calibration_and_test_pairs(self, all_calibration_pairs, all_test_pairs) -> Tuple[
+        Dict[Tuple, List[FacePair]],
+        Dict[Tuple, List[FacePair]]
+    ]:
+        assert isinstance(self.data_config['calibration'], tuple)
+        assert isinstance(self.data_config['test'], tuple)
+
+        # get all images
+        calibration_images = []
+        for dataset in self.data_config['calibration']:
+            calibration_images += dataset.images
+
+        # filter the images per category
+        calibration_images_per_category = defaultdict(list)
+        for image in calibration_images:
+            calibration_images_per_category[
+                self.get_values_for_categories(image)] \
+                .append(image)
+
+        calibration_pairs_per_category = {}
+
+        with open(f'cal_pairs_{self.params["calibration_filters"]}.txt', 'w') as f:
+            for category_a, images_a in calibration_images_per_category.items():
+                for category_b, images_b in \
+                        calibration_images_per_category.items():
+                    pairs = make_pairs_from_two_lists(images_a, images_b)
+                    # only add if there are both same and different source pairs
+                    if 0 < np.sum([pair.same_identity for pair in pairs]) < \
+                            len(pairs):
+                        calibration_pairs_per_category[(category_a, category_b)] \
+                            = pairs
+                        for pair in pairs:
+                            all_calibration_pairs.add((pair.first.path, pair.second.path))
+                            f.write(pair.first.path + ';' + pair.second.path + '\n')
+
+        test_pairs = []
+        for dataset in self.data_config['test']:
+            test_pairs += dataset.pairs
+        test_pair_categories = [(
+            self.get_values_for_categories(pair.first),
+            self.get_values_for_categories(pair.second))
+            for pair in test_pairs]
+
+        test_pairs_per_category = defaultdict(list)
+        for category, pair in zip(test_pair_categories, test_pairs):
+            test_pairs_per_category[category].append(pair)
+
+        with open(f'test_pairs_{self.params["calibration_filters"]}.txt', 'w') as f:
+            for pair in test_pairs:
+                all_test_pairs.add((pair.first.path, pair.second.path))
+                f.write(pair.first.path + ';' + pair.second.path + '\n')
+
+        return calibration_pairs_per_category, test_pairs_per_category
+
+    def get_values_for_categories(self, image: FaceImage):
+        return tuple(getattr(image, prop)
+                     for prop in self.params['calibration_filters'])
 
 
 class ExperimentalSetup:
@@ -166,7 +246,6 @@ class ExperimentalSetup:
         Parses a list of PARAMS configuration names and returns the
         corresponding PARAMS configurations. If no names are given, the ones
         specified under `PARAMS['current_set_up']` are used.
-
         :param param_names: List[str]
         :return: List[Dict[str, Any]]
         """
@@ -194,7 +273,6 @@ class ExperimentalSetup:
         """
         Returns all keys that need to be specified for a valid PARAMS
         configuration.
-
         :return: List[str]
         """
         return list(set(k for v in PARAMS['all'].values() for k in v.keys()))

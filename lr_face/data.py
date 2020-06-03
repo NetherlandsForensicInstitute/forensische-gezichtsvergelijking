@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import csv
+import json
 import os
 import random
 from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
+from enum import Enum
 from itertools import islice
 from typing import Dict, Any, Tuple, List, Optional, Union, Iterator, Callable
 
@@ -16,6 +18,20 @@ from sklearn.model_selection import GroupShuffleSplit
 from lr_face.utils import cache
 
 Augmenter = Callable[[np.ndarray], np.ndarray]
+
+
+class Yaw(Enum):
+    FRONTAL = "straight"
+    HALF_TURNED = "slightly_turned"
+    PROFILE = "sideways"
+
+
+class Pitch(Enum):
+    UP = "upwards"
+    HALF_UP = "slightly_upwards"
+    FRONTAL = "straight"
+    HALF_DOWN = "slightly_downwards"
+    DOWN = "downwards"
 
 
 @dataclass
@@ -39,6 +55,31 @@ class FaceImage:
     # An optional miscellaneous dictionary where any potentially relevant
     # metadata about the image can be stored.
     meta: Dict[str, Any] = None
+
+    # Defaults to none, which means there is no annotation available
+    # for the property.
+    yaw: Yaw = None
+    pitch: Pitch = None
+    headgear: bool = None
+    glasses: bool = None
+    beard: bool = None
+    other_occlusions: bool = None
+    low_quality: bool = None
+
+    @property
+    def resolution_bin(self):
+        """
+        categorical version of original resolution of image
+        """
+        resolution = self.get_image().shape
+        m_pixels = np.prod(resolution) / 10**6 / 3  # divide by 3 for color
+        # channels
+        if m_pixels < 0.01:
+            return 'LOW'
+        if m_pixels < 0.1:
+            return 'MEDIUM'
+        return 'GOOD'
+
 
     @cache
     def get_image(
@@ -75,6 +116,17 @@ class FaceImage:
         if normalize and np.max(res) > 1:
             res = res / 255
         return res
+
+    @property
+    def quality_score(self):
+        """ returns a 'quality score', as the average of the top ten score
+        against a fixed set of 100 different source images"""
+        from lr_face.models import Architecture
+        # TODO Open question: should we use the model we are calibrating?
+        model = Architecture.FACERECOGNITION.get_scorer_model(None)
+        scores = model.predict_proba(
+            [FacePair(self, image) for image in BENCHMARK_IMAGES])[:, 1]
+        return np.ceil(10 * np.mean(sorted(scores, reverse=True)[:10]))
 
     def __post_init__(self):
         if not self.meta:
@@ -278,7 +330,65 @@ class ForenFaceDataset(Dataset):
         for file in files:
             path = os.path.join(self.RESOURCE_FOLDER, file)
             identity = f'FORENFACE-{file[:3]}'
-            data.append(FaceImage(path, identity, source=str(self)))
+
+            # parse annotations in filename:
+            # cx -> camera number
+            # a = no hat, b = hat
+            annotation_code = os.path.splitext(file)[0][3:]
+            if annotation_code in ('lp', 'rp'):
+                yaw = Yaw.PROFILE
+                pitch = Pitch.FRONTAL
+                headgear = False
+                low_quality = False
+            elif annotation_code in ('lq', 'rq'):
+                yaw = Yaw.HALF_TURNED
+                pitch = Pitch.FRONTAL
+                headgear = False
+                low_quality = False
+            elif annotation_code in ('a', 'f', 'c1a7', 'c2a3', 'c3a8', 'c3a16', 'c4a7', 'c4a12', 'c5a3'):
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.FRONTAL
+                headgear = False
+                low_quality = False
+            elif annotation_code in ('c1b7', 'c2b3', 'c3b8', 'c3b16', 'c4b7', 'c4b12', 'c5b3'):
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.FRONTAL
+                headgear = True
+                low_quality = False
+            elif annotation_code in ('c3a3', 'c4a2'):
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.FRONTAL
+                headgear = False
+                low_quality = True
+            elif annotation_code in ('c3b3', 'c4b2'):
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.FRONTAL
+                headgear = True
+                low_quality = True
+            elif annotation_code == 'c6a3':
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.HALF_DOWN
+                headgear = False
+                low_quality = False
+            elif annotation_code == 'c6b3':
+                yaw = Yaw.FRONTAL
+                pitch = Pitch.HALF_DOWN
+                headgear = True
+                low_quality = False
+            else:
+                print(annotation_code, " cannot be parsed")
+                yaw = None
+                pitch = None
+                headgear = None
+                low_quality = None
+
+            data.append(FaceImage(path,
+                                  identity,
+                                  yaw=yaw,
+                                  pitch=pitch,
+                                  headgear=headgear,
+                                  low_quality=low_quality,
+                                  source=str(self)))
         return data
 
 
@@ -387,10 +497,10 @@ class SCDataset(Dataset):
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=Yaw.FRONTAL,
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose': 'frontal',
                             'cam': None,
                             'dist': None
                         }
@@ -404,14 +514,29 @@ class SCDataset(Dataset):
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     identity = filename[0:3]
-                    pose = name[4:]
+                    # we ignore information on left/right, just take the angle
+                    # 0 is frontal, 4 is sideways (1,2,3 intermediate steps)
+                    if name[4:] == 'frontal':
+                        yaw = Yaw.FRONTAL
+                    else:
+                        yaw_code = int(name[5:])
+                        if yaw_code == 1:
+                            yaw = Yaw.HALF_TURNED
+                        elif yaw_code in (3, 4):
+                            yaw = Yaw.PROFILE
+                        elif yaw_code == 2:
+                            # code 2 is inconsistent between turned and profile, so we ignore those
+                            continue
+                        else:
+                            raise ValueError("Code cannot be mapped")
+
                     data.append(FaceImage(
                         path,
                         identity,
+                        yaw=yaw,
                         source=str(self),
                         meta={
                             'cropped': False,
-                            'pose': pose,
                             'cam': None,
                             'dist': None
                         }
@@ -420,7 +545,6 @@ class SCDataset(Dataset):
             elif image_type == 'surveillance':
                 folder = os.path.join(
                     self.RESOURCE_FOLDER, 'surveillance_cameras_all')
-
                 for filename in os.listdir(folder):
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
@@ -438,7 +562,6 @@ class SCDataset(Dataset):
                         source=str(self),
                         meta={
                             'cropped': True,
-                            'pose': 'frontal',
                             'cam': cam,
                             'dist': dist
                         }
@@ -448,7 +571,6 @@ class SCDataset(Dataset):
                 raise ValueError(
                     f'Imagetype string value {image_type} is incorrect, should'
                     f'be one of frontal, rotated or surveillance')
-
         return data
 
 
@@ -498,17 +620,33 @@ class EnfsiDataset(Dataset):
                     reference_id = self._create_reference_id(year, idx)
                     query_id = self._create_query_id(year, idx, same)
 
+                    # read in annotation dict for the reference image.
+                    annotation_path = os.path.join(folder, os.path.splitext(reference)[0] + ".json")
+                    with open(os.path.join(annotation_path)) as ann:
+                        annotation = json.load(ann)
+
                     # Create a record for the reference image.
                     path = os.path.join(folder, reference)
                     data.append(FaceImage(
                         path,
                         reference_id,
                         source=str(self),
+                        yaw=Yaw(annotation["yaw"]),
+                        pitch=Pitch(annotation["pitch"]),
+                        headgear=annotation["headgear"],
+                        glasses=annotation["glasses"],
+                        beard=annotation["beard"],
+                        other_occlusions=annotation["other_occlusions"],
+                        low_quality=annotation["low_quality"],
                         meta={
                             'year': year,
                             'idx': idx
                         }
                     ))
+
+                    annotation_path = os.path.join(folder, os.path.splitext(query)[0] + ".json")
+                    with open(os.path.join(annotation_path)) as ann:
+                        annotation = json.load(ann)
 
                     # Create a record for the query image.
                     path = os.path.join(folder, query)
@@ -516,6 +654,13 @@ class EnfsiDataset(Dataset):
                         path,
                         query_id,
                         source=str(self),
+                        yaw=Yaw(annotation["yaw"]),
+                        pitch=Pitch(annotation["pitch"]),
+                        headgear=annotation["headgear"],
+                        glasses=annotation["glasses"],
+                        beard=annotation["beard"],
+                        other_occlusions=annotation["other_occlusions"],
+                        low_quality=annotation["low_quality"],
                         meta={
                             'year': year,
                             'idx': idx
@@ -629,7 +774,7 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
     for x in data:
         images_by_identity[x.identity].append(x)
 
-    res = []
+    result = []
     identities = set(images_by_identity.keys())
 
     # First we handle the case when `same` is False, meaning we don't have to
@@ -645,12 +790,12 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
                 for image in images:
                     for negative_id in identities - {identity}:
                         for negative in images_by_identity[negative_id]:
-                            res.append(FacePair(image, negative))
+                            result.append(FacePair(image, negative))
         else:
             # If `n` is not omitted we simply create `n` random negative pairs.
             for _ in range(n):
                 a, b = random.sample(identities, 2)
-                res.append(
+                result.append(
                     FacePair(
                         random.choice(images_by_identity[a]),
                         random.choice(images_by_identity[b])
@@ -663,7 +808,7 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
         for identity, images in images_by_identity.items():
             for i, image in enumerate(images):
                 for positive in images[i + 1:]:
-                    res.append(FacePair(image, positive))
+                    result.append(FacePair(image, positive))
 
         # If `same` is omitted (None), it means we need to generate an equal
         # number of negative pairs.
@@ -672,14 +817,58 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
             # negative pairs that contain at least one of the images from each
             # positive pair and a randomly chosen other image with a different
             # identity.
-            for first, second in res.copy():  # Copy, because we modify `res`.
+            for first, second in result.copy():  # Copy, because we modify `result`.
                 identity = first.identity
                 negative_id = random.choice(tuple(identities - {identity}))
                 negative = random.choice(images_by_identity[negative_id])
-                res.append(FacePair(random.choice([first, second]), negative))
+                result.append(FacePair(random.choice([first, second]), negative))
 
         if n:
-            res = random.sample(res, min(len(res), n))
+            result = random.sample(result, min(len(result), n))
+    return result
+
+
+def make_pairs_from_two_lists(
+        data_first: List[FaceImage],
+        data_second: List[FaceImage],
+        n: Optional[int] = None) -> List[FacePair]:
+    """
+    Takes two list of `FaceImage` instances and pairs them up, each pair
+    having one image from the first, one from the seconds
+
+    Returns:
+        A list of `FacePair` instances.
+    """
+    images_first_by_identity = defaultdict(list)
+    for x in data_first:
+        images_first_by_identity[x.identity].append(x)
+
+    images_second_by_identity = defaultdict(list)
+    for x in data_second:
+        images_second_by_identity[x.identity].append(x)
+
+    res = []
+    for identity in set(images_first_by_identity.keys()).intersection(
+            set(images_second_by_identity.keys())):
+        for image_a in images_first_by_identity[identity]:
+            for image_b in images_second_by_identity[identity]:
+                if image_a != image_b:
+                    res.append(FacePair(image_a, image_b))
+
+    # Loop over and unpack all positive pairs, then create matching
+    # negative pairs that contain at least one of the images from each
+    # positive pair and a randomly chosen other image with a different
+    # identity.
+    for first, second in res.copy():  # Copy, because we modify `res`.
+        identity = first.identity
+        options = set(images_second_by_identity.keys()) - {identity}
+        if len(options) > 0:
+            negative_id = random.choice(tuple(options))
+            negative = random.choice(images_second_by_identity[negative_id])
+            res.append(FacePair(first, negative))
+
+    if n:
+        res = random.sample(res, min(len(res), n))
     return res
 
 
@@ -820,3 +1009,18 @@ def split_by_identity(
         data = data.images
     train_idx, test_idx = next(gss.split(data, groups=identities))
     return [data[idx] for idx in train_idx], [data[idx] for idx in test_idx]
+
+
+def get_benchmark_images():
+    """creates a fixed set of images to compute quality scores against.
+
+    The images are taken from LFW and increasingle reduced in resolution"""
+
+    # TODO save this as standalone set when we settle on what images to use?
+    data = LfwDevDataset(True)
+    # TODO resolution reduction? somewhat involved for FaceImages
+    images = data.images
+    return images[:100]
+
+
+BENCHMARK_IMAGES: List[FaceImage] = get_benchmark_images()

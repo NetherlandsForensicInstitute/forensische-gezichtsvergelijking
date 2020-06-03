@@ -11,7 +11,7 @@ from lr_face.versioning import Tag
 
 fix_tensorflow_rtx()
 
-AUGMENT_RESOLUTION = (50, 50)
+AUGMENT_RESOLUTION = None
 DATASET = LfwDevDataset(training=True)
 OPTIMIZER = Adam(learning_rate=3e-5)
 LOSS = TripletLoss(alpha=.2)  # TODO: better value for alpha?
@@ -20,19 +20,24 @@ NUM_EPOCHS = 100  # TODO: make dynamic
 
 
 def augmenter(image):
-    return cv2.resize(image, AUGMENT_RESOLUTION)
+    if AUGMENT_RESOLUTION:
+        return cv2.resize(image, AUGMENT_RESOLUTION)
+    else:
+        return image
 
 
 def main(architecture: str, tag: str):
     architecture: Architecture = Architecture[architecture.upper()]
     triplet_embedding_model = architecture.get_triplet_embedding_model()
+    tag = Tag(tag)
 
-    # Determine under which tag to save the fine-tuned weights.
-    try:
-        version = architecture.get_latest_version(tag) + 1
-    except ValueError:
-        version = 1
-    tag = Tag(tag, version)
+    # Determine under which tag to save the fine-tuned weights if none was
+    # explicitly specified.
+    if not tag.version:
+        try:
+            tag.version = architecture.get_latest_version(tag) + 1
+        except ValueError:
+            tag.version = 1
 
     try:
         triplet_embedding_model.train(DATASET.triplets,

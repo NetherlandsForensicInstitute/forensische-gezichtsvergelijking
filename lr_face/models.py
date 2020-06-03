@@ -11,7 +11,7 @@ import pickle
 import random
 import re
 from enum import Enum
-from typing import Tuple, List, Optional, Union
+from typing import Tuple, List, Optional, Union, Dict
 
 import numpy as np
 import tensorflow as tf
@@ -73,6 +73,15 @@ class ScorerModel:
     def __init__(self, embedding_model: EmbeddingModel):
         self.embedding_model = embedding_model
 
+    def predict_proba_per_category(self,
+                                   X_per_category: Dict[List[FacePair]]) \
+            -> Dict[np.ndarray]:
+        """
+        Predicts probabilities per category
+        """
+        return {category: self.predict_proba(X)
+                for category, X in X_per_category.items()}
+
     def predict_proba(self, X: List[FacePair]) -> np.ndarray:
         """
         Takes a list of face pairs as an argument and computes similarity
@@ -85,6 +94,7 @@ class ScorerModel:
         :return np.ndarray
         """
         scores = []
+        rm_pair = []
         cache_dir = EMBEDDINGS_DIR
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
@@ -296,6 +306,7 @@ class Architecture(Enum):
     ```
     """
     DUMMY = 'Dummy'
+    FACEVACS = 'Facevacs'
     VGGFACE = 'VGGFace'
     FACENET = 'Facenet'
     FBDEEPFACE = 'FbDeepFace'
@@ -320,10 +331,12 @@ class Architecture(Enum):
             module = importlib.import_module(module_name)
             return module.loadModel()
 
-        if self == self.DUMMY:
+        if self == self.DUMMY or self == self.FACEVACS: # Facevacs scores come from file, so uses dummy
             return DummyModel()
+
         if self == self.FACERECOGNITION:
             return FaceRecognition()
+
         raise ValueError("Unable to load base model")
 
     def get_embedding_model(self,
