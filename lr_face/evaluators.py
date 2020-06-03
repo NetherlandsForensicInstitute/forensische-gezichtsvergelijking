@@ -7,6 +7,9 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 
 from lr_face.data import FacePair, Yaw
 from lr_face.utils import save_predicted_lrs
+from lr_face.data import FacePair
+from lr_face.experiments import Experiment
+from lr_face.utils import save_predicted_lrs, get_valid_scores
 
 
 def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):
@@ -150,15 +153,19 @@ def plot_tippett(predicted_log_lrs, y, savefig=None, show=None):
         plt.show()
 
 
-def calculate_metrics_dict(scores, y, lr_predicted, label):
+def calculate_metrics_dict(number_of_scores, scores, y, lr_predicted, cal_fraction_valid, label):
     """
     Calculates metrics for an lr system given the predicted LRs.
     """
     X1, X2 = Xy_to_Xn(lr_predicted, y)
-
-    return {'cllr' + label: round(calculate_cllr(X1, X2).cllr, 4),
-            'auc' + label: roc_auc_score(y, scores),
-            'accuracy' + label: accuracy_score(y, scores > .5)}
+    results = {'cllr' + label: round(calculate_cllr(X1, X2).cllr, 4),
+                'auc' + label: roc_auc_score(y, scores),
+                'accuracy' + label: accuracy_score(y, scores > .5),
+                'cal_fraction_valid' + label: np.mean(list(cal_fraction_valid.values())),
+                'test_fraction_valid' + label: len(scores)/number_of_scores}
+    for key, value in cal_fraction_valid.items():
+        results[f'cal_fraction_{key}'] = value
+    return results
 
 
 # TODO put here temporarily until a new version of lir comes out
@@ -188,14 +195,18 @@ def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=No
         plt.show()
 
 
-def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
+
+def evaluate(experiment: Experiment,
+             lr_systems: Dict[Tuple, CalibratedScorer],
              test_pairs_per_category: Dict[Tuple, List[FacePair]],
-             make_plots_and_save_as: Optional[str]) -> Dict[str, float]:
+             make_plots_and_save_as: Optional[str],
+             cal_fraction_valid: Dict[Tuple, float]) -> Dict[str, float]:
     """
     Calculates a variety of evaluation metrics and plots data if
     `make_plots_and_save_as` is not None.
     """
 
+    number_of_scores = 0
     scores = np.array([])
     lr_predicted = np.array([])
     y_test = []
@@ -204,30 +215,36 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
         if category not in lr_systems:
             print(f'skipping {pairs} for category {category}')
             continue
-        category_scores = lr_systems[category].scorer.predict_proba(pairs)[
-                          :, 1]
-        scores = np.append(scores, category_scores)
+        if lr_systems[category].scorer.embedding_model.name == 'Facevacs':
+            category_scores = np.array(experiment.get_scores_from_file('results_test_pairs.txt',
+                                                                       ((pair.first.path, pair.second.path) for pair in
+                                                                        pairs)))
+        else:
+            category_scores = lr_systems[category].scorer.predict_proba(pairs)
+        category_scores_valid, pairs_valid = get_valid_scores(category_scores[:, 1], pairs)
+        scores = np.append(scores, category_scores_valid)
+        number_of_scores += len(category_scores)
         lr_predicted = np.append(
             lr_predicted,
-            lr_systems[category].calibrator.transform(category_scores))
-        category_y_test = [int(pair.same_identity) for pair in pairs]
+            lr_systems[category].calibrator.transform(category_scores_valid))
+        category_y_test = [int(pair.same_identity) for pair in pairs_valid]
         y_test += category_y_test
-        test_pairs += pairs
+        test_pairs += list(pairs_valid)
         if make_plots_and_save_as:
             calibrator = lr_systems[category].calibrator
             if type(calibrator) == ELUBbounder:
                 calibrator = calibrator.first_step_calibrator
             plot_score_distribution_and_calibrator_fit(
                 calibrator,
-                category_scores,
+                category_scores_valid,
                 category_y_test,
                 savefig=f'{make_plots_and_save_as} {[str(c).split(":")[0] for cat in category for c in cat]} '
                         f'calibration' + '.png'
             )
-
             # save last one (type should all be the same)
             scorer = lr_systems[category].scorer
 
+    lr_predicted = np.nan_to_num(lr_predicted, posinf=10e5)
     if make_plots_and_save_as:
         plot_performance_as_function_of_yaw(
             scores,
@@ -259,8 +276,11 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
             make_plots_and_save_as)
 
     return calculate_metrics_dict(
-        scores,
-        y_test,
-        lr_predicted,
+        number_of_scores=number_of_scores,
+        scores=scores,
+        y=y_test,
+        lr_predicted=lr_predicted,
+        cal_fraction_valid=cal_fraction_valid,
         label=''
     )
+

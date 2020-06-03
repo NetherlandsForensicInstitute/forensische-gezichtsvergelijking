@@ -212,7 +212,8 @@ class DummyFaceImage(FaceImage):
             self,
             resolution: Optional[Tuple[int, int]] = None,
             normalize: bool = False,
-            augmenter: Optional[Augmenter] = None
+            augmenter: Optional[Augmenter] = None,
+            RGB: bool = False
     ) -> np.ndarray:
         """
         Since dummy instances don't have a real path, we override the
@@ -223,6 +224,8 @@ class DummyFaceImage(FaceImage):
         image = np.random.random(size=(*resolution, 3))
         if augmenter:
             image = augmenter(image)
+        if RGB:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, (resolution[1], resolution[0]))
         if normalize:
             image = image / 255
@@ -492,6 +495,8 @@ class SCDataset(Dataset):
                 folder = os.path.join(
                     self.RESOURCE_FOLDER, 'mugshot_frontal_cropped_all')
                 for filename in os.listdir(folder):
+                    if filename == 'meta.txt':
+                        continue
                     path = os.path.join(folder, filename)
                     identity = filename[0:3]
                     data.append(FaceImage(
@@ -511,6 +516,8 @@ class SCDataset(Dataset):
                     self.RESOURCE_FOLDER, 'mugshot_rotation_all')
 
                 for filename in os.listdir(folder):
+                    if filename == 'meta.txt':
+                        continue
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     identity = filename[0:3]
@@ -546,6 +553,8 @@ class SCDataset(Dataset):
                 folder = os.path.join(
                     self.RESOURCE_FOLDER, 'surveillance_cameras_all')
                 for filename in os.listdir(folder):
+                    if filename == 'meta.txt':
+                        continue
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     atrib = name.split('_')

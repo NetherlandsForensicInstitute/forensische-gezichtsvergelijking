@@ -1,6 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from typing import List, Dict, Any, Iterator, Tuple, Optional, Union
 
 import numpy as np
@@ -11,7 +12,6 @@ from lr_face.data import FacePair, \
 from lr_face.models import ScorerModel
 from lr_face.versioning import Tag
 from params import *
-
 
 @dataclass
 class Experiment:
@@ -39,7 +39,79 @@ class Experiment:
             params_str
         ])).replace(':', '-')  # Windows forbids ':'
 
-    def get_calibration_and_test_pairs(self) -> Tuple[
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def get_scores_from_file(filename, pair_paths):
+        with open(filename, 'r') as f:
+            pairs_from_file = f.read().splitlines()
+            pairs_from_file = [pair.split(';') for pair in pairs_from_file]
+
+        pairs_from_file_dict = dict()
+        for pair in pairs_from_file:
+            if len(pair) != 3:
+                print(f'some issue with results file: {pair}')
+                res = -1
+            else:
+                res = float(pair[2])
+            pairs_from_file_dict[
+                f'{pair[0]}_{pair[1]}'] = res
+            pairs_from_file_dict[
+                f'{pair[1]}_{pair[0]}'] = res
+
+        p = []
+        for pair_path in pair_paths:
+            match = pairs_from_file_dict.get(f'{pair_path[0]}_{pair_path[1]}')
+            if not match:
+                match = -1
+            p.append([1-match, match])
+        return p
+
+    def get_pairs_from_file(self, filename, cal_or_test):
+        with open(filename, 'r') as f:
+            pairs_from_file = f.read().splitlines()
+            pairs_from_file = [pair.split(';') for pair in pairs_from_file]
+
+        # get all images
+        images = list()
+        image_path_dict = defaultdict(list)
+        for dataset in self.data_config[cal_or_test]:
+            images += dataset.images
+        for image in images:
+            image_path_dict[image.path] = image
+
+        pairs = []
+        for pair_in_file in pairs_from_file:
+            first = image_path_dict[pair_in_file[0]]
+            second = image_path_dict[pair_in_file[1]]
+            if isinstance(first, FaceImage) and isinstance(second, FaceImage):
+                pairs.append(FacePair(first, second))
+            else:
+                print(f'Could not find {pair_in_file[0]} and/or {pair_in_file[1]} image in dataset images.')
+        pair_categories = [(
+            self.get_values_for_categories(pair.first),
+            self.get_values_for_categories(pair.second))
+            for pair in pairs]
+
+        pairs_per_category = defaultdict(list)
+        for category, pair in zip(pair_categories, pairs):
+            pairs_per_category[category].append(pair)
+
+        return pairs_per_category
+
+    def get_calibration_and_test_pairs_from_file(self) -> Tuple[
+        Dict[Tuple, List[FacePair]],
+        Dict[Tuple, List[FacePair]]
+    ]:
+        assert isinstance(self.data_config['calibration'], tuple)
+        assert isinstance(self.data_config['test'], tuple)
+
+        calibration_pairs = self.get_pairs_from_file(f'cal_pairs_{self.params["calibration_filters"]}.txt',
+                                                     'calibration')
+        test_pairs = self.get_pairs_from_file(f'test_pairs_{self.params["calibration_filters"]}.txt', 'test')
+
+        return calibration_pairs, test_pairs
+
+    def get_calibration_and_test_pairs(self, all_calibration_pairs, all_test_pairs) -> Tuple[
         Dict[Tuple, List[FacePair]],
         Dict[Tuple, List[FacePair]]
     ]:
@@ -59,15 +131,20 @@ class Experiment:
                 .append(image)
 
         calibration_pairs_per_category = {}
-        for category_a, images_a in calibration_images_per_category.items():
-            for category_b, images_b in \
-                    calibration_images_per_category.items():
-                pairs = make_pairs_from_two_lists(images_a, images_b)
-                # only add if there are both same and different source pairs
-                if 0 < np.sum([pair.same_identity for pair in pairs]) < \
-                        len(pairs):
-                    calibration_pairs_per_category[(category_a, category_b)] \
-                        = pairs
+
+        with open(f'cal_pairs_{self.params["calibration_filters"]}.txt', 'w') as f:
+            for category_a, images_a in calibration_images_per_category.items():
+                for category_b, images_b in \
+                        calibration_images_per_category.items():
+                    pairs = make_pairs_from_two_lists(images_a, images_b)
+                    # only add if there are both same and different source pairs
+                    if 0 < np.sum([pair.same_identity for pair in pairs]) < \
+                            len(pairs):
+                        calibration_pairs_per_category[(category_a, category_b)] \
+                            = pairs
+                        for pair in pairs:
+                            all_calibration_pairs.add((pair.first.path, pair.second.path))
+                            f.write(pair.first.path + ';' + pair.second.path + '\n')
 
         test_pairs = []
         for dataset in self.data_config['test']:
@@ -80,6 +157,11 @@ class Experiment:
         test_pairs_per_category = defaultdict(list)
         for category, pair in zip(test_pair_categories, test_pairs):
             test_pairs_per_category[category].append(pair)
+
+        with open(f'test_pairs_{self.params["calibration_filters"]}.txt', 'w') as f:
+            for pair in test_pairs:
+                all_test_pairs.add((pair.first.path, pair.second.path))
+                f.write(pair.first.path + ';' + pair.second.path + '\n')
 
         return calibration_pairs_per_category, test_pairs_per_category
 

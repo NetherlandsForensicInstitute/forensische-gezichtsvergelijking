@@ -86,6 +86,15 @@ def parse_object_string(obj_string, name_only=False):
     return obj_dict
 
 
+def write_all_pairs_to_file(all_calibration_pairs, all_test_pairs):
+    with open('cal_pairs_all.txt', 'w') as f:
+        for pair in all_calibration_pairs:
+            f.write(pair[0] + ';' + pair[1] + '\n')
+    with open('test_pairs_all.txt', 'w') as f:
+        for pair in all_test_pairs:
+            f.write(pair[0] + ';' + pair[1] + '\n')
+
+
 def create_dataframe(experimental_setup, results: List[Dict]) -> pd.DataFrame:
     df = pd.DataFrame({
         'scorers': [e.scorer for e in experimental_setup],
@@ -241,3 +250,15 @@ def get_enfsi_lrs():
         df_enfsi = df_enfsi.append(df_temp)
 
     return df_enfsi.replace('-', 0)
+
+
+def get_valid_scores(p, calibration_pairs):
+    """
+    filters out all scores that are -1, returns those p and pairs for which p != -1
+    """
+    assert len(p)>0
+    assert len(calibration_pairs)==len(p)
+    mask = p != -1
+    p_valid = p[mask]
+    calibration_pairs_valid = np.array(calibration_pairs)[mask]
+    return p_valid, calibration_pairs_valid
