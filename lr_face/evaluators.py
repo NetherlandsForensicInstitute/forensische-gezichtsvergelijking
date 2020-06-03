@@ -2,6 +2,8 @@ from typing import Dict, Optional, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder
 from sklearn.metrics import accuracy_score, roc_auc_score
 
@@ -34,21 +36,22 @@ def plot_performance_as_function_of_yaw(scores,
     """
     plots the scores as a function of the maximum yaw (=looking sideways) on
     the images, coloured by ground truth. calls plt.show() if show is True.
-    todo: Currently not working, because of changes in how the annotations are processed.
     """
+    df_yaws = pd.DataFrame(columns=['pair_id', 'y_test', 'yaw_first', 'yaw_second', 'score'])
+    for i, test_pair in enumerate(test_pairs):
+        df_yaws = df_yaws.append(dict(pair_id=i,
+                                      y_test=y_test[i],
+                                      yaw_first=test_pair.first.yaw.value,
+                                      yaw_second=test_pair.second.yaw.value,
+                                      score=scores[i]),
+                                 ignore_index=True)
 
-    # give it a slight offset so both classes are visible
-    yaws = [max(pair.first.yaw, pair.second.yaw) - 0.1 + 0.2 * int(y) for
-            pair, y in zip(test_pairs, y_test)]
-    label = 'yaw (0=frontal)'
-    plot_performance_as_a_function_of_x(
-        properties=yaws,
-        scores=scores,
-        y_test=y_test,
-        x_label=label,
-        savefig=savefig,
-        show=show,
-        bins=[(i - .5, i + .5) for i in range(5)])
+    sns.catplot(x="yaw_second", y="score", row='yaw_first', hue='y_test', kind="swarm", data=df_yaws)
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
 
 
 def plot_performance_as_function_of_resolution(scores,
@@ -235,11 +238,11 @@ def evaluate(experiment: Experiment,
 
     lr_predicted = np.nan_to_num(lr_predicted, posinf=10e5)
     if make_plots_and_save_as:
-        # plot_performance_as_function_of_yaw(
-        #     scores,
-        #     test_pairs,
-        #     y_test,
-        #     savefig=f'{make_plots_and_save_as} scores against yaw.png')
+        plot_performance_as_function_of_yaw(
+            scores,
+            test_pairs,
+            y_test,
+            savefig=f'{make_plots_and_save_as} scores against yaw.png')
 
         plot_performance_as_function_of_resolution(
             scores,

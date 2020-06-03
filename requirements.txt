@@ -19,3 +19,4 @@ tensorflow==2.1.0
 bcolz==1.2.1
 PyYAML
 face_recognition
+seaborn
