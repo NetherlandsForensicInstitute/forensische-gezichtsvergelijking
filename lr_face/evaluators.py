@@ -233,7 +233,6 @@ def evaluate(experiment: Experiment,
 
     lr_predicted = np.nan_to_num(lr_predicted, posinf=10e5)
     if make_plots_and_save_as:
-
         # plot_performance_as_function_of_yaw(
         #     scores,
         #     test_pairs,

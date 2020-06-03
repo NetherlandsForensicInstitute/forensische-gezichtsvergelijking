@@ -11,7 +11,9 @@ from lr_face.evaluators import evaluate
 from lr_face.experiments import ExperimentalSetup, Experiment
 from lr_face.utils import (write_output,
                            parser_setup,
-                           create_dataframe, write_all_pairs_to_file, get_valid_scores)
+                           create_dataframe,
+                           write_all_pairs_to_file,
+                           get_valid_scores)
 from params import TIMES, PAIRS_FROM_FILE
 
 
