@@ -495,6 +495,8 @@ class SCDataset(Dataset):
                 folder = os.path.join(
                     self.RESOURCE_FOLDER, 'mugshot_frontal_cropped_all')
                 for filename in os.listdir(folder):
+                    if filename == 'meta.txt':
+                        continue
                     path = os.path.join(folder, filename)
                     identity = filename[0:3]
                     data.append(FaceImage(
@@ -514,6 +516,8 @@ class SCDataset(Dataset):
                     self.RESOURCE_FOLDER, 'mugshot_rotation_all')
 
                 for filename in os.listdir(folder):
+                    if filename == 'meta.txt':
+                        continue
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     identity = filename[0:3]
@@ -549,6 +553,8 @@ class SCDataset(Dataset):
                 folder = os.path.join(
                     self.RESOURCE_FOLDER, 'surveillance_cameras_all')
                 for filename in os.listdir(folder):
+                    if filename == 'meta.txt':
+                        continue
                     path = os.path.join(folder, filename)
                     name, file_extension = os.path.splitext(filename)
                     atrib = name.split('_')
