@@ -5,7 +5,7 @@ import numpy as np
 from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-from lr_face.data import FacePair
+from lr_face.data import FacePair, Yaw
 from lr_face.utils import save_predicted_lrs
 
 
@@ -35,14 +35,14 @@ def plot_performance_as_function_of_yaw(scores,
     the images, coloured by ground truth. calls plt.show() if show is True.
     todo: Currently not working, because of changes in how the annotations are processed.
     """
-    for_yaws = [None] * len(test_pairs)
-    for i in range(len(test_pairs)):
-        if (str(test_pairs[i].first.yaw) == 'Yaw.PROFILE') | (str(test_pairs[i].second.yaw) == 'Yaw.PROFILE'):
-            for_yaws[i] = 2
-        elif (str(test_pairs[i].first.yaw) == 'Yaw.HALF_TURNED') | (str(test_pairs[i].second.yaw) == 'Yaw.HALF_TURNED'):
-            for_yaws[i] = 1
+    for_yaws = []
+    for i, test_pair in enumerate(test_pairs):
+        if (test_pair.first.yaw == Yaw.PROFILE) | (test_pair.second.yaw == Yaw.PROFILE):
+            for_yaws.append(2)
+        elif (test_pair.first.yaw == Yaw.HALF_TURNED) | (test_pair.second.yaw == Yaw.HALF_TURNED):
+            for_yaws.append(1)
         else:
-            for_yaws[i] = 0
+            for_yaws.append(0)
 
     # give it a slight offset so both classes are visible
     yaws = [pair - 0.1 + 0.2 * int(y) for
@@ -161,7 +161,7 @@ def calculate_metrics_dict(scores, y, lr_predicted, label):
             'accuracy' + label: accuracy_score(y, scores > .5)}
 
 
-#TODO put here temporarily until a new version of lir comes out
+# TODO put here temporarily until a new version of lir comes out
 def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=None, show=None):
     """
     plots the distributions of scores calculated by the (fitted) lr_system, as well as the fitted score distributions/
@@ -171,7 +171,7 @@ def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=No
     plt.figure(figsize=(10, 10), dpi=100)
     x = np.arange(0, 1, .01)
     calibrator.transform(x)
-    if len(set(y))==2:
+    if len(set(y)) == 2:
         points0, points1 = Xy_to_Xn(scores, y)
         plt.hist(points0, bins=20, alpha=.25, density=True, label='class 0')
         plt.hist(points1, bins=20, alpha=.25, density=True, label='class 1')
@@ -186,6 +186,7 @@ def plot_score_distribution_and_calibrator_fit(calibrator, scores, y, savefig=No
         plt.close()
     if show or savefig is None:
         plt.show()
+
 
 def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
              test_pairs_per_category: Dict[Tuple, List[FacePair]],
@@ -228,7 +229,6 @@ def evaluate(lr_systems: Dict[Tuple, CalibratedScorer],
             scorer = lr_systems[category].scorer
 
     if make_plots_and_save_as:
-
         plot_performance_as_function_of_yaw(
             scores,
             test_pairs,

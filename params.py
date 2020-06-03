@@ -24,7 +24,7 @@ Parameters to be used in an experiment, different/new sets can be added under 'a
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
-    'current_set_up': ['scenario_1', 'scenario_2', 'scenario_3'],
+    'current_set_up': ['scenario_1'],
     'all': {
         'scenario_1': {
             'calibration_filters': [],
