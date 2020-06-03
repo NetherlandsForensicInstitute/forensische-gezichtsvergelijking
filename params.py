@@ -18,14 +18,14 @@ fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 TIMES = 1
-PAIRS_FROM_FILE = True
+PAIRS_FROM_FILE = True  # Only change to False if you want to generate new pair files instead of reading them from file
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 PARAMS = {
-    'current_set_up': ['scenario_1', 'scenario_3'],
+    'current_set_up': ['scenario_1', 'scenario_2', 'scenario_3'],
     'all': {
         'scenario_1': {
             'calibration_filters': [],
@@ -44,7 +44,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['forenface_enfsi_sc'],
+    'current_set_up': ['forenface_enfsi_sc_dev'],
     'all': {
         # specify both calibration and test as a tuple of datasets
         'test': {
@@ -132,7 +132,7 @@ New calibrators can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 CALIBRATORS = {
-    'current_set_up': ['logit'],
+    'current_set_up': ['logit', 'KDE', 'isotonic'],
     'all': {
         'logit': LogitCalibrator(),
         'logit_normalized': NormalizedCalibrator(LogitCalibrator()),

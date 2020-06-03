@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import face_recognition
+import dlib
 
 import hashlib
 import importlib
@@ -51,10 +52,13 @@ class FaceRecognition():
         self.input_shape = (None, None)  # face_recognition accepts any size
 
     def predict(self, x):
-        # embed = None
-        embed = np.ones(128)
+        embed = None
+        # embed = np.ones(128)
+        # Compulsory to process already cropped faces.
+        im_shape = x.shape[0:2]
+        face_bb = [(0, im_shape[0], im_shape[1], 0)]
         try:
-            embed = face_recognition.face_encodings(x)[0]
+            embed = face_recognition.face_encodings(x, known_face_locations=face_bb, model='large')[0]
         except IndexError:
             print('no face found')
         return [embed]
@@ -95,8 +99,13 @@ class ScorerModel:
         for pair in X:
             embedding1 = self.embedding_model.embed(pair.first, cache_dir)
             embedding2 = self.embedding_model.embed(pair.second, cache_dir)
-            score = np.linalg.norm(embedding1 - embedding2)
-            scores.append([score, 1 - score])                
+            if embedding1 is None or embedding2 is None:
+                # If face was not detected, score = -1
+                score = -1
+            else:
+                score = np.linalg.norm(embedding1 - embedding2)
+                # score = spatial.distance.cosine(embedding1, embedding2)
+            scores.append([score, 1 - score])
         return np.asarray(scores)
 
     def __str__(self) -> str:
@@ -322,7 +331,7 @@ class Architecture(Enum):
             module = importlib.import_module(module_name)
             return module.loadModel()
 
-        if self == self.DUMMY or self == self.FACEVACS:
+        if self == self.DUMMY or self == self.FACEVACS: # Facevacs scores come from file, so uses dummy
             return DummyModel()
 
         if self == self.FACERECOGNITION:

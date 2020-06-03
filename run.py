@@ -11,7 +11,9 @@ from lr_face.evaluators import evaluate
 from lr_face.experiments import ExperimentalSetup, Experiment
 from lr_face.utils import (write_output,
                            parser_setup,
-                           create_dataframe, write_all_pairs_to_file, get_valid_scores)
+                           create_dataframe,
+                           write_all_pairs_to_file,
+                           get_valid_scores)
 from params import TIMES, PAIRS_FROM_FILE
 
 
@@ -62,16 +64,15 @@ def perform_experiment(
         calibration_pairs_per_category, test_pairs_per_category = \
             experiment.get_calibration_and_test_pairs(all_calibration_pairs, all_test_pairs)
     lr_systems = {}
+    cal_fraction_valid = {}
     for category, calibration_pairs in calibration_pairs_per_category.items():
         lr_systems[category] = CalibratedScorer(experiment.scorer,
                                                 experiment.calibrator)
         # TODO currently, calibration could contain test images
         if experiment.scorer.embedding_model.name == 'Facevacs':
-            print('Facevacs is working')
             p = np.array(experiment.get_scores_from_file('results_cal_pairs.txt',
                                                          ((pair.first.path, pair.second.path) for pair in calibration_pairs)))
         else:
-            print('Hey I"m cheating')
             p = lr_systems[category].scorer.predict_proba(calibration_pairs)
         assert len(p[0]) == 2
         # Remove invalid scores (-1) where no face was found on one of the images in the pair
@@ -80,8 +81,9 @@ def perform_experiment(
         if 0 < np.sum(y_cal) < len(calibration_pairs_valid):
             lr_systems[category].calibrator.fit(
                 X=p_valid,
-                y= y_cal
+                y=y_cal
             )
+            cal_fraction_valid[category] = len(calibration_pairs_valid) / len(calibration_pairs)
         else:
             del lr_systems[category]
 
@@ -89,7 +91,7 @@ def perform_experiment(
                     lr_systems=lr_systems,
                     test_pairs_per_category=test_pairs_per_category,
                     make_plots_and_save_as=make_plots_and_save_as,
-                    cal_fraction_valid=len(calibration_pairs_valid) / len(calibration_pairs))
+                    cal_fraction_valid=cal_fraction_valid)
 
 
 if __name__ == '__main__':
