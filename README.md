@@ -11,11 +11,24 @@ fork from the deepface github (https://github.com/serengil/deepface), containing
 ***insightface:***
 fork from https://github.com/peteryuX/arcface-tf2 (Arcface) and from https://github.com/shaoanlu/face_toolbox_keras (LResNet, Ir50m1sm, ir50asia)
 
+***keras_vggface:***
+vgg_face model implemented in keras.
+
 ***lr_face package:*** 
-scripts to initiate the data providers, experiment settings and evaluators
+scripts to initiate the data providers, experiment settings and evaluators.
 
 ***output:*** 
-contains generated figures and result files
+contains generated figures and result files. The Graphs generated are:
+- Date time_experiments_results.csv (e.g. 2020-05-31 21 45 23_experiments_results.csv): contains 
+- Date time folder (e.g. 2020-05-31 21 45 23) - constains png with figures.
+
+     
+
+***resources:***
+contains datasets with faces. They should be named:
+- enfsi - ENFSI dataset
+- lfw - Labeled Faces in the Wild dataset (http://vis-www.cs.umass.edu/lfw/)
+- SC - Surveillance Cameras Face Database (https://www.scface.org/)
 
 ***root:***
 contains runnable scripts
