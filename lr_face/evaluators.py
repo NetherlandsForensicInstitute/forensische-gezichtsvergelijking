@@ -234,7 +234,7 @@ def evaluate(experiment: Experiment,
             scorer = lr_systems[category].scorer
 
     lr_predicted = np.nan_to_num(lr_predicted, posinf=10e5)
-    if make_plots_and_save_as:
+    if make_plots_and_save_as and len(set(y_test)) == 2:
         # plot_performance_as_function_of_yaw(
         #     scores,
         #     test_pairs,

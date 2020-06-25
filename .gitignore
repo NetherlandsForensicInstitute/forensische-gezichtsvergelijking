@@ -20,4 +20,8 @@ __pycache__
 .DS_Store
 
 /insightface/weights
+/insightface/checkpoints
+cal_pairs_*
+test_pairs_*
+results_*
 **/**/__pycache__

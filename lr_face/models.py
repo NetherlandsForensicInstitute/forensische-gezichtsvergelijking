@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import face_recognition
-import dlib
 
 import hashlib
 import importlib
@@ -15,7 +14,6 @@ from typing import Tuple, List, Optional, Union, Dict
 
 import numpy as np
 import tensorflow as tf
-from scipy import spatial
 from tensorflow.python.keras.layers import Flatten, Dense, Input, Lambda
 
 from lr_face.data import FaceImage, FacePair, FaceTriplet, to_array, Augmenter
@@ -53,12 +51,8 @@ class FaceRecognition():
 
     def predict(self, x):
         embed = None
-        # embed = np.ones(128)
-        # Compulsory to process already cropped faces.
-        im_shape = x.shape[0:2]
-        face_bb = [(0, im_shape[0], im_shape[1], 0)]
         try:
-            embed = face_recognition.face_encodings(x, known_face_locations=face_bb, model='large')[0]
+            embed = face_recognition.face_encodings(x)[0]
         except IndexError:
             print('no face found')
         return [embed]
@@ -104,8 +98,7 @@ class ScorerModel:
                 score = -1
             else:
                 score = np.linalg.norm(embedding1 - embedding2)
-                # score = spatial.distance.cosine(embedding1, embedding2)
-            scores.append([score, 1 - score])
+            scores.append([1-score, score])
         return np.asarray(scores)
 
     def __str__(self) -> str:
