@@ -12,23 +12,18 @@ fork from the deepface github (https://github.com/serengil/deepface), containing
 fork from https://github.com/peteryuX/arcface-tf2 (Arcface) and from https://github.com/shaoanlu/face_toolbox_keras (LResNet, Ir50m1sm, ir50asia)
 
 ***keras_vggface:***
-vgg_face model implemented in keras.
+vgg_face model implemented in keras (from https://github.com/rcmalli/keras-vggface)
 
 ***lr_face package:*** 
 scripts to initiate the data providers, experiment settings and evaluators.
 
 ***output:*** 
-contains generated figures and result files. The Graphs generated are:
-- Date time_experiments_results.csv (e.g. 2020-05-31 21 45 23_experiments_results.csv): contains 
-- Date time folder (e.g. 2020-05-31 21 45 23) - constains png with figures.
-
-     
+contains generated figures and result files. 
+- Date time_experiments_results.csv (e.g. 2020-05-31 21 45 23_experiments_results.csv): contains metrics for each experiment.
+- Date time folder (e.g. 2020-05-31 21 45 23): contains generated figures.
 
 ***resources:***
-contains datasets with faces. They should be named:
-- enfsi - ENFSI dataset
-- lfw - Labeled Faces in the Wild dataset (http://vis-www.cs.umass.edu/lfw/)
-- SC - Surveillance Cameras Face Database (https://www.scface.org/)
+datasets should be placed here. They can be found in the project folder.
 
 ***root:***
 contains runnable scripts
@@ -57,7 +52,7 @@ If you run into problems with connection timeouts or proxies, try the following 
 pip install -i https://pypi.org/simple -r requirements.txt
 ```
 
-cmake is needed for the the face_recognition library (more specifically, for pip install dlib):
+cmake is needed for the the face_recognition library:
 ```bash
 sudo apt-get install cmake
 sudo apt-get install python3.7-dev
@@ -111,11 +106,18 @@ In the `params.py` file the following parameters can be set:
 ***TIMES:***
 Number of repetitions
 
+***PAIRS_FROM_FILE:***
+Boolean to specify whether you want to use predefined pairs from a file. This is helpful if using the `facevacs` model in
+as well as others to ensure the same pairs are used in the experiments. If `false`, new pair files will be generated
+based on the executed experiments.
+
 ***DATA:***
 Dataset(s). Define `current_set_up` from one or more of the options in `all`.
 
 ***SCORERS:***
 Scorer models. Define `current_set_up` from one or more of the options in `all`.
+If `facevacs` is selected, a results file is expected in the script location for both calibration and test pairs.
+The most up-to-date files can be found in the project folder.
 
 ***CALIBRATORS:***
 Calibrator models. Define `current_set_up` from one or more of the options in `all`.
