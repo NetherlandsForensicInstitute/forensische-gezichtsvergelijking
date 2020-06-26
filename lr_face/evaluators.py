@@ -143,6 +143,61 @@ def plot_tippett(predicted_log_lrs, y, savefig=None, show=None):
         plt.show()
 
 
+def plot_cllr(pairs, lrs, y, savefig=None, show=None):
+    """
+    Plots cllr value for ENFSI tests. It computes both cllr of automated systems with the cllrs from experts.
+    """
+    # Create a mask to only evaluate ENFSI data.
+    maskEnfsi = [x.first.source[:5] == 'Enfsi' for x in pairs]
+
+    pairsEnfsi = [x for x, y in zip(pairs, maskEnfsi) if y ]
+    lrsEnfsi = lrs[maskEnfsi]
+    yEnfsi = np.array(y)[maskEnfsi]
+
+    years = np.unique([x.first.meta['year'] for x in pairsEnfsi])
+
+    cllrAut = []   # for automated system
+    cllrExpe = [] # for Experts
+
+    for year in years:
+        maskYear = [x.first.meta['year'] == year for x in pairsEnfsi]
+
+        lrs0,lrs1 = Xy_to_Xn(lrsEnfsi[maskYear],yEnfsi[maskYear])
+        cllrAut.append(calculate_cllr(lrs0,lrs1).cllr)
+
+        LLRexp = np.array([pair.expertsLLR for pair,mask in zip(pairsEnfsi,maskYear) if mask], dtype="float32")
+        LRexp = np.power(10,LLRexp)
+
+        LRexp0 = LRexp[yEnfsi[maskYear]==0,:]
+        LRexp1 = LRexp[yEnfsi[maskYear]==1,:]
+
+        # Calculate cllr individually for each expert
+        cllrExpe.append( [calculate_cllr(LRexp0[:,i], LRexp1[:,i]).cllr for i in range(LRexp0.shape[1])])
+
+    plt.figure(figsize=(10, 10), dpi=100)
+    # Plot for automated system
+    plt.scatter(range(len(years)), cllrAut, color='b', label=r'Cllrs automated system')
+
+    # Plot for Experts
+    xp = []
+    yp = []
+    for x ,y in enumerate(cllrExpe):
+        xp += [x] * len(y)
+        yp += y
+
+    plt.scatter(xp, yp, marker='x', color='r', label=r'Experts')
+
+    plt.xlabel('Year')
+    plt.xticks(range(len(years)), years )
+    plt.ylabel('Cllr')
+    plt.title('Cllr for Enfi Dataset')
+    plt.legend()
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
 def calculate_metrics_dict(number_of_scores, scores, y, lr_predicted, cal_fraction_valid, label):
     """
     Calculates metrics for an lr system given the predicted LRs.
@@ -259,6 +314,10 @@ def evaluate(experiment: Experiment,
             y_test,
             savefig=f'{make_plots_and_save_as} tippett.png'
         )
+
+        plot_cllr(
+            pairs,lr_predicted,y_test,
+            savefig=f'{make_plots_and_save_as} cllr.png')
 
         save_predicted_lrs(
             scorer, calibrator, test_pairs, lr_predicted,

@@ -14,6 +14,7 @@ from typing import Dict, Any, Tuple, List, Optional, Union, Iterator, Callable
 import cv2
 import numpy as np
 from sklearn.model_selection import GroupShuffleSplit
+import pandas as pd
 
 from lr_face.utils import cache
 
@@ -153,6 +154,25 @@ class FacePair:
         :return: bool
         """
         return self.first.identity == self.second.identity
+
+    # Experts' log LLR estimation (optional).
+    @property
+    def expertsLLR(self) -> [np.array]:
+        # read in log LR from experts file
+        folder = os.path.dirname(self.first.path)
+        experts_path = os.path.join(folder, "Experts_LLR.csv")
+        if os.path.isfile(experts_path):
+            with open(os.path.join(experts_path)) as exprt:
+                reader = pd.read_csv(exprt)
+                line = reader.loc[reader['id'] == self.first.meta['idx']].to_numpy(dtype='float16')
+                experts = line[0, 1:]
+                return experts
+        else:
+            if 'Enfsi' in self.first.source:
+                raise ValueError(f'File {experts_path} not found')
+
+        return None
+
 
     def __iter__(self) -> Iterator[FaceImage]:
         """
