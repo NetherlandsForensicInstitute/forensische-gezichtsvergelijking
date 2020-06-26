@@ -13,6 +13,7 @@ from lr_face.models import ScorerModel
 from lr_face.versioning import Tag
 from params import *
 
+
 @dataclass
 class Experiment:
     data_config: Dict[str, Any]
@@ -63,7 +64,7 @@ class Experiment:
             match = pairs_from_file_dict.get(f'{pair_path[0]}_{pair_path[1]}')
             if not match:
                 match = -1
-            p.append([1-match, match])
+            p.append([1 - match, match])
         return p
 
     def get_pairs_from_file(self, filename, cal_or_test):

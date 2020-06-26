@@ -150,29 +150,29 @@ def plot_cllr(pairs, lrs, y, savefig=None, show=None):
     # Create a mask to only evaluate ENFSI data.
     maskEnfsi = [x.first.source[:5] == 'Enfsi' for x in pairs]
 
-    pairsEnfsi = [x for x, y in zip(pairs, maskEnfsi) if y ]
+    pairsEnfsi = [x for x, y in zip(pairs, maskEnfsi) if y]
     lrsEnfsi = lrs[maskEnfsi]
     yEnfsi = np.array(y)[maskEnfsi]
 
     years = np.unique([x.first.meta['year'] for x in pairsEnfsi])
 
-    cllrAut = []   # for automated system
-    cllrExpe = [] # for Experts
+    cllrAut = []  # for automated system
+    cllrExpe = []  # for Experts
 
     for year in years:
         maskYear = [x.first.meta['year'] == year for x in pairsEnfsi]
 
-        lrs0,lrs1 = Xy_to_Xn(lrsEnfsi[maskYear],yEnfsi[maskYear])
-        cllrAut.append(calculate_cllr(lrs0,lrs1).cllr)
+        lrs0, lrs1 = Xy_to_Xn(lrsEnfsi[maskYear], yEnfsi[maskYear])
+        cllrAut.append(calculate_cllr(lrs0, lrs1).cllr)
 
-        LLRexp = np.array([pair.expertsLLR for pair,mask in zip(pairsEnfsi,maskYear) if mask], dtype="float32")
-        LRexp = np.power(10,LLRexp)
+        LLRexp = np.array([pair.expertsLLR for pair, mask in zip(pairsEnfsi, maskYear) if mask], dtype="float32")
+        LRexp = np.power(10, LLRexp)
 
-        LRexp0 = LRexp[yEnfsi[maskYear]==0,:]
-        LRexp1 = LRexp[yEnfsi[maskYear]==1,:]
+        LRexp0 = LRexp[yEnfsi[maskYear] == 0, :]
+        LRexp1 = LRexp[yEnfsi[maskYear] == 1, :]
 
         # Calculate cllr individually for each expert
-        cllrExpe.append( [calculate_cllr(LRexp0[:,i], LRexp1[:,i]).cllr for i in range(LRexp0.shape[1])])
+        cllrExpe.append([calculate_cllr(LRexp0[:, i], LRexp1[:, i]).cllr for i in range(LRexp0.shape[1])])
 
     plt.figure(figsize=(10, 10), dpi=100)
     # Plot for automated system
@@ -181,14 +181,14 @@ def plot_cllr(pairs, lrs, y, savefig=None, show=None):
     # Plot for Experts
     xp = []
     yp = []
-    for x ,y in enumerate(cllrExpe):
+    for x, y in enumerate(cllrExpe):
         xp += [x] * len(y)
         yp += y
 
     plt.scatter(xp, yp, marker='x', color='r', label=r'Experts')
 
     plt.xlabel('Year')
-    plt.xticks(range(len(years)), years )
+    plt.xticks(range(len(years)), years)
     plt.ylabel('Cllr')
     plt.title('Cllr for Enfi Dataset')
     plt.legend()
@@ -198,16 +198,17 @@ def plot_cllr(pairs, lrs, y, savefig=None, show=None):
     if show or savefig is None:
         plt.show()
 
+
 def calculate_metrics_dict(number_of_scores, scores, y, lr_predicted, cal_fraction_valid, label):
     """
     Calculates metrics for an lr system given the predicted LRs.
     """
     X1, X2 = Xy_to_Xn(lr_predicted, y)
     results = {'cllr' + label: round(calculate_cllr(X1, X2).cllr, 4),
-                'auc' + label: roc_auc_score(y, scores),
-                'accuracy' + label: accuracy_score(y, scores > .5),
-                'cal_fraction_valid' + label: np.mean(list(cal_fraction_valid.values())),
-                'test_fraction_valid' + label: len(scores)/number_of_scores}
+               'auc' + label: roc_auc_score(y, scores),
+               'accuracy' + label: accuracy_score(y, scores > .5),
+               'cal_fraction_valid' + label: np.mean(list(cal_fraction_valid.values())),
+               'test_fraction_valid' + label: len(scores) / number_of_scores}
     for key, value in cal_fraction_valid.items():
         results[f'cal_fraction_{key}'] = value
     return results
@@ -316,7 +317,7 @@ def evaluate(experiment: Experiment,
         )
 
         plot_cllr(
-            pairs,lr_predicted,y_test,
+            pairs, lr_predicted, y_test,
             savefig=f'{make_plots_and_save_as} cllr.png')
 
         save_predicted_lrs(
@@ -331,4 +332,3 @@ def evaluate(experiment: Experiment,
         cal_fraction_valid=cal_fraction_valid,
         label=''
     )
-

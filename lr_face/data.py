@@ -73,14 +73,13 @@ class FaceImage:
         categorical version of original resolution of image
         """
         resolution = self.get_image().shape
-        m_pixels = np.prod(resolution) / 10**6 / 3  # divide by 3 for color
+        m_pixels = np.prod(resolution) / 10 ** 6 / 3  # divide by 3 for color
         # channels
         if m_pixels < 0.01:
             return 'LOW'
         if m_pixels < 0.1:
             return 'MEDIUM'
         return 'GOOD'
-
 
     @cache
     def get_image(
@@ -172,7 +171,6 @@ class FacePair:
                 raise ValueError(f'File {experts_path} not found')
 
         return None
-
 
     def __iter__(self) -> Iterator[FaceImage]:
         """
