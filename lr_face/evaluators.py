@@ -46,7 +46,7 @@ def plot_performance_as_function_of_yaw(scores,
                                       score=scores[i]),
                                  ignore_index=True)
 
-    sns.catplot(x="yaw_second_image", y="score", row='yaw_first_image', hue='y_test', kind="swarm", data=df_yaws)
+    sns.catplot(x="yaw_second", y="score", row='yaw_first', hue='y_test', kind="swarm", data=df_yaws)
     if savefig is not None:
         plt.savefig(savefig)
         plt.close()
@@ -237,7 +237,7 @@ def evaluate(experiment: Experiment,
             scorer = lr_systems[category].scorer
 
     lr_predicted = np.nan_to_num(lr_predicted, posinf=10e5)
-    if make_plots_and_save_as:
+    if make_plots_and_save_as and len(set(y_test)) == 2:
         plot_performance_as_function_of_yaw(
             scores,
             test_pairs,
