@@ -143,12 +143,16 @@ def plot_tippett(predicted_log_lrs, y, savefig=None, show=None):
         plt.show()
 
 
-def plot_cllr(pairs, lrs, y, savefig=None, show=None):
+def plot_cllr(pairs, lrs, y, savefig=None, show=None, scorer=None):
     """
     Plots cllr value for ENFSI tests. It computes both cllr of automated systems with the cllrs from experts.
+    If there is no ENFSI data, this graph does not show.
     """
     # Create a mask to only evaluate ENFSI data.
     maskEnfsi = [x.first.source[:5] == 'Enfsi' for x in pairs]
+    if maskEnfsi.count(True) == 0:
+        print(f'No ENFSI data in {savefig}. No Cllrs are plotted')
+        return
 
     pairsEnfsi = [x for x, y in zip(pairs, maskEnfsi) if y]
     lrsEnfsi = lrs[maskEnfsi]
@@ -176,7 +180,7 @@ def plot_cllr(pairs, lrs, y, savefig=None, show=None):
 
     plt.figure(figsize=(10, 10), dpi=100)
     # Plot for automated system
-    plt.scatter(range(len(years)), cllrAut, color='b', label=r'Cllrs automated system')
+    plt.scatter(range(len(years)), cllrAut, color='b', label=f'Cllrs {scorer}')
 
     # Plot for Experts
     xp = []
@@ -190,7 +194,7 @@ def plot_cllr(pairs, lrs, y, savefig=None, show=None):
     plt.xlabel('Year')
     plt.xticks(range(len(years)), years)
     plt.ylabel('Cllr')
-    plt.title('Cllr for Enfi Dataset')
+    plt.title('Cllr for ENFSI Dataset')
     plt.legend()
     if savefig is not None:
         plt.savefig(savefig)
@@ -318,7 +322,8 @@ def evaluate(experiment: Experiment,
 
         plot_cllr(
             pairs, lr_predicted, y_test,
-            savefig=f'{make_plots_and_save_as} cllr.png')
+            savefig=f'{make_plots_and_save_as} cllr.png',
+            scorer=scorer.embedding_model.name)
 
         save_predicted_lrs(
             scorer, calibrator, test_pairs, lr_predicted,

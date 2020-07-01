@@ -154,7 +154,6 @@ class FacePair:
         """
         return self.first.identity == self.second.identity
 
-    # Experts' log LLR estimation (optional).
     @property
     def expertsLLR(self) -> [np.array]:
         # read in log LR from experts file
@@ -167,10 +166,7 @@ class FacePair:
                 experts = line[0, 1:]
                 return experts
         else:
-            if 'Enfsi' in self.first.source:
-                raise ValueError(f'File {experts_path} not found')
-
-        return None
+            raise ValueError(f'File {experts_path} not found')
 
     def __iter__(self) -> Iterator[FaceImage]:
         """
