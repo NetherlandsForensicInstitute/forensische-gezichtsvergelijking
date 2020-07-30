@@ -13,6 +13,7 @@ from lr_face.models import ScorerModel
 from lr_face.versioning import Tag
 from params import *
 
+
 @dataclass
 class Experiment:
     data_config: Dict[str, Any]
@@ -63,7 +64,7 @@ class Experiment:
             match = pairs_from_file_dict.get(f'{pair_path[0]}_{pair_path[1]}')
             if not match:
                 match = -1
-            p.append([1-match, match])
+            p.append([1 - match, match])
         return p
 
     def get_pairs_from_file(self, filename, cal_or_test):
@@ -136,7 +137,7 @@ class Experiment:
             for category_a, images_a in calibration_images_per_category.items():
                 for category_b, images_b in \
                         calibration_images_per_category.items():
-                    pairs = make_pairs_from_two_lists(images_a, images_b)
+                    pairs = make_pairs_from_two_lists(images_a, images_b, 1000)
                     # only add if there are both same and different source pairs
                     if 0 < np.sum([pair.same_identity for pair in pairs]) < \
                             len(pairs):

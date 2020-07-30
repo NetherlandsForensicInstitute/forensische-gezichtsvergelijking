@@ -14,6 +14,7 @@ from typing import Dict, Any, Tuple, List, Optional, Union, Iterator, Callable
 import cv2
 import numpy as np
 from sklearn.model_selection import GroupShuffleSplit
+import pandas as pd
 
 from lr_face.utils import cache
 
@@ -72,14 +73,13 @@ class FaceImage:
         categorical version of original resolution of image
         """
         resolution = self.get_image().shape
-        m_pixels = np.prod(resolution) / 10**6 / 3  # divide by 3 for color
+        m_pixels = np.prod(resolution) / 10 ** 6 / 3  # divide by 3 for color
         # channels
         if m_pixels < 0.01:
             return 'LOW'
         if m_pixels < 0.1:
             return 'MEDIUM'
         return 'GOOD'
-
 
     @cache
     def get_image(
@@ -153,6 +153,20 @@ class FacePair:
         :return: bool
         """
         return self.first.identity == self.second.identity
+
+    @property
+    def expertsLLR(self) -> [np.array]:
+        # read in log LR from experts file
+        folder = os.path.dirname(self.first.path)
+        experts_path = os.path.join(folder, "Experts_LLR.csv")
+        if os.path.isfile(experts_path):
+            with open(os.path.join(experts_path)) as exprt:
+                reader = pd.read_csv(exprt)
+                line = reader.loc[reader['id'] == self.first.meta['idx']].to_numpy(dtype='float16')
+                experts = line[0, 1:]
+                return experts
+        else:
+            raise ValueError(f'File {experts_path} not found')
 
     def __iter__(self) -> Iterator[FaceImage]:
         """
@@ -838,9 +852,9 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
 
 
 def make_pairs_from_two_lists(
-        data_first: List[FaceImage],
-        data_second: List[FaceImage],
-        n: Optional[int] = None) -> List[FacePair]:
+        data_first: object,
+        data_second: object,
+        n: object = None) -> object:
     """
     Takes two list of `FaceImage` instances and pairs them up, each pair
     having one image from the first, one from the seconds

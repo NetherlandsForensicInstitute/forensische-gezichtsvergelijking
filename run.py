@@ -71,7 +71,8 @@ def perform_experiment(
         # TODO currently, calibration could contain test images
         if experiment.scorer.embedding_model.name == 'Facevacs':
             p = np.array(experiment.get_scores_from_file('results_cal_pairs.txt',
-                                                         ((pair.first.path, pair.second.path) for pair in calibration_pairs)))
+                                                         ((pair.first.path, pair.second.path) for pair in
+                                                          calibration_pairs)))
         else:
             p = lr_systems[category].scorer.predict_proba(calibration_pairs)
         assert len(p[0]) == 2

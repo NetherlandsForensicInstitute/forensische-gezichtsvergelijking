@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder
-from sklearn.metrics import accuracy_score, roc_auc_score
+from sklearn.metrics import accuracy_score, roc_auc_score, roc_curve
 
 from lr_face.data import FacePair
 from lr_face.experiments import Experiment
@@ -21,6 +21,44 @@ def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):
     plt.hist(points0, bins=20, alpha=.25, density=True)
     plt.hist(points1, bins=20, alpha=.25, density=True)
     plt.xlabel('10log LR')
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
+
+def plot_ROC_curve(scores, y, savefig: Optional[str] = None,
+                   show: Optional[bool] = None):
+    fpr, tpr, thresholds = roc_curve(y, scores)
+    plt.figure(figsize=(10, 10), dpi=100)
+    plt.plot(fpr, fpr, linestyle='--', label='No Skill')
+    plt.plot(fpr, tpr, color='r', label=r'ROC curve')
+    plt.xlabel('False positive rate (1 - specificity)')
+    plt.ylabel('True positive rate (sensitivity)')
+    plt.title('ROC curve')
+    plt.legend()
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
+
+def plot_ROC_in_LR_coordinates(scores, y, savefig: Optional[str] = None,
+                               show: Optional[bool] = None):
+
+    fpr, tpr, thresholds = roc_curve(y, scores)
+    LLRp = np.log10(tpr/fpr)
+    LLRm = np.log10((1-tpr)/(1-fpr))
+    plt.figure(figsize=(10, 10), dpi=100)
+    plt.gca().invert_xaxis()
+    plt.plot(-fpr, fpr, linestyle='--', label='No Skill')
+    plt.plot(LLRm, LLRp, color='r', label=r'ROC curve')
+    plt.xlabel('base-tan logarithm of the negative likelihood ratio($log_{10}LR$)')
+    plt.ylabel('base-tan logarithm of the positive likelihood ratio($log_{10}LR$)')
+    plt.title('ROC curve')
+    plt.legend()
     if savefig is not None:
         plt.savefig(savefig)
         plt.close()
@@ -146,16 +184,76 @@ def plot_tippett(predicted_log_lrs, y, savefig=None, show=None):
         plt.show()
 
 
+def plot_cllr(pairs, lrs, y, savefig=None, show=None, scorer=None):
+    """
+    Plots cllr value for ENFSI tests. It computes both cllr of automated systems with the cllrs from experts.
+    If there is no ENFSI data, this graph does not show.
+    """
+    # Create a mask to only evaluate ENFSI data.
+    maskEnfsi = [x.first.source[:5] == 'Enfsi' for x in pairs]
+    if maskEnfsi.count(True) == 0:
+        print(f'No ENFSI data in {savefig}. No Cllrs are plotted')
+        return
+
+    pairsEnfsi = [x for x, y in zip(pairs, maskEnfsi) if y]
+    lrsEnfsi = lrs[maskEnfsi]
+    yEnfsi = np.array(y)[maskEnfsi]
+
+    years = np.unique([x.first.meta['year'] for x in pairsEnfsi])
+
+    cllrAut = []  # for automated system
+    cllrExpe = []  # for Experts
+
+    for year in years:
+        maskYear = [x.first.meta['year'] == year for x in pairsEnfsi]
+
+        lrs0, lrs1 = Xy_to_Xn(lrsEnfsi[maskYear], yEnfsi[maskYear])
+        cllrAut.append(calculate_cllr(lrs0, lrs1).cllr)
+
+        LLRexp = np.array([pair.expertsLLR for pair, mask in zip(pairsEnfsi, maskYear) if mask], dtype="float32")
+        LRexp = np.power(10, LLRexp)
+
+        LRexp0 = LRexp[yEnfsi[maskYear] == 0, :]
+        LRexp1 = LRexp[yEnfsi[maskYear] == 1, :]
+
+        # Calculate cllr individually for each expert
+        cllrExpe.append([calculate_cllr(LRexp0[:, i], LRexp1[:, i]).cllr for i in range(LRexp0.shape[1])])
+
+    plt.figure(figsize=(10, 10), dpi=100)
+    # Plot for automated system
+    plt.scatter(range(len(years)), cllrAut, color='b', label=f'Cllrs {scorer}')
+
+    # Plot for Experts
+    xp = []
+    yp = []
+    for x, y in enumerate(cllrExpe):
+        xp += [x] * len(y)
+        yp += y
+
+    plt.scatter(xp, yp, marker='x', color='r', label=r'Experts')
+
+    plt.xlabel('Year')
+    plt.xticks(range(len(years)), years)
+    plt.ylabel('Cllr')
+    plt.title('Cllr for ENFSI Dataset')
+    plt.legend()
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
+
 def calculate_metrics_dict(number_of_scores, scores, y, lr_predicted, cal_fraction_valid, label):
     """
     Calculates metrics for an lr system given the predicted LRs.
     """
     X1, X2 = Xy_to_Xn(lr_predicted, y)
     results = {'cllr' + label: round(calculate_cllr(X1, X2).cllr, 4),
-                'auc' + label: roc_auc_score(y, scores),
-                'accuracy' + label: accuracy_score(y, scores > .5),
-                'cal_fraction_valid' + label: np.mean(list(cal_fraction_valid.values())),
-                'test_fraction_valid' + label: len(scores)/number_of_scores}
+               'auc' + label: roc_auc_score(y, scores),
+               'accuracy' + label: accuracy_score(y, scores > .5),
+               'cal_fraction_valid' + label: np.mean(list(cal_fraction_valid.values())),
+               'test_fraction_valid' + label: len(scores) / number_of_scores}
     for key, value in cal_fraction_valid.items():
         results[f'cal_fraction_{key}'] = value
     return results
@@ -257,11 +355,23 @@ def evaluate(experiment: Experiment,
             savefig=f'{make_plots_and_save_as} lr distribution.png'
         )
 
+        plot_ROC_curve(scores,
+                       y_test,
+                       savefig=f'{make_plots_and_save_as} ROC curve.png')
+        plot_ROC_in_LR_coordinates(scores,
+                                   y_test,
+                                   savefig=f'{make_plots_and_save_as} ROC LR coordinates curve.png')
+
         plot_tippett(
             np.log10(lr_predicted),
             y_test,
             savefig=f'{make_plots_and_save_as} tippett.png'
         )
+
+        plot_cllr(
+            test_pairs, lr_predicted, y_test,
+            savefig=f'{make_plots_and_save_as} cllr.png',
+            scorer=scorer.embedding_model.name)
 
         save_predicted_lrs(
             scorer, calibrator, test_pairs, lr_predicted,
@@ -275,4 +385,3 @@ def evaluate(experiment: Experiment,
         cal_fraction_valid=cal_fraction_valid,
         label=''
     )
-
