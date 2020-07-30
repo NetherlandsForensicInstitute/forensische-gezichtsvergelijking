@@ -18,7 +18,7 @@ fix_tensorflow_rtx()
 
 """How often to repeat all experiments"""
 TIMES = 1
-PAIRS_FROM_FILE = True  # Only change to False if you want to generate new pair files instead of reading them from file
+PAIRS_FROM_FILE = False  # Only change to False if you want to generate new pair files instead of reading them from file
 
 """
 Parameters to be used in an experiment, different/new sets can be added under 'all'.
@@ -44,7 +44,7 @@ New datasets can be added to 'all'.
 For the input of an experiment the 'current_set_up' list can be updated.
 """
 DATA = {
-    'current_set_up': ['forenface_enfsi_sc_dev'],
+    'current_set_up': ['lfw_enfsi'],
     'all': {
         # specify both calibration and test as a tuple of datasets
         'test': {
@@ -88,6 +88,10 @@ DATA = {
         'lfw_sanity_check': {
             'calibration': (LfwDevDataset(True),),
             'test': (LfwDevDataset(False),),
+        },
+        'lfw_enfsi': {
+            'calibration': (LfwDataset(),),
+            'test': (EnfsiDataset(years=[2011, 2012, 2013, 2017]),),
         },
     }
 }

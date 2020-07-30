@@ -3,7 +3,7 @@ from typing import Dict, Optional, List, Tuple, Union
 import matplotlib.pyplot as plt
 import numpy as np
 from lir import Xy_to_Xn, calculate_cllr, CalibratedScorer, ELUBbounder
-from sklearn.metrics import accuracy_score, roc_auc_score
+from sklearn.metrics import accuracy_score, roc_auc_score, roc_curve
 
 from lr_face.data import FacePair
 from lr_face.experiments import Experiment
@@ -19,6 +19,44 @@ def plot_lr_distributions(predicted_log_lrs, y, savefig=None, show=None):
     plt.hist(points0, bins=20, alpha=.25, density=True)
     plt.hist(points1, bins=20, alpha=.25, density=True)
     plt.xlabel('10log LR')
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
+
+def plot_ROC_curve(scores, y, savefig: Optional[str] = None,
+                   show: Optional[bool] = None):
+    fpr, tpr, thresholds = roc_curve(y, scores)
+    plt.figure(figsize=(10, 10), dpi=100)
+    plt.plot(fpr, fpr, linestyle='--', label='No Skill')
+    plt.plot(fpr, tpr, color='r', label=r'ROC curve')
+    plt.xlabel('False positive rate (1 - specificity)')
+    plt.ylabel('True positive rate (sensitivity)')
+    plt.title('ROC curve')
+    plt.legend()
+    if savefig is not None:
+        plt.savefig(savefig)
+        plt.close()
+    if show or savefig is None:
+        plt.show()
+
+
+def plot_ROC_in_LR_coordinates(scores, y, savefig: Optional[str] = None,
+                               show: Optional[bool] = None):
+
+    fpr, tpr, thresholds = roc_curve(y, scores)
+    LLRp = np.log10(tpr/fpr)
+    LLRm = np.log10((1-tpr)/(1-fpr))
+    plt.figure(figsize=(10, 10), dpi=100)
+    plt.gca().invert_xaxis()
+    plt.plot(-fpr, fpr, linestyle='--', label='No Skill')
+    plt.plot(LLRm, LLRp, color='r', label=r'ROC curve')
+    plt.xlabel('base-tan logarithm of the negative likelihood ratio($log_{10}LR$)')
+    plt.ylabel('base-tan logarithm of the positive likelihood ratio($log_{10}LR$)')
+    plt.title('ROC curve')
+    plt.legend()
     if savefig is not None:
         plt.savefig(savefig)
         plt.close()
@@ -314,6 +352,13 @@ def evaluate(experiment: Experiment,
             savefig=f'{make_plots_and_save_as} lr distribution.png'
         )
 
+        plot_ROC_curve(scores,
+                       y_test,
+                       savefig=f'{make_plots_and_save_as} ROC curve.png')
+        plot_ROC_in_LR_coordinates(scores,
+                                   y_test,
+                                   savefig=f'{make_plots_and_save_as} ROC LR coordinates curve.png')
+
         plot_tippett(
             np.log10(lr_predicted),
             y_test,
@@ -321,7 +366,7 @@ def evaluate(experiment: Experiment,
         )
 
         plot_cllr(
-            pairs, lr_predicted, y_test,
+            test_pairs, lr_predicted, y_test,
             savefig=f'{make_plots_and_save_as} cllr.png',
             scorer=scorer.embedding_model.name)
 

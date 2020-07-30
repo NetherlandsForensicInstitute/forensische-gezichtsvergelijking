@@ -137,7 +137,7 @@ class Experiment:
             for category_a, images_a in calibration_images_per_category.items():
                 for category_b, images_b in \
                         calibration_images_per_category.items():
-                    pairs = make_pairs_from_two_lists(images_a, images_b)
+                    pairs = make_pairs_from_two_lists(images_a, images_b, 1000)
                     # only add if there are both same and different source pairs
                     if 0 < np.sum([pair.same_identity for pair in pairs]) < \
                             len(pairs):

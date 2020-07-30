@@ -852,9 +852,9 @@ def make_pairs(data: Union[Dataset, List[FaceImage]],
 
 
 def make_pairs_from_two_lists(
-        data_first: List[FaceImage],
-        data_second: List[FaceImage],
-        n: Optional[int] = None) -> List[FacePair]:
+        data_first: object,
+        data_second: object,
+        n: object = None) -> object:
     """
     Takes two list of `FaceImage` instances and pairs them up, each pair
     having one image from the first, one from the seconds
